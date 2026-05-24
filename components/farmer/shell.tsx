@@ -1,11 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Mark, Wheat, Sun } from "@/components/mark";
+import { usePathname, useRouter } from "next/navigation";
+import { Mark } from "@/components/mark";
 import { type AuthState, DemoBanner } from "./auth-gate";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 type NavItem = {
   href: string;
@@ -15,17 +15,17 @@ type NavItem = {
 
 const FARMER_NAV: NavItem[] = [
   { href: "/farmer/", label: "Today", hint: "what's happening" },
-  { href: "/farmer/inventory/", label: "Inventory" },
-  { href: "/farmer/roster/", label: "Pickup roster" },
-  { href: "/farmer/members/", label: "Members" },
-  { href: "/farmer/messages/", label: "Messages" },
-  { href: "/farmer/emails/", label: "Emails" },
-  { href: "/farmer/log/", label: "Harvest log" },
-  { href: "/farmer/analytics/", label: "Analytics" },
-  { href: "/farmer/homepage/", label: "Homepage" },
-  { href: "/farmer/payments/", label: "Payments" },
-  { href: "/farmer/import/", label: "Import" },
-  { href: "/farmer/settings/", label: "Settings" },
+  { href: "/farmer/inventory/", label: "Inventory", hint: "what you're selling" },
+  { href: "/farmer/roster/", label: "Pickup roster", hint: "who's coming today" },
+  { href: "/farmer/members/", label: "Members", hint: "the people you feed" },
+  { href: "/farmer/messages/", label: "Messages", hint: "two-way SMS inbox" },
+  { href: "/farmer/emails/", label: "Emails", hint: "the newsletter" },
+  { href: "/farmer/log/", label: "Harvest log", hint: "what came in from the field" },
+  { href: "/farmer/analytics/", label: "Analytics", hint: "season in numbers" },
+  { href: "/farmer/site/", label: "Site builder", hint: "your farm's homepage" },
+  { href: "/farmer/payments/", label: "Payments", hint: "how money moves" },
+  { href: "/farmer/import/", label: "Import", hint: "bring your data home" },
+  { href: "/farmer/settings/", label: "Settings", hint: "everything else" },
 ];
 
 export function FarmerShell({
@@ -39,6 +39,7 @@ export function FarmerShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   async function signOut() {
     const sb = getSupabaseBrowser();
@@ -46,12 +47,28 @@ export function FarmerShell({
     router.push("/");
   }
 
+  // Close the mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll when menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [menuOpen]);
+
   return (
     <div className="min-h-screen flex flex-col bg-cream">
       {auth.kind === "demo" && <DemoBanner session={auth.session} />}
       <div className="flex-1 flex">
-        {/* Sidebar */}
-        <aside className="hidden md:flex flex-col w-64 bg-soil text-parchment relative">
+        {/* Sidebar — desktop only */}
+        <aside className="hidden md:flex flex-col w-64 bg-soil text-parchment relative shrink-0">
           <div className="absolute inset-0 bg-grain opacity-30 pointer-events-none" />
           <div className="relative p-6">
             <Link href="/" className="flex items-center gap-3 group">
@@ -74,9 +91,13 @@ export function FarmerShell({
             </div>
           )}
 
-          <nav className="relative flex-1 px-3 pb-6">
+          <nav className="relative flex-1 px-3 pb-6 overflow-y-auto">
             {FARMER_NAV.map((item) => {
-              const active = pathname === item.href || pathname?.startsWith(item.href + "");
+              const active =
+                item.href === "/farmer/"
+                  ? pathname === item.href
+                  : pathname === item.href ||
+                    (pathname?.startsWith(item.href) ?? false);
               return (
                 <Link
                   key={item.href}
@@ -117,38 +138,161 @@ export function FarmerShell({
         </aside>
 
         {/* Mobile header */}
-        <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-soil text-parchment px-4 py-3 flex items-center justify-between">
+        <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-soil text-parchment px-4 py-3 flex items-center justify-between border-b border-wheat/15">
           <Link href="/" className="flex items-center gap-2">
             <Mark className="w-7 h-7 text-wheat" />
-            <span className="display text-lg">Communicare</span>
+            <div className="leading-none">
+              <span className="display text-base">Communicare</span>
+              {farmName && (
+                <div className="text-[9px] text-parchment/55 small-caps mt-0.5">
+                  {farmName}
+                </div>
+              )}
+            </div>
           </Link>
-          {auth.kind === "authed" && (
-            <button onClick={signOut} className="text-xs display italic text-wheat/85">
-              Sign out
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="text-parchment display flex items-center gap-2 px-3 py-1.5 rounded-full border border-wheat/30 hover:bg-wheat/10 text-sm"
+            aria-label="Open menu"
+          >
+            <Hamburger />
+            <span>Menu</span>
+          </button>
         </div>
 
         {/* Main */}
-        <main className="flex-1 md:pl-0 pt-16 md:pt-0">{children}</main>
+        <main className="flex-1 md:pl-0 pt-16 md:pt-0 min-w-0">{children}</main>
       </div>
 
-      {/* Mobile nav */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-soil text-parchment border-t border-wheat/20 grid grid-cols-4 text-[10px]">
-        {FARMER_NAV.slice(0, 4).map((item) => {
-          const active = pathname === item.href;
+      {/* Mobile slide-in menu */}
+      {menuOpen && (
+        <MobileMenu
+          farmName={farmName}
+          auth={auth}
+          onClose={() => setMenuOpen(false)}
+          onSignOut={signOut}
+        />
+      )}
+    </div>
+  );
+}
+
+function MobileMenu({
+  farmName,
+  auth,
+  onClose,
+  onSignOut,
+}: {
+  farmName?: string;
+  auth: AuthState;
+  onClose: () => void;
+  onSignOut: () => void;
+}) {
+  const pathname = usePathname();
+  return (
+    <div className="md:hidden fixed inset-0 z-50 flex flex-col bg-soil text-parchment animate-[fade-up_200ms_ease-out]">
+      <div className="absolute inset-0 bg-grain opacity-25 pointer-events-none" />
+      <div className="relative px-5 py-4 border-b border-parchment/10 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Mark className="w-8 h-8 text-wheat" />
+          <div className="leading-none">
+            <div className="display text-lg">Communicare</div>
+            {farmName && (
+              <div className="text-[10px] text-parchment/55 small-caps mt-0.5">
+                Tending {farmName}
+              </div>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-parchment/85 hover:text-wheat display italic text-sm flex items-center gap-1"
+          aria-label="Close menu"
+        >
+          Close
+          <span className="text-xl leading-none">×</span>
+        </button>
+      </div>
+
+      <nav className="relative flex-1 overflow-y-auto px-3 py-4">
+        {FARMER_NAV.map((item) => {
+          const active =
+            item.href === "/farmer/"
+              ? pathname === item.href
+              : pathname === item.href ||
+                (pathname?.startsWith(item.href) ?? false);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`py-3 text-center ${active ? "text-wheat" : "text-parchment/65"}`}
+              onClick={onClose}
+              className={`block px-4 py-4 rounded-md mb-1 transition-colors ${
+                active
+                  ? "bg-parchment/10 text-wheat"
+                  : "text-parchment/85 hover:bg-parchment/5"
+              }`}
             >
-              <div className="display">{item.label}</div>
+              <div className="flex items-baseline justify-between">
+                <span className="display text-lg">{item.label}</span>
+                {active && (
+                  <span className="text-[10px] small-caps text-wheat">Here</span>
+                )}
+              </div>
+              {item.hint && (
+                <div className="text-[11px] text-parchment/55 italic mt-0.5">
+                  {item.hint}
+                </div>
+              )}
             </Link>
           );
         })}
       </nav>
+
+      <div className="relative px-5 py-5 border-t border-parchment/10 text-sm text-parchment/65 flex items-center justify-between">
+        {auth.kind === "authed" ? (
+          <>
+            <div className="truncate flex-1 mr-3">{auth.email}</div>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="display italic text-wheat/85 hover:text-wheat"
+            >
+              Sign out →
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="italic">Demo session</div>
+            <Link
+              href="/"
+              onClick={onClose}
+              className="display italic text-wheat/85 hover:text-wheat"
+            >
+              Back to site →
+            </Link>
+          </>
+        )}
+      </div>
     </div>
+  );
+}
+
+function Hamburger() {
+  return (
+    <svg
+      width="18"
+      height="14"
+      viewBox="0 0 18 14"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <line x1="0" y1="1" x2="18" y2="1" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="0" y1="7" x2="18" y2="7" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="0" y1="13" x2="18" y2="13" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
   );
 }
 

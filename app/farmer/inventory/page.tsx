@@ -3,9 +3,31 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/farmer/shell";
 import { demoProducts, formatCents, type DemoProduct } from "@/lib/farmer-demo";
+import { Wheat } from "@/components/mark";
+
+type NewProduct = {
+  name: string;
+  description: string;
+  kind: "fixed" | "catch_weight" | "share";
+  price_cents: number;
+  unit_label: string;
+  inventory_cap: number | null;
+};
+
+const EMPTY_NEW: NewProduct = {
+  name: "",
+  description: "",
+  kind: "fixed",
+  price_cents: 0,
+  unit_label: "each",
+  inventory_cap: null,
+};
 
 export default function FarmerInventoryPage() {
   const [products, setProducts] = useState(demoProducts);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState<NewProduct>(EMPTY_NEW);
+  const [priceInput, setPriceInput] = useState("");
 
   function toggleSoldOut(id: number) {
     setProducts((prev) =>
@@ -19,6 +41,33 @@ export default function FarmerInventoryPage() {
           : p,
       ),
     );
+  }
+
+  function addProduct() {
+    if (!draft.name.trim() || draft.price_cents <= 0) return;
+    const newProduct: DemoProduct = {
+      id: Math.max(0, ...products.map((p) => p.id)) + 1,
+      name: draft.name.trim(),
+      description: draft.description.trim() || undefined,
+      kind: draft.kind,
+      price_cents: draft.price_cents,
+      unit_label: draft.unit_label.trim() || "each",
+      inventory_cap: draft.inventory_cap,
+      inventory_now: draft.inventory_cap,
+      is_sold_out: false,
+    };
+    setProducts((prev) => [newProduct, ...prev]);
+    setDraft(EMPTY_NEW);
+    setPriceInput("");
+    setShowForm(false);
+  }
+
+  function setPrice(v: string) {
+    setPriceInput(v);
+    const parsed = parseFloat(v);
+    if (!Number.isNaN(parsed)) {
+      setDraft((d) => ({ ...d, price_cents: Math.round(parsed * 100) }));
+    }
   }
 
   const totalSkus = products.length;
@@ -38,8 +87,12 @@ export default function FarmerInventoryPage() {
         title="Inventory."
         subtitle="Tap a sold-out toggle from your phone at the market. The web store updates the same second."
         action={
-          <button type="button" className="btn btn-primary">
-            + Add product
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className="btn btn-primary"
+          >
+            {showForm ? "Close form" : "+ Add product"}
           </button>
         }
       />
@@ -49,6 +102,164 @@ export default function FarmerInventoryPage() {
         <Stat label="Sold out" value={soldOut.toString()} accent="brick" />
         <Stat label="Low stock" value={lowStock.toString()} accent="wheat" />
       </div>
+
+      {showForm && (
+        <div className="px-6 md:px-10 pb-6">
+          <div className="paper p-7 border-wheat/40 bg-wheat/5">
+            <div className="small-caps text-xs text-brick mb-2">
+              New product
+            </div>
+            <h3 className="display text-xl font-medium mb-5">
+              What are you adding?
+            </h3>
+
+            <div className="grid md:grid-cols-2 gap-5">
+              <div>
+                <label className="label" htmlFor="np_name">
+                  Name
+                </label>
+                <input
+                  id="np_name"
+                  className="field"
+                  placeholder="e.g. Lacinato kale"
+                  value={draft.name}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, name: e.target.value }))
+                  }
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="label">Kind</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      { v: "fixed", l: "Fixed", h: "By the dozen, bunch, jar" },
+                      { v: "catch_weight", l: "Catch-weight", h: "By the lb, kg" },
+                      { v: "share", l: "Share", h: "Subscription only" },
+                    ] as const
+                  ).map((opt) => {
+                    const active = draft.kind === opt.v;
+                    return (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() =>
+                          setDraft((d) => ({ ...d, kind: opt.v }))
+                        }
+                        className={`text-left px-3 py-2 rounded-md text-xs border transition-colors ${
+                          active
+                            ? "border-brick bg-brick/5 text-brick"
+                            : "border-soil/15 hover:border-soil/30 text-soil/65"
+                        }`}
+                      >
+                        <div className="display text-sm">{opt.l}</div>
+                        <div className="text-[10px] italic">{opt.h}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="label" htmlFor="np_desc">
+                  Description (optional)
+                </label>
+                <input
+                  id="np_desc"
+                  className="field"
+                  placeholder="e.g. Bunch, ~3/4 lb · sweetened by the cold snap"
+                  value={draft.description}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, description: e.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-[1fr_120px] gap-3">
+                <div>
+                  <label className="label" htmlFor="np_price">
+                    Price ($)
+                  </label>
+                  <input
+                    id="np_price"
+                    className="field"
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 4.00"
+                    value={priceInput}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="np_unit">
+                    Per
+                  </label>
+                  <input
+                    id="np_unit"
+                    className="field"
+                    placeholder="bunch"
+                    value={draft.unit_label}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, unit_label: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label" htmlFor="np_cap">
+                  Inventory cap{" "}
+                  <span className="text-soil/45 italic text-xs">(leave blank = no cap)</span>
+                </label>
+                <input
+                  id="np_cap"
+                  className="field"
+                  type="number"
+                  placeholder="e.g. 80"
+                  value={draft.inventory_cap ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDraft((d) => ({
+                      ...d,
+                      inventory_cap: v === "" ? null : parseInt(v, 10),
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-soil/15 mt-7 pt-5 flex items-center justify-between">
+              <span className="text-xs italic text-soil/55">
+                You can edit any of this later. Members see changes within a
+                minute.
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    setDraft(EMPTY_NEW);
+                    setPriceInput("");
+                  }}
+                  className="btn btn-ghost text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={addProduct}
+                  disabled={!draft.name.trim() || draft.price_cents <= 0}
+                  className="btn btn-primary text-sm disabled:opacity-50"
+                >
+                  Add to inventory →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="px-6 md:px-10 pb-12">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -60,6 +271,19 @@ export default function FarmerInventoryPage() {
             />
           ))}
         </div>
+        {products.length === 0 && (
+          <div className="paper p-12 text-center">
+            <Wheat className="w-10 h-12 text-wheatDark mx-auto mb-4 opacity-60" />
+            <p className="display text-lg mb-3">Nothing in inventory yet.</p>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="btn btn-primary text-sm"
+            >
+              + Add your first product
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

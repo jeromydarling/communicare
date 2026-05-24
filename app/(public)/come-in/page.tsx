@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Sun } from "@/components/mark";
+import { FarmScene } from "@/components/farm-scene";
+import { Mark } from "@/components/mark";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -46,116 +47,149 @@ export default function ComeInPage() {
     setSent(true);
   }
 
-  if (sent) {
-    return (
-      <div className="max-w-xl mx-auto px-6 py-24 text-center">
-        <Sun className="w-16 h-16 text-wheat mx-auto mb-6" />
-        <div className="small-caps text-xs text-brick mb-4">
-          The link is in your inbox
-        </div>
-        <h1 className="display text-5xl font-medium leading-tight mb-6">
-          Check your email.
-        </h1>
-        <p className="text-lg text-soil/80 leading-relaxed">
-          We sent a magic link to <span className="display">{email}</span>.
-          Click it from any device and it will let you in. No password to
-          invent. The link is good for an hour.
-        </p>
-        <p className="display italic text-brick mt-8 text-xl">Pax tibi.</p>
-
-        <div className="rule my-12" />
-
-        <button
-          type="button"
-          onClick={() => {
-            setSent(false);
-            setEmail("");
-          }}
-          className="btn btn-ghost"
-        >
-          Send to a different email →
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-xl mx-auto px-6 py-24">
-      <div className="text-center mb-12">
-        <Sun className="w-14 h-14 text-wheat mx-auto mb-6" />
-        <div className="small-caps text-xs text-brick mb-4">
-          Come in
+    <div className="min-h-[calc(100vh-64px)] grid md:grid-cols-2">
+      {/* LEFT — farm scene, full bleed, Berry quote anchored bottom-left */}
+      <div className="relative bg-soil overflow-hidden order-2 md:order-1 min-h-[300px] md:min-h-0">
+        <FarmScene className="absolute inset-0 w-full h-full" />
+        <div className="absolute top-8 left-8 text-parchment/85 z-10">
+          <div className="small-caps text-[10px] text-parchment/60 tracking-[0.2em]">
+            Issue №&nbsp;13 · Late spring of the year MMXXVI
+          </div>
         </div>
-        <h1 className="display text-5xl md:text-6xl font-medium leading-[1.0]">
-          Welcome back.
-        </h1>
-        <p className="mt-6 text-lg text-soil/80 leading-relaxed max-w-md mx-auto">
-          Type your email. We'll send a magic link that signs you in. No
-          password to remember; no password to lose.
-        </p>
+        <div className="absolute bottom-8 left-8 right-8 md:right-auto md:max-w-sm z-10">
+          <div className="bg-parchment/95 backdrop-blur p-6 paper border-soil/10">
+            <p className="display italic text-soil leading-snug text-lg md:text-xl">
+              &ldquo;The soil is the great connector of lives, the source and
+              destination of all.&rdquo;
+            </p>
+            <p className="text-xs text-soil/60 mt-3 small-caps">
+              Wendell Berry · The Unsettling of America, 1977
+            </p>
+          </div>
+        </div>
       </div>
 
-      {!isSupabaseConfigured && (
-        <div className="border border-wheat/40 bg-wheat/5 px-4 py-3 mb-6 text-sm text-soil/75 italic rounded">
-          <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-            Demo mode
-          </span>
-          Magic-link sign-in is wired up but needs a Supabase project to
-          actually send mail. Set{" "}
-          <code className="font-mono not-italic text-xs">
-            NEXT_PUBLIC_SUPABASE_URL
-          </code>{" "}
-          and{" "}
-          <code className="font-mono not-italic text-xs">
-            NEXT_PUBLIC_SUPABASE_ANON_KEY
-          </code>{" "}
-          to turn it on.
-        </div>
-      )}
+      {/* RIGHT — magic-link form */}
+      <div className="relative bg-parchment flex flex-col order-1 md:order-2">
+        <div className="flex-1 flex items-center justify-center px-6 py-16 md:py-12">
+          <div className="w-full max-w-md">
+            {sent ? (
+              <>
+                <Mark className="w-12 h-12 text-brick mb-8" />
+                <div className="small-caps text-xs text-brick mb-3">
+                  The link is on its way
+                </div>
+                <h1 className="display text-4xl md:text-5xl font-medium leading-tight mb-5">
+                  Check your inbox.
+                </h1>
+                <p className="text-lg text-soil/80 leading-relaxed mb-6">
+                  We sent a magic link to{" "}
+                  <span className="display">{email}</span>. Tap it from any
+                  device and we&apos;ll let you in. No password to invent. The
+                  link is good for an hour.
+                </p>
+                <p className="display italic text-brick text-xl mb-8">
+                  Pax tibi.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSent(false);
+                    setEmail("");
+                  }}
+                  className="text-sm display italic text-soil/65 hover:text-brick"
+                >
+                  Send to a different email →
+                </button>
+              </>
+            ) : (
+              <>
+                <Mark className="w-12 h-12 text-brick mb-8" />
+                <div className="small-caps text-xs text-brick mb-3">
+                  Come in
+                </div>
+                <h1 className="display text-4xl md:text-6xl font-medium leading-[0.95] mb-5">
+                  Welcome back
+                  <br />
+                  <span className="italic text-brick">to the table.</span>
+                </h1>
+                <p className="text-lg text-soil/75 leading-relaxed mb-8">
+                  Type your email. We&apos;ll send a magic link that signs you
+                  in — no password to remember, no password to lose. We
+                  believe in quiet entries.
+                </p>
 
-      <form onSubmit={onSubmit} className="paper p-10 space-y-6">
-        <div>
-          <label className="label" htmlFor="email">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            className="field"
-            placeholder="you@yourfarm.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+                {!isSupabaseConfigured && (
+                  <div className="border border-wheat/40 bg-wheat/5 px-4 py-3 mb-5 text-sm text-soil/75 italic rounded">
+                    <span className="not-italic small-caps text-[10px] text-wheat mr-2">
+                      Demo mode
+                    </span>
+                    The form works; magic-link delivery needs a Supabase
+                    project. Try the{" "}
+                    <Link href="/demo" className="not-italic underline hover:text-brick">
+                      form-gated demo
+                    </Link>{" "}
+                    instead.
+                  </div>
+                )}
 
-        {error && (
-          <div className="border border-brick bg-brick/5 px-4 py-3 text-brick text-sm">
-            {error}
+                <form onSubmit={onSubmit} className="space-y-5">
+                  <div>
+                    <label className="label" htmlFor="email">
+                      Email address
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      required
+                      className="field text-base"
+                      placeholder="you@yourfarm.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="border border-brick bg-brick/5 px-4 py-3 text-brick text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-3 pt-2">
+                    <button
+                      type="submit"
+                      disabled={busy || !isSupabaseConfigured}
+                      className="btn btn-primary disabled:opacity-50"
+                    >
+                      {busy ? "Sending the link…" : "Send the magic link →"}
+                    </button>
+                    <span className="text-xs italic text-soil/55 text-right">
+                      Good for one hour.
+                      <br />
+                      Works on any device.
+                    </span>
+                  </div>
+                </form>
+
+                <div className="rule my-10" />
+                <p className="text-sm text-soil/65 italic leading-relaxed">
+                  Not on the list yet?{" "}
+                  <Link href="/join" className="text-brick hover:underline not-italic">
+                    Join the early circle
+                  </Link>
+                  , or{" "}
+                  <Link href="/demo" className="text-brick hover:underline not-italic">
+                    open the demo
+                  </Link>{" "}
+                  to poke around with sample data.
+                </p>
+              </>
+            )}
           </div>
-        )}
-
-        <div className="pt-4 border-t border-soil/15 flex items-center justify-between gap-4">
-          <button
-            type="submit"
-            disabled={busy || !isSupabaseConfigured}
-            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {busy ? "Sending…" : "Send the link →"}
-          </button>
-          <span className="text-xs italic text-soil/55 max-w-xs text-right">
-            The link is good for one hour, on one device.
-          </span>
         </div>
-      </form>
-
-      <p className="text-center text-xs text-soil/55 italic mt-8 max-w-sm mx-auto leading-relaxed">
-        Not on the list yet?{" "}
-        <Link href="/join" className="text-brick hover:underline">
-          Join the early circle
-        </Link>{" "}
-        — we'll write when we're ready for you.
-      </p>
+      </div>
     </div>
   );
 }

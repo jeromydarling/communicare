@@ -9,6 +9,7 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 const SHARE_NAV = [
   { href: "/share/", label: "This week" },
+  { href: "/share/ticket/", label: "Ticket" },
   { href: "/share/orders/", label: "My orders" },
   { href: "/share/credit/", label: "Credit" },
   { href: "/share/profile/", label: "Profile" },

@@ -21,6 +21,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Auto-enable GitHub Pages on the repo and set the source to
+          # "GitHub Actions" if it isn't already. Removes the manual
+          # Settings → Pages step from setup.
+          enablement: true
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

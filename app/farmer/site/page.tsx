@@ -32,12 +32,12 @@ type Palette = {
 const PALETTES: Palette[] = [
   {
     id: "cream",
-    name: "Agrarian heritage",
-    bg: "#FFF8F5",
-    surface: "#FFEADB",
-    text: "#26190C",
-    accent: "#B5563E",
-    hint: "Our default — warmest. Best for vegetable and mixed farms.",
+    name: "Agrarian almanac",
+    bg: "#FBF1EC",
+    surface: "#FBE9DD",
+    text: "#1A1410",
+    accent: "#C16850",
+    hint: "Our default — pale pink-cream and salmon. Lightest, airiest option.",
   },
   {
     id: "evergreen",

@@ -43,11 +43,18 @@ export function PickupTicketCard({
     QRCode.toDataURL(url, {
       margin: 1,
       width: 320,
-      color: { dark: "#26190C", light: "#FFF8F5" },
+      color: { dark: "#1A1410", light: "#FBF1EC" },
       errorCorrectionLevel: "M",
-    }).then((dataUrl) => {
-      if (!cancelled) setQr(dataUrl);
-    });
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setQr(dataUrl);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.warn("QR generation failed:", err);
+          setQr(""); // empty falsy string → renders fallback panel
+        }
+      });
     return () => {
       cancelled = true;
     };

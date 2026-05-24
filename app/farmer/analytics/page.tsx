@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
 
           <svg viewBox="0 0 600 240" className="w-full h-56">
             {/* Axis baseline */}
-            <line x1="50" y1="200" x2="580" y2="200" stroke="rgba(38,25,12,0.15)" />
+            <line x1="50" y1="200" x2="580" y2="200" stroke="rgba(26,20,16,0.15)" />
             {/* Bars */}
             {WEEKLY_REVENUE.map((w, i) => {
               const x = 60 + i * 90;
@@ -89,7 +89,7 @@ export default function AnalyticsPage() {
                     textAnchor="middle"
                     fontFamily="Fraunces"
                     fontSize="13"
-                    fill="#26190C"
+                    fill="#1A1410"
                   >
                     ${(w.cents / 100).toFixed(0)}
                   </text>
@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
                     textAnchor="middle"
                     fontFamily="Source Serif 4"
                     fontSize="11"
-                    fill="rgba(38,25,12,0.55)"
+                    fill="rgba(26,20,16,0.55)"
                   >
                     {w.week}
                   </text>

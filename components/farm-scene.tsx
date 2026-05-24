@@ -92,7 +92,7 @@ export function FarmScene({ className }: { className?: string }) {
         {/* Barn body */}
         <path
           d="M 0 60 L 0 25 L 50 0 L 100 25 L 100 60 Z"
-          fill="#26190C"
+          fill="#1A1410"
           stroke="#1F140A"
           strokeWidth="1"
         />
@@ -102,8 +102,8 @@ export function FarmScene({ className }: { className?: string }) {
         {/* Roof line accent */}
         <path d="M 0 25 L 50 0 L 100 25" fill="none" stroke="#8F6D0E" strokeWidth="1.2" />
         {/* Silo */}
-        <rect x="100" y="20" width="12" height="40" fill="#26190C" />
-        <ellipse cx="106" cy="20" rx="6" ry="3" fill="#26190C" />
+        <rect x="100" y="20" width="12" height="40" fill="#1A1410" />
+        <ellipse cx="106" cy="20" rx="6" ry="3" fill="#1A1410" />
       </g>
 
       {/* Fence */}
@@ -153,7 +153,7 @@ export function FarmScene({ className }: { className?: string }) {
         y="0"
         width="800"
         height="1200"
-        fill="rgba(38,25,12,0.06)"
+        fill="rgba(26,20,16,0.06)"
         filter="url(#grain)"
       />
     </svg>

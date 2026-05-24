@@ -22,7 +22,7 @@ export function PhoneFrame({
       style={{ width: 300 }}
     >
       <div
-        className="relative bg-soil rounded-[44px] p-2 shadow-[0_30px_60px_-20px_rgba(38,25,12,0.4),0_0_0_8px_rgba(38,25,12,0.06)]"
+        className="relative bg-soil rounded-[44px] p-2 shadow-[0_30px_60px_-20px_rgba(26,20,16,0.4),0_0_0_8px_rgba(26,20,16,0.06)]"
         style={{ aspectRatio: "9/19.5" }}
       >
         {/* Side buttons */}

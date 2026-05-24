@@ -22,12 +22,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Pages
+        # Reads the existing GitHub Pages config and sets up the env vars
+        # the deploy step needs. Pages must already be enabled with
+        # "Source: GitHub Actions" in the repo Settings → Pages tab
+        # (one-time manual step; GITHUB_TOKEN cannot create the Pages
+        # site itself — only a repo admin can).
         uses: actions/configure-pages@v5
-        with:
-          # Auto-enable GitHub Pages on the repo and set the source to
-          # "GitHub Actions" if it isn't already. Removes the manual
-          # Settings → Pages step from setup.
-          enablement: true
 
       - name: Setup Node
         uses: actions/setup-node@v4

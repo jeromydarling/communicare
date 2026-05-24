@@ -13,36 +13,36 @@ export function FarmScene({ className }: { className?: string }) {
       <defs>
         {/* Dawn-warm sky gradient */}
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F4E5C8" />
-          <stop offset="35%" stopColor="#E8C896" />
-          <stop offset="55%" stopColor="#D9A668" />
+          <stop offset="0%" stopColor="#FFEADB" />
+          <stop offset="35%" stopColor="#F8DEC9" />
+          <stop offset="55%" stopColor="#EFD5C1" />
           <stop offset="100%" stopColor="#B5563E" />
         </linearGradient>
         {/* Distant hills */}
         <linearGradient id="hills-back" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#7B4D2E" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#5C3920" stopOpacity="0.85" />
+          <stop offset="0%" stopColor="#7D2C18" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#56423E" stopOpacity="0.85" />
         </linearGradient>
         {/* Mid hills */}
         <linearGradient id="hills-mid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4A6650" />
-          <stop offset="100%" stopColor="#33493A" />
+          <stop offset="0%" stopColor="#4F6B55" />
+          <stop offset="100%" stopColor="#324D38" />
         </linearGradient>
         {/* Foreground field */}
         <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#C8A056" />
-          <stop offset="100%" stopColor="#9B7A28" />
+          <stop offset="0%" stopColor="#ECC15F" />
+          <stop offset="100%" stopColor="#8F6D0E" />
         </linearGradient>
         {/* Sun glow */}
         <radialGradient id="sun-glow" cx="0.7" cy="0.35" r="0.4">
           <stop offset="0%" stopColor="#FFFCEE" stopOpacity="0.9" />
-          <stop offset="40%" stopColor="#F4D78F" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#F4D78F" stopOpacity="0" />
+          <stop offset="40%" stopColor="#ECC15F" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#ECC15F" stopOpacity="0" />
         </radialGradient>
         {/* SVG noise filter for grain */}
         <filter id="grain">
           <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
-          <feColorMatrix values="0 0 0 0 0.18  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.18 0" />
+          <feColorMatrix values="0 0 0 0 0.15  0 0 0 0 0.10  0 0 0 0 0.05  0 0 0 0.18 0" />
           <feComposite operator="in" in2="SourceGraphic" />
         </filter>
       </defs>
@@ -52,8 +52,8 @@ export function FarmScene({ className }: { className?: string }) {
       <rect x="0" y="0" width="800" height="900" fill="url(#sun-glow)" />
 
       {/* Sun */}
-      <circle cx="560" cy="420" r="60" fill="#FFEEC2" opacity="0.85" />
-      <circle cx="560" cy="420" r="40" fill="#FAF5ED" />
+      <circle cx="560" cy="420" r="60" fill="#FFEADB" opacity="0.85" />
+      <circle cx="560" cy="420" r="40" fill="#FFF8F5" />
 
       {/* Far hills */}
       <path
@@ -78,7 +78,7 @@ export function FarmScene({ className }: { className?: string }) {
       </g>
 
       {/* Distant tree line */}
-      <g fill="#33493A" opacity="0.85">
+      <g fill="#324D38" opacity="0.85">
         <ellipse cx="80" cy="790" rx="28" ry="22" />
         <ellipse cx="140" cy="785" rx="20" ry="18" />
         <ellipse cx="200" cy="788" rx="32" ry="24" />
@@ -92,7 +92,7 @@ export function FarmScene({ className }: { className?: string }) {
         {/* Barn body */}
         <path
           d="M 0 60 L 0 25 L 50 0 L 100 25 L 100 60 Z"
-          fill="#2D1F12"
+          fill="#26190C"
           stroke="#1F140A"
           strokeWidth="1"
         />
@@ -100,10 +100,10 @@ export function FarmScene({ className }: { className?: string }) {
         <rect x="38" y="35" width="24" height="25" fill="#1F140A" />
         <line x1="50" y1="35" x2="50" y2="60" stroke="#3A2A1A" strokeWidth="0.5" />
         {/* Roof line accent */}
-        <path d="M 0 25 L 50 0 L 100 25" fill="none" stroke="#9B7A28" strokeWidth="1.2" />
+        <path d="M 0 25 L 50 0 L 100 25" fill="none" stroke="#8F6D0E" strokeWidth="1.2" />
         {/* Silo */}
-        <rect x="100" y="20" width="12" height="40" fill="#2D1F12" />
-        <ellipse cx="106" cy="20" rx="6" ry="3" fill="#2D1F12" />
+        <rect x="100" y="20" width="12" height="40" fill="#26190C" />
+        <ellipse cx="106" cy="20" rx="6" ry="3" fill="#26190C" />
       </g>
 
       {/* Fence */}
@@ -117,13 +117,13 @@ export function FarmScene({ className }: { className?: string }) {
       </g>
 
       {/* A single wheat sheaf in the lower right corner */}
-      <g transform="translate(670, 990) scale(2.5)" fill="#9B7A28" opacity="0.9">
+      <g transform="translate(670, 990) scale(2.5)" fill="#8F6D0E" opacity="0.9">
         <line
           x1="12"
           y1="32"
           x2="12"
           y2="6"
-          stroke="#9B7A28"
+          stroke="#8F6D0E"
           strokeWidth="1.2"
         />
         {[8, 12, 16, 20, 24].map((y, i) => (
@@ -153,7 +153,7 @@ export function FarmScene({ className }: { className?: string }) {
         y="0"
         width="800"
         height="1200"
-        fill="rgba(45,31,18,0.06)"
+        fill="rgba(38,25,12,0.06)"
         filter="url(#grain)"
       />
     </svg>

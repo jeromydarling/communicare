@@ -92,7 +92,7 @@ export default function FindPage() {
         const el = document.createElement("button");
         el.className =
           "communicare-pin block w-9 h-9 rounded-full bg-brick text-parchment shadow-lg cursor-pointer flex items-center justify-center transition-transform hover:scale-110";
-        el.style.border = "2px solid #FAF5ED";
+        el.style.border = "2px solid #FFF8F5";
         el.title = farm.name;
         el.innerHTML = kindGlyph(farm.kind);
         el.addEventListener("click", () => setSelected(farm));

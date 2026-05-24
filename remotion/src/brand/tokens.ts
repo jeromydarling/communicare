@@ -3,20 +3,24 @@
 // skill (.claude/skills/communicare-voice/SKILL.md) is the source of truth
 // on tone.
 
+// Mirrors tailwind.config.ts → colors. Adopted from Stitch's
+// `agrarian_heritage` palette: warmer + pinker. Edit both files together.
 export const palette = {
-  parchment: "#FAF5ED",
-  cream: "#F2EAD8",
-  cream2: "#EFE4CD",
-  soil: "#2D1F12",
-  soil2: "#4A3621",
-  wheat: "#C19A3C",
-  wheatDark: "#9B7A28",
+  parchment: "#FFF8F5",
+  cream: "#FFEADB",
+  cream2: "#F8DEC9",
+  soil: "#26190C",
+  soil2: "#56423E",
+  wheat: "#ECC15F",
+  wheatDark: "#8F6D0E",
   brick: "#B5563E",
-  brickDark: "#8E3F2B",
-  moss: "#4A6650",
-  mossDark: "#33493A",
+  brickDark: "#963F28",
+  moss: "#4F6B55",
+  mossDark: "#324D38",
   sky: "#8FB3D3",
-  clay: "#D9B98C",
+  clay: "#EFD5C1",
+  outline: "#89726D",
+  outlineSoft: "#DCC1BA",
 } as const;
 
 export const fonts = {

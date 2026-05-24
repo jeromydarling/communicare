@@ -32,10 +32,10 @@ type Palette = {
 const PALETTES: Palette[] = [
   {
     id: "cream",
-    name: "Cream & brick",
-    bg: "#FAF5ED",
-    surface: "#F2EAD8",
-    text: "#2D1F12",
+    name: "Agrarian heritage",
+    bg: "#FFF8F5",
+    surface: "#FFEADB",
+    text: "#26190C",
     accent: "#B5563E",
     hint: "Our default — warmest. Best for vegetable and mixed farms.",
   },
@@ -45,7 +45,7 @@ const PALETTES: Palette[] = [
     bg: "#F2F3EF",
     surface: "#DCE3D8",
     text: "#1F2A1F",
-    accent: "#33493A",
+    accent: "#324D38",
     hint: "Cooler, forest-y. Good for orchards and tree-fruit farms.",
   },
   {
@@ -53,8 +53,8 @@ const PALETTES: Palette[] = [
     name: "Midnight & wheat",
     bg: "#1F1814",
     surface: "#2D2520",
-    text: "#FAF5ED",
-    accent: "#C19A3C",
+    text: "#FFF8F5",
+    accent: "#ECC15F",
     hint: "Dark editorial. Works for grass-fed meat and herd-share dairies.",
   },
   {

@@ -43,7 +43,7 @@ export function PickupTicketCard({
     QRCode.toDataURL(url, {
       margin: 1,
       width: 320,
-      color: { dark: "#2D1F12", light: "#FAF5ED" },
+      color: { dark: "#26190C", light: "#FFF8F5" },
       errorCorrectionLevel: "M",
     }).then((dataUrl) => {
       if (!cancelled) setQr(dataUrl);

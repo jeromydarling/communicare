@@ -36,17 +36,23 @@ export function Nav() {
             See a farm
           </Link>
           <Link
-            href="/come-in"
+            href="/find"
             className="hover:text-brick transition-colors text-soil/65"
+          >
+            Find a farm
+          </Link>
+          <Link
+            href="/come-in"
+            className="hover:text-brick transition-colors text-soil/65 text-sm"
           >
             Come in
           </Link>
-          <Link href="/join" className="btn btn-ghost py-2 px-4 text-sm">
-            Join the circle
+          <Link href="/demo" className="btn btn-primary py-2 px-4 text-sm">
+            Try the demo →
           </Link>
         </nav>
-        <Link href="/join" className="md:hidden btn btn-ghost py-2 px-4 text-sm">
-          Join
+        <Link href="/demo" className="md:hidden btn btn-primary py-2 px-4 text-sm">
+          Demo →
         </Link>
       </div>
     </header>

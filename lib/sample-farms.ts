@@ -20,6 +20,8 @@ export type SampleFarm = {
   };
   pickup: { place: string; day: string; window: string }[];
   faq: { q: string; a: string }[];
+  // [longitude, latitude] for the discovery map
+  coords: [number, number];
 };
 
 export const sampleFarms: SampleFarm[] = [
@@ -79,6 +81,7 @@ export const sampleFarms: SampleFarm[] = [
         a: "Please. We have a sandbox, a friendly dog, and tomatoes you may eat off the vine.",
       },
     ],
+    coords: [-82.0834, 39.3292],
   },
   {
     slug: "three-forks",
@@ -135,6 +138,7 @@ export const sampleFarms: SampleFarm[] = [
         a: "Yes. Saturday mornings during pickup, anytime by arrangement. The cows will remember you faster than you'll remember them.",
       },
     ],
+    coords: [-105.8231, 39.2247],
   },
   {
     slug: "low-creek",
@@ -191,6 +195,7 @@ export const sampleFarms: SampleFarm[] = [
         a: "No. We're a small operation and shipping frozen meat well takes infrastructure we don't have. The drop sites are how we serve people outside Lewis County.",
       },
     ],
+    coords: [-87.5495, 35.5520],
   },
   {
     slug: "morning-glory",
@@ -241,6 +246,7 @@ export const sampleFarms: SampleFarm[] = [
         a: "Yes, starting in 2026. We're working on it.",
       },
     ],
+    coords: [-122.8164, 38.4021],
   },
 ];
 

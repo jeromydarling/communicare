@@ -74,5 +74,16 @@ inspector_port = 8083
 [functions.generate-homepage]
 verify_jwt = false
 
+# Twilio sends raw POSTs with X-Twilio-Signature headers, not Supabase JWTs.
+# The function verifies the signature itself.
+[functions.twilio-webhook]
+verify_jwt = false
+
+# Stripe webhooks ditto: signed via stripe-signature, not Supabase JWT.
+# The onboard op IS gated to authenticated users in production (set to true
+# once you're ready and front it with a Next.js Route Handler instead).
+[functions.stripe-connect]
+verify_jwt = false
+
 [analytics]
 enabled = false

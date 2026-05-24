@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
-import { Nav } from "@/components/nav";
-import { Footer } from "@/components/footer";
 
 const display = Fraunces({
   subsets: ["latin"],
@@ -29,6 +27,9 @@ export const metadata: Metadata = {
   },
 };
 
+// Root layout is intentionally bare — just html/body + fonts. The
+// public Nav + Footer live in app/(public)/layout.tsx so the farmer
+// and member dashboards can take over the whole viewport.
 export default function RootLayout({
   children,
 }: {
@@ -36,11 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body className="min-h-screen flex flex-col bg-parchment text-soil">
-        <Nav />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
+      <body className="min-h-screen bg-parchment text-soil">{children}</body>
     </html>
   );
 }

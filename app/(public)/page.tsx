@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Wheat, Sun, Jar, Leaf, Barn } from "@/components/mark";
 import { sampleFarms } from "@/lib/sample-farms";
+import {
+  SmsSwapScreenshot,
+  RosterScreenshot,
+  ShareCardScreenshot,
+  HomepageGeneratorScreenshot,
+} from "@/components/screenshots";
 
 export default function Home() {
   return (
@@ -27,13 +33,16 @@ export default function Home() {
                 contract and no setup. We made this as a gift.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-4 fade-up fade-up-delay-3">
-                <Link href="/homepage" className="btn btn-primary">
-                  Try the AI homepage →
+                <Link href="/demo" className="btn btn-primary">
+                  Open the demo →
                 </Link>
-                <Link href="/join" className="btn btn-ghost">
-                  Join the early circle
+                <Link href="/homepage" className="btn btn-ghost">
+                  Try the AI homepage
                 </Link>
-                <span className="text-sm text-soil/55 italic ml-2">
+                <Link href="/find" className="btn btn-ghost">
+                  Find a farm
+                </Link>
+                <span className="text-sm text-soil/55 italic ml-2 w-full md:w-auto">
                   (no credit card. no demo call. ever.)
                 </span>
               </div>
@@ -133,6 +142,99 @@ export default function Home() {
         </div>
       </section>
 
+      {/* WHAT IT ACTUALLY LOOKS LIKE — three stripes alternating side */}
+      <section className="border-t border-soil/15 bg-cream">
+        <div className="max-w-page mx-auto px-6 py-24">
+          <div className="text-center mb-16">
+            <div className="small-caps text-xs text-brick mb-3">
+              The work, on a screen
+            </div>
+            <h2 className="display text-4xl md:text-5xl font-medium leading-tight">
+              What it actually looks like.
+            </h2>
+            <p className="text-soil/65 italic mt-4 max-w-xl mx-auto">
+              These are the real screens, rendered in your browser as you
+              read.
+            </p>
+          </div>
+
+          {/* Stripe 1 — SMS swap */}
+          <div className="grid md:grid-cols-2 gap-12 items-center mb-24">
+            <div>
+              <div className="small-caps text-xs text-wheat mb-2">№ 01</div>
+              <h3 className="display text-3xl font-medium mb-4 leading-tight">
+                Your members order
+                <br />
+                by texting back.
+              </h3>
+              <p className="text-soil/80 leading-relaxed mb-4">
+                We text every member their share Monday morning. They reply
+                with what they want — <span className="font-mono text-soil">swap kale for spinach</span>,{" "}
+                <span className="font-mono text-soil">skip</span>,{" "}
+                <span className="font-mono text-soil">donate</span>. No app
+                to open. No password to remember. No web form to fill in.
+              </p>
+              <p className="text-soil/65 italic">
+                The fastest way to keep a CSA member happy is to make sure
+                they never need to remember a password.
+              </p>
+            </div>
+            <div className="md:order-last">
+              <SmsSwapScreenshot />
+            </div>
+          </div>
+
+          {/* Stripe 2 — Pickup roster */}
+          <div className="grid md:grid-cols-2 gap-12 items-center mb-24">
+            <div className="md:order-2">
+              <div className="small-caps text-xs text-wheat mb-2">№ 02</div>
+              <h3 className="display text-3xl font-medium mb-4 leading-tight">
+                The pickup roster
+                <br />
+                fits in your apron pocket.
+              </h3>
+              <p className="text-soil/80 leading-relaxed mb-4">
+                At the market, at the farm gate, at the church parking
+                lot — pull out your phone, see who's coming, check off
+                names as they pick up, long-press a no-show to text them.
+              </p>
+              <p className="text-soil/65 italic">
+                Long-press the leftover boxes at the end of the window to
+                donate them in one tap. Everyone's account is credited.
+              </p>
+            </div>
+            <div className="md:order-1">
+              <RosterScreenshot />
+            </div>
+          </div>
+
+          {/* Stripe 3 — Share card */}
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="small-caps text-xs text-wheat mb-2">№ 03</div>
+              <h3 className="display text-3xl font-medium mb-4 leading-tight">
+                A poster you can post
+                <br />
+                in two taps.
+              </h3>
+              <p className="text-soil/80 leading-relaxed mb-4">
+                Every Tuesday we generate an Instagram-ready square card of
+                what's in this week's share — using your farm's photos and
+                colors. Post it. The neighbors will come.
+              </p>
+              <p className="text-soil/65 italic">
+                We also generate a print-ready QR poster for the farmers
+                market, a press kit page for local writers, and an embed
+                code for your existing website.
+              </p>
+            </div>
+            <div className="md:order-last">
+              <ShareCardScreenshot />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* PRICE — the single line */}
       <section className="bg-soil text-parchment relative overflow-hidden">
         <div className="absolute inset-0 bg-grain opacity-30 pointer-events-none" />
@@ -169,6 +271,36 @@ export default function Home() {
             >
               Try the AI homepage
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* HOMEPAGE GENERATOR PREVIEW */}
+      <section className="max-w-page mx-auto px-6 py-24">
+        <div className="grid md:grid-cols-12 gap-10 items-center">
+          <div className="md:col-span-5">
+            <div className="small-caps text-xs text-brick mb-3">
+              The AI homepage
+            </div>
+            <h2 className="display text-4xl md:text-5xl font-medium leading-tight">
+              A site for your farm,
+              <br />
+              drafted in under a minute.
+            </h2>
+            <p className="mt-6 text-soil/80 leading-relaxed">
+              Answer six questions in your own words. Our model — Claude
+              Opus 4.7 — drafts a warm, specific one-page site that sounds
+              like a person, not a brand. Edit any paragraph; ask the AI to
+              rewrite a section in a different tone; publish in one click.
+            </p>
+            <div className="mt-8">
+              <Link href="/homepage" className="btn btn-primary">
+                Try it now →
+              </Link>
+            </div>
+          </div>
+          <div className="md:col-span-7">
+            <HomepageGeneratorScreenshot />
           </div>
         </div>
       </section>
@@ -275,12 +407,16 @@ export default function Home() {
           If you keep a farm, we would like to make this for you.
         </h2>
         <p className="mt-6 max-w-xl mx-auto text-lg text-soil/75 italic">
-          Tell us your farm's name and a way to reach you. We will email when
-          we are ready to receive your share.
+          Open the live demo to see what a Tuesday looks like inside
+          Communicare. Or leave your name and we&apos;ll email when we&apos;re
+          ready to receive your farm.
         </p>
-        <div className="mt-10">
-          <Link href="/join" className="btn btn-primary">
-            Join the early circle →
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <Link href="/demo" className="btn btn-primary">
+            Open the demo →
+          </Link>
+          <Link href="/join" className="btn btn-ghost">
+            Join the early circle
           </Link>
         </div>
         <div className="ornament mt-20 max-w-md mx-auto">❦ ◊ ❦</div>

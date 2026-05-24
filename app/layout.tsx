@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Source_Serif_4 } from "next/font/google";
+import { Fraunces, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const display = Fraunces({
@@ -13,6 +13,13 @@ const body = Source_Serif_4({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -36,7 +43,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html
+      lang="en"
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
+    >
       <body className="min-h-screen bg-parchment text-soil">{children}</body>
     </html>
   );

@@ -9,25 +9,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Adopted from Stitch's `agrarian_heritage` palette — warmer, pinker,
-        // more "old farmhouse + terracotta" than our previous cooler cream.
+        // Lighter, airier "agrarian almanac" palette. Page background is a
+        // pale pink-cream wash; cards are pure white with thin outlines.
         // Token NAMES stay the same so components and Remotion don't break.
-        parchment: "#FFF8F5", // background (was #FAF5ED)
-        cream: "#FFEADB", // surface-container (was #F2EAD8)
-        cream2: "#F8DEC9", // surface-container-highest (was #EFE4CD)
-        soil: "#26190C", // on-surface (was #2D1F12) — richer
-        soil2: "#56423E", // on-surface-variant (was #4A3621)
-        wheat: "#ECC15F", // tertiary-fixed-dim (was #C19A3C) — brighter gold
-        wheatDark: "#8F6D0E", // tertiary-container (was #9B7A28)
-        brick: "#B5563E", // primary-container (unchanged)
-        brickDark: "#963F28", // primary (was #8E3F2B) — deeper
-        moss: "#4F6B55", // on-secondary-container (was #4A6650)
-        mossDark: "#324D38", // on-secondary-fixed-variant (was #33493A)
-        sky: "#8FB3D3", // unchanged — Stitch had no equivalent
-        clay: "#EFD5C1", // surface-dim (was #D9B98C) — warmer
-        // New tokens from Stitch
-        outline: "#89726D",
-        outlineSoft: "#DCC1BA",
+        parchment: "#FBF1EC", // page bg — lighter pink-cream
+        cream: "#FBE9DD", // accent surface (eyebrow tints, banners)
+        cream2: "#F5E0D2", // slightly deeper surface
+        soil: "#1A1410", // text — nearly black, warm
+        soil2: "#56423E", // muted body text
+        wheat: "#ECC15F", // tertiary-fixed-dim
+        wheatDark: "#8F6D0E", // tertiary-container
+        brick: "#C16850", // a touch lighter / more salmon than before
+        brickDark: "#963F28", // primary
+        moss: "#7A8E70", // softer sage for muted cards
+        mossDark: "#324D38",
+        sky: "#8FB3D3",
+        clay: "#EFD5C1",
+        outline: "#DCC1BA", // hairlines / card borders — soft tan, not gray
+        outlineSoft: "#EBD9CF",
         error: "#BA1A1A",
         errorSoft: "#FFDAD6",
       },

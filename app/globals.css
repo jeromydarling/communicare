@@ -5,12 +5,13 @@
 :root {
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "Source Serif 4", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 html,
 body {
-  background-color: #fff8f5;
-  color: #26190c;
+  background-color: #fbf1ec;
+  color: #1a1410;
   font-family: var(--font-body);
   font-feature-settings: "kern", "liga", "onum";
   -webkit-font-smoothing: antialiased;
@@ -19,7 +20,7 @@ body {
 
 ::selection {
   background: #ecc15f;
-  color: #26190c;
+  color: #1a1410;
 }
 
 @layer components {
@@ -30,9 +31,13 @@ body {
   }
 
   .small-caps {
-    font-variant-caps: all-small-caps;
-    letter-spacing: 0.12em;
+    /* Monospace tracked caps — like the labels in the agrarian almanac mock.
+       Falls back to font-variant-caps if mono fails to load. */
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
     font-weight: 500;
+    font-feature-settings: "kern", "ss01";
   }
 
   .rule {
@@ -80,10 +85,11 @@ body {
     align-items: center;
     gap: 0.5rem;
     padding: 0.85rem 1.6rem;
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 1.05rem;
-    letter-spacing: 0.01em;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     border: 1px solid currentColor;
     border-radius: 999px;
     transition: all 200ms ease;
@@ -91,42 +97,44 @@ body {
   }
 
   .btn-primary {
-    background: #26190c;
-    color: #fff8f5;
-    border-color: #26190c;
+    background: #c16850;
+    color: #fbf1ec;
+    border-color: #c16850;
   }
 
   .btn-primary:hover {
-    background: #b5563e;
-    border-color: #b5563e;
+    background: #963f28;
+    border-color: #963f28;
   }
 
   .btn-ghost {
     background: transparent;
-    color: #26190c;
+    color: #1a1410;
+    border-color: rgba(26, 20, 16, 0.15);
   }
 
   .btn-ghost:hover {
-    background: #26190c;
-    color: #fff8f5;
+    background: #1a1410;
+    color: #fbf1ec;
+    border-color: #1a1410;
   }
 
   .field {
     width: 100%;
-    background: #fff8f5;
-    border: 1px solid rgba(38, 25, 12, 0.25);
+    background: #ffffff;
+    border: 1px solid #ebd9cf;
     padding: 0.85rem 1rem;
     font-family: var(--font-body);
     font-size: 1.05rem;
-    color: #26190c;
-    border-radius: 4px;
-    transition: border-color 150ms ease;
+    color: #1a1410;
+    border-radius: 8px;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
   }
 
   .field:focus {
     outline: none;
-    border-color: #b5563e;
-    box-shadow: 0 0 0 3px rgba(181, 86, 62, 0.15);
+    border-color: #c16850;
+    box-shadow: 0 0 0 3px rgba(193, 104, 80, 0.15);
   }
 
   textarea.field {
@@ -153,9 +161,12 @@ body {
 
   .paper {
     background: #ffffff;
-    border: 1px solid rgba(38, 25, 12, 0.12);
-    box-shadow: 0 1px 0 rgba(38, 25, 12, 0.04),
-      0 20px 40px -20px rgba(38, 25, 12, 0.18);
+    /* Soft tan hairline outline + a near-invisible drop. The almanac
+       mock uses minimal shadow — we follow it. */
+    border: 1px solid #ebd9cf;
+    border-radius: 12px;
+    box-shadow: 0 1px 0 rgba(38, 25, 12, 0.02),
+      0 12px 32px -24px rgba(38, 25, 12, 0.12);
   }
 
   .grain-overlay {

@@ -1,0 +1,7 @@
+node_modules/
+out/
+.env
+.env.local
+public/audio/*.mp3
+public/audio/*.wav
+!public/audio/.gitkeep

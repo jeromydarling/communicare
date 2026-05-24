@@ -7,3 +7,9 @@ out/
 .DS_Store
 .vercel
 next-env.d.ts
+
+# Remotion subproject ignores
+remotion/node_modules/
+remotion/out/
+remotion/public/audio/*.mp3
+remotion/public/audio/*.wav

@@ -1,0 +1,32 @@
+{
+  "name": "communicare-remotion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Communicare marketing & explainer videos rendered with Remotion. Brand-locked to the main app's palette and type.",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render Communicare out/communicare.mp4",
+    "render:portrait": "remotion render CommunicarePortrait out/communicare-portrait.mp4",
+    "render:still": "remotion still Communicare --frame=15 out/poster.png",
+    "audio": "tsx scripts/generate-audio.ts",
+    "voiceover": "tsx scripts/generate-audio.ts --voiceover-only",
+    "music": "tsx scripts/generate-audio.ts --music-only"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.300",
+    "@remotion/google-fonts": "^4.0.300",
+    "@remotion/media-utils": "^4.0.300",
+    "@remotion/zod-types": "^4.0.300",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.300",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

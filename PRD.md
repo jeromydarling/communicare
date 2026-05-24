@@ -8,11 +8,13 @@
 
 ## 1. Executive Summary
 
-We are building a mobile-first SaaS for small direct-to-consumer farms (CSAs, raw-milk herd shares, grass-fed meat, pastured eggs, market gardens) and their customers. The category is fragmented, dated, and resented; the December 2024 sunset of Harvie left ~150 farms shopping for a new home, and the dominant marketer (Barn2Door) is widely complained about for high-pressure sales, $399–$599 setup, and data lock-in.
+We are building a mobile-first app for small direct-to-consumer farms (CSAs, raw-milk herd shares, grass-fed meat, pastured eggs, market gardens) and their customers. The category is fragmented, dated, and resented; the December 2024 sunset of Harvie left ~150 farms shopping for a new home, and the dominant marketer (Barn2Door) is widely complained about for high-pressure sales, $399–$599 setup, and data lock-in.
 
-**Our wedge:** the simplest possible customer experience (magic-link login, SMS-driven weekly swap/skip/pause loop, no passwords) combined with a mobile-first farm admin that handles inventory, pickup rosters, and the two billing models incumbents do poorly: catch-weight meat shares and herd-share boarding fees.
+**This is a gift to the farm-share community, not a venture-scale SaaS bet.** We charge one flat, extremely low price for the software (placeholder: **$9/month, no tiers, no setup, no contract**), and earn a small platform fee only on the opt-in "Managed Payments" service for farms that don't want to set up their own processor.
 
-**Positioning, in one line:** *Stripe-simple farm software, with passwordless login, SMS that works, and no setup fee.*
+**Our wedge:** the simplest possible customer experience (magic-link login, SMS-driven weekly swap/skip/pause loop, no passwords) combined with a mobile-first farm admin that handles inventory, pickup rosters, and the two billing models incumbents do poorly: catch-weight meat shares and herd-share boarding fees. Plus an AI-generated one-page farm homepage and social-promotion toolkit so farms can market themselves without hiring a designer.
+
+**Positioning, in one line:** *The $9/month app that runs your farm share — keep your own payment processor, get a free homepage, and let your members swap a box by texting back.*
 
 ---
 
@@ -53,8 +55,11 @@ We are building a mobile-first SaaS for small direct-to-consumer farms (CSAs, ra
 | Axis | Barn2Door | Local Line | GrazeCart | CSAware | Harvie (RIP) | **Us** |
 |---|---|---|---|---|---|---|
 | Setup fee | $399–$599 | $0 | $0 | $0 | $0 | **$0** |
-| Monthly | $99–$299 | $99–$199 | $124+ | $100 min + 2% | n/a | **$79–$249** |
+| Monthly | $99–$299 | $99–$199 | $124+ | $100 min + 2% | n/a | **$9 flat** |
 | Contract | Annual | Monthly | Monthly | Monthly | n/a | **Monthly** |
+| Bring-your-own payment processor | No | No | No | No | No | **Yes (default)** |
+| AI-generated farm homepage | No | No | No | No | No | **Yes** |
+| Social-promotion toolkit | No | No | No | No | No | **Yes** |
 | Magic-link auth | No | No | No | No | No | **Yes** |
 | SMS-driven swap/skip | No | No | No | No | Partial | **Yes** |
 | Catch-weight billing | Yes (clunky) | Limited | Yes | No | No | **Yes (clean)** |
@@ -67,12 +72,15 @@ We are building a mobile-first SaaS for small direct-to-consumer farms (CSAs, ra
 
 ## 5. Product Principles
 
-1. **Passwordless by default.** Magic link to email, SMS-OTP fallback. Passwords are an anti-pattern for a 1×/week app.
-2. **SMS is the primary surface, not the app.** Customers should never have to log in to swap, skip, pause, gift, or change pickup. The app is for the 10% of actions that need a screen.
-3. **Mobile-first for both sides.** Every farmer flow must work on a phone, in a barn, with one hand, on bad LTE.
-4. **Flat pricing, no skims, no lock-in.** Month-to-month, instant CSV export, public pricing page.
-5. **Templates over blank slates.** Pre-built SMS/email flows per farm type. Pre-built share/boarding contracts per state. Empty composers lose farmers.
-6. **No demo-call wall.** Sign up and try the product in 60 seconds.
+1. **This is a gift to the farms.** One flat low price, no tiers, no upsell tricks. We make money on optional Managed Payments only.
+2. **Bring your own payment processor.** Farms already use Stripe, Square, Helcim, Venmo, cash, or check. Don't make them rip-and-replace. Managed Payments via our Stripe Connect is optional, for farms that want zero setup.
+3. **Passwordless by default.** Magic link to email, SMS-OTP fallback. Passwords are an anti-pattern for a 1×/week app.
+4. **SMS is the primary surface, not the app.** Customers should never have to log in to swap, skip, pause, gift, or change pickup. The app is for the 10% of actions that need a screen.
+5. **Mobile-first for both sides.** Every farmer flow must work on a phone, in a barn, with one hand, on bad LTE.
+6. **Flat pricing, no skims, no lock-in.** Month-to-month, instant CSV export, public pricing page.
+7. **Templates over blank slates.** Pre-built SMS/email flows per farm type. Pre-built share/boarding contracts per state. AI generates the homepage so the farmer never faces an empty composer.
+8. **No demo-call wall.** Sign up and try the product in 60 seconds.
+9. **Discovery comes last.** The national farm-share map is the final phase — we only build it once we have enough farms on the platform to make discovery genuinely useful.
 
 ---
 
@@ -119,10 +127,13 @@ We are building a mobile-first SaaS for small direct-to-consumer farms (CSAs, ra
 
 **Onboarding (10 minutes, self-serve)**
 - Pick farm type (CSA vegetable / herd share dairy / meat / eggs / mixed) → loads sensible defaults
-- Stripe Connect Express OAuth (5 min including ID verification)
+- **Pick a payment mode:**
+  - *Bring Your Own* (default): paste your Stripe / Square / PayPal / Venmo / Zelle / ACH details, or "I'll collect by cash/check at pickup." We track what's owed; you collect however you already do.
+  - *Managed Payments*: we set you up on Stripe Connect Express (5 min including ID verification). 1% platform fee on top of Stripe's own fees; we handle disputes, payouts, and 1099s.
 - Add first 5 products with photos
 - Set pickup sites & windows
 - Set share definitions
+- **Generate your homepage**: answer 6 questions (farm name, location, what you grow, your story in 2 sentences, hours, photos) → AI drafts a working one-page site you can publish in one click
 - Invite first members by CSV or paste a Barn2Door / Harvie export — we parse and migrate
 
 **Inventory**
@@ -152,21 +163,55 @@ We are building a mobile-first SaaS for small direct-to-consumer farms (CSAs, ra
 - 3-year contract retention with audit log
 - Charged as "Herd Share Boarding Fee" on card descriptors (never "raw milk")
 
-**Money**
-- Stripe Connect Express, per-farm merchant
-- Stripe Subscriptions for recurring billing
-- Plaid-verified ACH for upfront / boarding fees (0.8% capped at $5 vs ~3% on cards — material savings on $600 CSA shares)
-- Stripe Customer Balance backing our store-credit ledger
-- Skip-week button auto-issues credit (positive ledger entry referencing the share-week)
-- Damaged-item: admin issues credit, no Stripe refund (saves fees & reconciliation)
-- Auto-debit priority: apply credit balance first, charge card/ACH for remainder
-- Top-up flow: "Add $500, get $25 bonus" (single Stripe PaymentIntent, $525 credit to ledger)
-- Monthly statement PDF emailed to each member
+**Money (two modes — farmer picks at onboarding)**
+
+*Mode A — Bring Your Own Processor (default, $0 platform fee)*
+- Farm enters its existing payment method(s): Stripe API key, Square OAuth, PayPal email, Venmo handle, Zelle email, bank/ACH details, "cash at pickup," or "check by mail."
+- We generate a checkout link per order that redirects to the farm's chosen processor (Stripe Checkout / Square Checkout / PayPal.me link / Venmo deep link), or shows pay-at-pickup instructions.
+- We track paid / unpaid status; farm reconciles in their own processor dashboard.
+- Members can store a card-on-file with the farm's own Stripe / Square if the farm has connected those.
+- We never touch the money — the farm's processor settles directly to the farm.
+
+*Mode B — Managed Payments (opt-in, 1% platform fee + Stripe pass-through)*
+- Stripe Connect Express, per-farm merchant, we hold the platform Stripe account.
+- Stripe Subscriptions for recurring billing.
+- Plaid-verified ACH for upfront / boarding fees (0.8% capped at $5 vs ~3% on cards — material savings on $600 CSA shares).
+- Stripe Customer Balance backing our store-credit ledger.
+- Skip-week button auto-issues credit (positive ledger entry referencing the share-week).
+- Damaged-item: admin issues credit, no Stripe refund (saves fees & reconciliation).
+- Auto-debit priority: apply credit balance first, charge card/ACH for remainder.
+- Top-up flow: "Add $500, get $25 bonus" (single Stripe PaymentIntent, $525 credit to ledger).
+- Monthly statement PDF emailed to each member.
+- 1% application fee taken via Stripe Connect (on top of Stripe's own 2.9%+30¢ or 0.8% ACH).
+- We handle: dispute responses, 1099-K issuance, payout schedule.
+
+*Credit ledger and store credits work in both modes* — in Mode A we track the IOU and surface it to the farm; in Mode B we settle it through Stripe Customer Balance.
 
 **Reports & data**
 - Sales by SKU, by member, by pickup site, by week
 - One-click CSV export of: members, orders, products, subscriptions, ledger entries
 - QuickBooks / Wave integration via CSV in v1; native sync in v2
+
+**AI-driven one-page CMS (every farm gets a homepage)**
+- 6-question setup wizard: farm name, location, what you grow, your story (2 sentences), pickup days, photos (3+).
+- AI (Claude) drafts: hero headline, "about the farm" paragraph, product callouts, FAQ, pickup info section, "subscribe to a share" CTA.
+- Farmer reviews, edits inline, publishes in one click.
+- Free subdomain: `farmname.communicare.farm` (or chosen brand domain TBD).
+- Custom domain support (CNAME) included in the $9 plan — no upcharge.
+- Auto-generated meta tags, JSON-LD `LocalBusiness` + `FoodEstablishment` schema, OpenGraph cards.
+- Re-generation: farmer can hit "rewrite this section in a friendlier tone" and AI redrafts.
+- Templates by farm type so the homepage looks different for a herd-share dairy vs a vegetable CSA vs a beef ranch.
+- This is **not** a general website builder — it's a one-page farm storefront. No blog, no multi-page nav. Resist scope creep here.
+
+**Social & community promotion toolkit**
+- **Auto-generated share cards**: every week, generate Instagram-ready square + story images of "this week's share" using farm photos + AI layout. Farmer taps "share to Instagram" → opens Instagram app with image pre-loaded.
+- **Subscribe link / QR**: every farm gets a short link (`comm.farm/elmwood`) and a downloadable QR poster (PDF, print-ready) for farmers markets, community boards, coffee shops.
+- **Embeddable subscribe widget**: 3-line JS snippet that drops a "Subscribe to our share" button onto any existing farm website (Squarespace, Wix, WordPress).
+- **Referral mechanic**: each member gets a personal referral link; first share for referrer earns a credit (farm-configurable amount, default $20).
+- **Gift-a-share**: any member can gift a 4-week share to a friend via SMS in 30 seconds — recipient gets a magic link to claim and pick a pickup site.
+- **"This week's share" email** auto-composed and sent to the farm's mailing list (BYO Mailchimp / ConvertKit or use ours for $0 included).
+- **Press kit page** auto-generated: high-res photos, farm story, owner quote, contact info — for local newspapers and food bloggers.
+- All assets carry the farm's brand, not ours (no "powered by" watermark on share cards in MVP — earn the right to brand later).
 
 ### 6.3 Explicitly out of scope for V1
 
@@ -176,7 +221,9 @@ We are building a mobile-first SaaS for small direct-to-consumer farms (CSAs, ra
 - Wholesale / restaurant accounts with custom price lists
 - Box customization UI (the swap-by-SMS flow covers 80% of the value)
 - SNAP / EBT online (V2 — requires MarketLink grant application, 3–6 month process)
-- Farmers-market POS hardware (use Stripe Terminal tap-to-pay on iPhone)
+- Farmers-market POS hardware (use Stripe Terminal tap-to-pay on iPhone in Managed Payments mode)
+- **National farm-share discovery map** (Phase 5 — built last, only once we have enough farms on platform to make it useful)
+- General website builder / blog / multi-page CMS (the AI homepage is intentionally one page only)
 
 ---
 
@@ -282,23 +329,48 @@ Append-only ledger and audit log for everything money-touching.
 
 ## 11. Pricing
 
-| Plan | Price | Includes |
-|---|---|---|
-| **Starter** | $79/mo | Up to 50 active members, 500 SMS segments/mo, all features |
-| **Grower** | $149/mo | Up to 250 active members, 2,000 SMS segments/mo, herd-share module, white-label SMS sender ID |
-| **Pro** | $249/mo | Unlimited members, 10,000 SMS segments/mo, priority support, custom contract templates, QuickBooks sync |
-| SMS overage | $0.02 / segment | beyond plan allowance |
+**One price. For everyone. Forever.**
 
-- **No setup fee.**
-- **No per-transaction skim** (farms pass through Stripe's own fees).
-- **Month-to-month, no annual contract.**
-- **30-day free trial, no credit card required to start.**
-- **One-click data export on cancel.**
+| | Price |
+|---|---|
+| **Software** | **$9 / month** (flat — placeholder; final price TBD) |
+| Setup fee | $0 |
+| Contract | Month-to-month |
+| Free trial | 30 days, no credit card required |
+| Member count | Unlimited |
+| Features | All of them. There are no tiers. |
+| SMS | Unlimited reasonable use (~2,000 segments/farm/mo soft cap; we email if you go wild) |
+| AI homepage | Included |
+| Promotion toolkit | Included |
+| Herd-share module | Included |
+| Catch-weight billing | Included |
+| Data export | One-click CSV anytime |
 
-Stripe processing (passed through):
+**Optional: Managed Payments add-on**
+- For farms that don't want to set up their own Stripe/Square/etc.
+- We set up Stripe Connect Express in 5 min.
+- **1% platform fee** on processed volume, on top of Stripe's own fees:
+  - Cards: 2.9% + $0.30 (Stripe) + 1% (us) = 3.9% + $0.30
+  - ACH: 0.8% capped at $5 (Stripe) + 1% (us)
+  - Tap-to-pay iPhone: 2.7% + $0.05 (Stripe) + 1% (us)
+- We handle: disputes, payouts, 1099-Ks.
+- Toggle off anytime; farm migrates to BYO mode with one click.
+
+**Why so cheap?**
+This is a gift to the farm-share community. Most of these farms gross $50k–$200k/year; $99/mo from Barn2Door is meaningful money. $9/mo is invisible. The mission is to make it irrational for a farm to *not* run on us. We earn enough on Managed Payments (the farms that opt in) and from the eventual national farm-share map (sponsored placements, lead-gen for new farms entering the space — TBD) to cover operating costs.
+
+**What we will never do**
+- Charge a setup fee.
+- Take a % of farm revenue when the farm is using their own processor.
+- Lock data in.
+- Hide pricing behind a demo call.
+- Charge per member, per pickup site, per product, per SMS, per anything.
+- Sell upsell tiers, "Pro" features, or "Enterprise" features.
+
+Stripe processing pass-through (Managed Payments only):
 - Cards: 2.9% + $0.30
 - ACH: 0.8% (capped at $5)
-- Tap-to-pay: 2.7% + $0.05
+- Tap-to-pay iPhone: 2.7% + $0.05
 
 ---
 
@@ -306,8 +378,8 @@ Stripe processing (passed through):
 
 ### 12.1 Beachhead (months 0–3)
 - **Cold-outreach the ~150 Harvie-displaced farms.** Mine the Local Line and GrownBy migration discussions for names; reach out via farm websites and Instagram DMs.
-- **Free white-glove migration** from Harvie / Barn2Door / Local Line exports (CSV import + Stripe-Connect transfer).
-- **Pitch:** "Sign up your members in 30 seconds — no password ever. Cancel anytime, export your data in one click. $49/mo for your first season."
+- **Free white-glove migration** from Harvie / Barn2Door / Local Line exports (CSV import + payment-method handoff).
+- **Pitch:** "$9/month, keep your own Stripe/Square, free AI-generated homepage, members swap a box by texting back. No contract, export your data anytime. We built this as a gift to farm shares."
 
 ### 12.2 Herd-share community (months 1–6)
 - Partner with **Farm-to-Consumer Legal Defense Fund** for distribution.
@@ -316,46 +388,80 @@ Stripe processing (passed through):
 - Ship the state contract template library as a free standalone tool to seed brand.
 
 ### 12.3 Content & SEO (continuous)
-- "Barn2Door alternative" SEO play (high-volume queries).
+- "Barn2Door alternative" SEO play (high-volume queries — and now even more compelling: "Barn2Door is $99/mo + setup, we're $9").
 - "How to start a CSA in [state]" guides with embedded onboarding.
 - Founder-led YouTube: weekly farm-software teardowns.
+- Free public farm-share starter kit: state contract templates + AI homepage generator + QR poster generator, all standalone, all funnels.
 
-### 12.4 Pricing experiment in beta
-- First 50 farms: $49/mo for life (founder pricing). Use to fund support staff and reference customers.
+### 12.4 The map flywheel (Phase 5+)
+- The national farm-share discovery map is the consumer-facing growth engine.
+- Every farm on platform gets a verified listing (real-time availability, accurate pickup info, owner-confirmed).
+- Non-platform farms get a basic scraped listing with a "Claim this listing" CTA → onboarding funnel.
+- For customers: best farm-share discovery experience in the country (LocalHarvest's listings are stale, Eatwild charges farms to list).
+- For us: every consumer search becomes a farm-acquisition opportunity.
+
+### 12.5 No founder-pricing tricks
+- $9 is $9 for everyone, day one. No early-bird discount, no founder pricing, no annual prepay discount.
+- The price IS the marketing.
 
 ---
 
 ## 13. Roadmap
 
 ### Phase 0 — Foundation (weeks 1–4)
-- Repo scaffolding, auth (magic link + OTP), Stripe Connect onboarding, basic farm + product CRUD, member sign-up
+- Repo scaffolding, magic-link + SMS-OTP auth, farm + product + member CRUD, BYO payment-processor config (Stripe key, Square OAuth, PayPal/Venmo handles, "cash at pickup")
 
-### Phase 1 — Core MVP (weeks 5–10)
-- Subscriptions, weekly share orders, pickup sites + roster phone view, customer SMS loop (swap/skip/pause), credit ledger
+### Phase 1 — Core MVP (weeks 5–11)
+- Subscriptions, weekly share orders, pickup sites + roster phone view, customer SMS loop (swap/skip/pause), credit ledger, **AI-generated one-page farm homepage**, subscribe-link + QR poster generator
 
-### Phase 2 — Specialization (weeks 11–14)
-- Catch-weight billing, herd-share module + e-sign, state contract templates, monthly statement PDFs
+### Phase 2 — Specialization (weeks 12–15)
+- Catch-weight billing, herd-share module + e-sign, state contract templates, monthly statement PDFs, Managed Payments option (Stripe Connect Express + 1% platform fee)
 
-### Phase 3 — Polish & Launch (weeks 15–18)
-- Onboarding wizard, CSV import from Barn2Door / Harvie / Local Line, public marketing site, pricing page, public beta launch
+### Phase 3 — Promotion toolkit (weeks 16–19)
+- Auto-generated social share cards (Instagram square + story), referral mechanic, gift-a-share by SMS, embeddable subscribe widget for existing farm sites, press-kit page, "this week's share" email composer
 
-### Phase 4 — Growth (months 5–9)
-- SNAP-online (MarketLink), QuickBooks sync, multi-channel inventory (farmers-market Stripe Terminal), wholesale price lists, native mobile shell
+### Phase 4 — Polish & Launch (weeks 20–22)
+- Onboarding wizard refinement, CSV import from Barn2Door / Harvie / Local Line, public marketing site, public beta launch
+
+### Phase 5 — National farm-share discovery map (months 6–9+)
+- **Built last, intentionally.** Public consumer-facing map of every farm share in the US.
+- Seeded from our platform farms (free, accurate, owner-verified data).
+- Augmented with scraped data from LocalHarvest, USDA, Eatwild, Real Milk finder, state ag departments (with attribution / opt-out).
+- Filters: share type (vegetable / dairy / meat / eggs), pickup type, certification, distance, price range, availability now.
+- "Claim your listing" CTA for non-platform farms — onboarding funnel back into the $9 plan.
+- Eventual revenue: sponsored top-of-list placements (clearly labeled), lead-gen for organic certifications, farm-tour booking. Carefully — must stay member-trusted.
+
+### Phase 6 — Growth (months 9–15)
+- SNAP-online (MarketLink — application started in parallel from Phase 1)
+- QuickBooks sync (native)
+- Stripe Terminal tap-to-pay for farmers-market POS (Managed Payments mode)
+- Wholesale / restaurant price lists
+- Native mobile shell (only if PWA telemetry justifies it)
+- Multi-farm cart (the marketplace mode for customers shopping across multiple platform farms)
 
 ---
 
 ## 14. Success Metrics
 
-**North-star:** weekly active farms × paying-member-count per farm.
+**North-star:** number of US farm shares running on us (the mission metric — not revenue).
+
+**Secondary:** members served × weeks-of-share-delivered (the value-to-the-community metric).
 
 **MVP success criteria (6 months post-launch):**
-- 50 paying farms
-- 4,000 active members across all farms
+- **500 paying farms** (the bar is much higher than a normal SaaS because the price is invisible — adoption should be the constraint, not willingness-to-pay)
+- 30,000 active members across all farms
 - 70%+ of customer actions (swap/skip/pause) happen via SMS, not web
 - Magic-link sign-up completion > 80% (vs Calendly's 71% benchmark post-passwordless)
-- Farmer NPS > 50
+- 80%+ of farms publish their AI homepage within 7 days of signup
+- 25%+ of farms opt in to Managed Payments (revenue funding for ongoing ops)
+- Farmer NPS > 60 (higher target — the price means we win the love or we go home)
 - Member retention season-over-season > 65% (vs industry baseline 45%)
-- < 3% farm churn / month
+- < 2% farm churn / month
+
+**Revenue at 6 months (sanity check):**
+- 500 farms × $9 = $4,500/mo from software
+- 125 farms (25%) on Managed Payments × ~$8k/mo GMV × 1% = $10,000/mo from platform fee
+- ~$14,500/mo total — covers a small team and infrastructure but not VC-scale. **By design.**
 
 ---
 
@@ -375,12 +481,24 @@ Stripe processing (passed through):
 
 ## 16. Open Questions
 
-1. **Multi-farm cart (v1 or v2?)** — customer research suggests demand ("one cart for this week's groceries"); operator simplicity suggests single-farm-at-a-time. Recommend v2 to avoid marketplace complexity in v1.
-2. **Native app priority** — PWA covers 90%; native lets us use push notifications without OS-level paid SMS. Suggest deferring to month 6+ based on PWA telemetry.
-3. **SNAP-online for v1?** — would unlock low-income customer base + federal grant funding (MarketLink). 3–6 month application. Suggest start application now in parallel; ship in v2.
-4. **Open-source the herd-share contract templates?** — high-trust signal for the community; potential SEO/distribution play. Recommend yes.
-5. **Repo name** — current repo is `communicare` (Latin "to share / commune"). Fits the brand if we want to keep it; otherwise rename. Suggest a brand workshop before launch.
-6. **Founding-team support model** — at $79/mo with phone-call-required support expectations, the first 50 customers will consume a lot of human time. Plan for founder-led support for first 6 months.
+### Resolved by new direction (2026-05-24)
+- ~~Pricing tiers~~ → resolved: **one flat price ($9/mo placeholder), no tiers**
+- ~~Stripe Connect default~~ → resolved: **BYO processor by default, Managed Payments opt-in**
+- ~~SNAP-online priority~~ → still deferred to Phase 6; start MarketLink application in parallel from Phase 1
+
+### Still open
+
+1. **Exact price point.** $9/mo is the placeholder. Candidates: $5, $9, $12, $15, $19, or free-with-Managed-Payments-only. Lower number = stronger gift narrative + faster adoption; higher number = more runway. Recommend $9.
+2. **Managed Payments platform fee.** 1% is placeholder; could be 0.5% (more generous) or 2% (faster path to profitability). Recommend 1% — material savings vs Barn2Door's 3–5% all-in but still funds ops.
+3. **Multi-farm cart** — defer to Phase 6. Customer demand exists but operator simplicity matters more in v1.
+4. **Native app priority** — PWA covers 90%; defer to Phase 6 based on PWA telemetry.
+5. **Open-source the herd-share contract templates?** — recommend yes (trust + SEO + distribution).
+6. **Repo name → product name.** Current repo is `communicare` (Latin "to share / commune"). Possible product names: Communicare, Farm.share, ShareFarm, Commons, Acre, Boxshare. Need a brand decision before public marketing site (Phase 4).
+7. **National map data strategy.** Scrape LocalHarvest / USDA / Eatwild with attribution and opt-out, or partner with them? Partnership is slower but more defensible. Scraping is faster but legally grayer.
+8. **AI homepage subdomain.** `farmname.communicare.farm` is placeholder. Need final root domain.
+9. **Founder-led support model.** At $9/mo, support cost matters even more than at $79. Plan: chat-first (Intercom-style) with founder coverage during business hours for first 500 farms; community forum / Discord for off-hours; AI-assisted first-response after Phase 4.
+10. **Mailing list product.** Do we ship our own list-sender (cheap, locked-in) or just generate Mailchimp/ConvertKit-compatible exports? Recommend ship our own — every dollar saved matters when farms only pay $9.
+11. **Branding-free social share cards in MVP, or "powered by" footer for distribution?** Recommend branding-free for the gift framing; revisit later.
 
 ---
 

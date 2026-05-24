@@ -19,8 +19,12 @@ const FARMER_NAV: NavItem[] = [
   { href: "/farmer/roster/", label: "Pickup roster" },
   { href: "/farmer/members/", label: "Members" },
   { href: "/farmer/messages/", label: "Messages" },
+  { href: "/farmer/emails/", label: "Emails" },
+  { href: "/farmer/log/", label: "Harvest log" },
+  { href: "/farmer/analytics/", label: "Analytics" },
   { href: "/farmer/homepage/", label: "Homepage" },
   { href: "/farmer/payments/", label: "Payments" },
+  { href: "/farmer/import/", label: "Import" },
   { href: "/farmer/settings/", label: "Settings" },
 ];
 

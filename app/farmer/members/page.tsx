@@ -87,7 +87,11 @@ export default function FarmerMembersPage() {
                 </tr>
               )}
               {filtered.map((m) => (
-                <tr key={m.id} className="border-b border-soil/8 last:border-0 hover:bg-cream/50">
+                <tr
+                  key={m.id}
+                  className="border-b border-soil/8 last:border-0 hover:bg-cream/50 cursor-pointer"
+                  onClick={() => (window.location.href = `/farmer/members/${m.id}/`)}
+                >
                   <td className="px-4 py-4">
                     <div className="display text-base">{m.display_name}</div>
                     <div className="text-[11px] text-soil/55">{m.email}</div>

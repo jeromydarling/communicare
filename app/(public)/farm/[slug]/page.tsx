@@ -57,10 +57,13 @@ export default async function FarmPage({
           <p className="mt-8 max-w-2xl text-xl md:text-2xl leading-relaxed text-soil/85">
             {farm.tagline}
           </p>
-          <div className="mt-10">
-            <a href="#join" className="btn btn-primary">
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href={`/farm/${farm.slug}/subscribe/`} className="btn btn-primary">
               Subscribe to a share →
-            </a>
+            </Link>
+            <Link href={`/farm/${farm.slug}/journal/`} className="btn btn-ghost">
+              Read the farm journal
+            </Link>
           </div>
         </div>
       </section>

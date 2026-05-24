@@ -98,7 +98,7 @@ export const Ornament: React.FC<{ char?: string; color?: string }> = ({
   <span
     style={{
       fontFamily: "Fraunces",
-      color: color ?? "rgba(38,25,12, 0.4)",
+      color: color ?? "rgba(26,20,16, 0.4)",
       fontSize: 28,
       letterSpacing: "0.5em",
     }}

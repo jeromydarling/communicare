@@ -71,7 +71,7 @@ export const SmsDemo: React.FC = () => {
             fontFamily: fonts.body,
             fontStyle: "italic",
             fontSize: portrait ? 24 : 28,
-            color: "rgba(38,25,12,0.65)",
+            color: "rgba(26,20,16,0.65)",
             marginTop: 28,
             opacity: interpolate(frame, [60, 90], [0, 1], { extrapolateRight: "clamp" }),
             lineHeight: 1.5,
@@ -123,7 +123,7 @@ function PhoneFrame({
         padding: 12,
         width: portrait ? 480 : 380,
         aspectRatio: "9/19.5",
-        boxShadow: "0 30px 80px -20px rgba(38,25,12,0.5)",
+        boxShadow: "0 30px 80px -20px rgba(26,20,16,0.5)",
         position: "relative",
       }}
     >
@@ -157,7 +157,7 @@ function PhoneFrame({
             textAlign: "center",
             fontFamily: fonts.display,
             fontSize: 16,
-            color: "rgba(38,25,12,0.6)",
+            color: "rgba(26,20,16,0.6)",
             marginBottom: 4,
           }}
         >

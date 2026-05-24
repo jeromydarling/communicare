@@ -82,7 +82,7 @@ export const Map: React.FC = () => {
           aspectRatio: "16/9",
           background: palette.parchment,
           borderRadius: 12,
-          border: `1px solid rgba(38,25,12,0.12)`,
+          border: `1px solid rgba(26,20,16,0.12)`,
           overflow: "hidden",
         }}
       >
@@ -136,7 +136,7 @@ export const Map: React.FC = () => {
           fontFamily: fonts.body,
           fontStyle: "italic",
           fontSize: portrait ? 22 : 26,
-          color: "rgba(38,25,12,0.65)",
+          color: "rgba(26,20,16,0.65)",
           marginTop: 36,
           opacity: interpolate(frame, [80, 110], [0, 1], { extrapolateRight: "clamp" }),
         }}

@@ -58,7 +58,7 @@ export const Closing: React.FC = () => {
           fontSize: portrait ? 24 : 30,
           letterSpacing: "0.2em",
           textTransform: "uppercase",
-          color: "rgba(38,25,12,0.6)",
+          color: "rgba(26,20,16,0.6)",
           opacity: tagIn,
           textAlign: "center",
         }}

@@ -59,7 +59,7 @@ export const Hero: React.FC = () => {
           transform: `translateY(${subY}px)`,
           fontFamily: fonts.body,
           fontSize: portrait ? 30 : 36,
-          color: "rgba(38,25,12, 0.65)",
+          color: "rgba(26,20,16, 0.65)",
           fontStyle: "italic",
         }}
       >

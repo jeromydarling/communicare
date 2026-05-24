@@ -12,6 +12,7 @@ const SHARE_NAV = [
   { href: "/share/ticket/", label: "Ticket" },
   { href: "/share/orders/", label: "My orders" },
   { href: "/share/credit/", label: "Credit" },
+  { href: "/share/statements/", label: "Statements" },
   { href: "/share/profile/", label: "Profile" },
 ];
 

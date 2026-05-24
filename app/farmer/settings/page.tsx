@@ -1,7 +1,14 @@
 "use client";
 
 import { PageHeader } from "@/components/farmer/shell";
-import { demoFarm } from "@/lib/farmer-demo";
+import {
+  demoFarm,
+  demoMembers,
+  demoOrders,
+  demoProducts,
+  demoSms,
+} from "@/lib/farmer-demo";
+import { downloadBundle, downloadCsv } from "@/lib/csv-export";
 
 export default function FarmerSettingsPage() {
   return (
@@ -101,8 +108,28 @@ export default function FarmerSettingsPage() {
             ledger entry. No retention loop, no contract. Closing your farm
             removes you from Communicare and stops billing.
           </p>
-          <div className="flex gap-3">
-            <button className="btn btn-ghost text-sm">Download a full export</button>
+          <div className="flex gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() =>
+                downloadBundle([
+                  { filename: "members.csv", rows: demoMembers },
+                  { filename: "orders.csv", rows: demoOrders.map((o) => ({ ...o, items: o.items.join(" | ") })) },
+                  { filename: "products.csv", rows: demoProducts },
+                  { filename: "sms.csv", rows: demoSms },
+                ])
+              }
+              className="btn btn-ghost text-sm"
+            >
+              Download a full export (4 CSVs)
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadCsv("members.csv", demoMembers)}
+              className="btn btn-ghost text-sm"
+            >
+              Just members
+            </button>
             <button className="btn text-sm text-brick border-brick hover:bg-brick hover:text-parchment">
               Close this farm
             </button>

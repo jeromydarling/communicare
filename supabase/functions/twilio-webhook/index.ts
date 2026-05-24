@@ -24,6 +24,18 @@
 // =============================================================================
 
 import { createClient } from "npm:@supabase/supabase-js@^2.50.0";
+import {
+  handleSwap,
+  handleSkip,
+  handlePause,
+  handleResume,
+  handleDonate,
+  handleGift,
+  handleConfirm,
+  handleOptOut,
+  makeAdmin,
+  type IntentContext,
+} from "./intent-handlers.ts";
 
 // -----------------------------------------------------------------------------
 // Signature verification
@@ -233,29 +245,82 @@ Deno.serve(async (req: Request) => {
   const intent = parseIntent(body);
 
   // Persist + act on the message via the service-role client
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (supabaseUrl && serviceKey) {
-    const admin = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-    });
+  const admin = makeAdmin();
+  let finalReply = intent.reply;
 
-    // Look up the user from the phone number
+  if (admin) {
     const { data: profile } = await admin
       .from("profiles")
       .select("id")
       .eq("phone", fromPhone)
       .maybeSingle();
 
-    // For now we log the inbound + outbound — handlers per intent live
-    // in a follow-up. The schema supports them; this PR keeps the function
-    // focused on signature verification + intent parsing.
-    const farmIdForNumber = await resolveFarmIdForNumber(admin, toPhone);
+    const userId = (profile as { id: string } | null)?.id ?? null;
+    const farmId = await resolveFarmIdForNumber(admin, toPhone);
+
+    // Run the corresponding intent handler when we know who the member is
+    // AND we have a farm for the inbound number.
+    if (userId && farmId && intent.kind !== "unknown") {
+      const ctx: IntentContext = {
+        admin,
+        farmId,
+        userId,
+        memberPhone: fromPhone,
+      };
+      try {
+        let result;
+        switch (intent.kind) {
+          case "swap":
+            result = await handleSwap(
+              ctx,
+              intent.payload?.from ?? "",
+              intent.payload?.to ?? "",
+            );
+            break;
+          case "skip":
+            result = await handleSkip(
+              ctx,
+              Number(intent.payload?.weeks ?? "1"),
+            );
+            break;
+          case "pause":
+            result = await handlePause(
+              ctx,
+              Number(intent.payload?.weeks ?? "1"),
+            );
+            break;
+          case "resume":
+            result = await handleResume(ctx);
+            break;
+          case "donate":
+            result = await handleDonate(ctx);
+            break;
+          case "gift":
+            result = await handleGift(
+              ctx,
+              intent.payload?.name ?? "your friend",
+              intent.payload?.phone || undefined,
+            );
+            break;
+          case "confirm":
+            result = await handleConfirm(ctx);
+            break;
+          case "opt_out":
+            result = await handleOptOut(admin, fromPhone);
+            break;
+        }
+        if (result) finalReply = result.reply;
+      } catch (err) {
+        console.error("intent handler error", { intent: intent.kind, err });
+        finalReply =
+          "Sorry, something went wrong on our end. We just texted the farmer so they can sort it out — and you don't need to do anything.";
+      }
+    }
 
     await admin.from("sms_messages").insert([
       {
-        farm_id: farmIdForNumber,
-        user_id: profile?.id ?? null,
+        farm_id: farmId,
+        user_id: userId,
         phone: fromPhone,
         direction: "inbound",
         body,
@@ -264,22 +329,17 @@ Deno.serve(async (req: Request) => {
         twilio_sid: params["MessageSid"] ?? null,
       },
       {
-        farm_id: farmIdForNumber,
-        user_id: profile?.id ?? null,
+        farm_id: farmId,
+        user_id: userId,
         phone: fromPhone,
         direction: "outbound",
-        body: intent.reply,
+        body: finalReply,
         sent_at: new Date().toISOString(),
       },
     ]);
-
-    // TODO: apply the intent — for swap, update the next-pickup order_items;
-    // for skip/pause, mutate subscriptions + credit_ledger; for donate,
-    // mark order donated + credit; for gift, create a magic-link gift token.
-    // The schema supports all of these; wiring is a 2-3 hour follow-up.
   }
 
-  return twiml(intent.reply);
+  return twiml(finalReply);
 });
 
 // Look up which farm owns a Twilio number. In production every farm has

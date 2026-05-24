@@ -9,6 +9,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   getDemoSession,
   clearDemoSession,
+  bypassDemo,
   type DemoSession,
 } from "@/lib/demo-session";
 
@@ -32,6 +33,17 @@ export function AuthGate({
   const [state, setState] = useState<AuthState>({ kind: "loading" });
 
   useEffect(() => {
+    // Bypass: ?skip=1 anywhere short-circuits the gate. We read directly
+    // off window.location so the component doesn't need to be wrapped in
+    // a Suspense boundary (which useSearchParams would require under
+    // static export).
+    if (
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("skip") === "1"
+    ) {
+      bypassDemo();
+    }
+
     // No Supabase wired → site-wide demo mode (anyone can explore).
     if (!isSupabaseConfigured) {
       setState({ kind: "demo", session: getDemoSession() ?? undefined });

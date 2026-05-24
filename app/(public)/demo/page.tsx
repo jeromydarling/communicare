@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Sun, Wheat, Barn, Leaf } from "@/components/mark";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { setDemoSession, DEMO_REASONS } from "@/lib/demo-session";
+import { setDemoSession, bypassDemo, DEMO_REASONS } from "@/lib/demo-session";
 import type { Database, FarmKind } from "@/lib/supabase/types";
 
 type WaitlistInsert = Database["public"]["Tables"]["waitlist"]["Insert"];
@@ -195,12 +195,27 @@ function Inner() {
         />
       </div>
 
-      <p className="text-center text-xs text-soil/55 italic mt-10">
-        Have a magic link already?{" "}
-        <Link href="/come-in" className="text-brick hover:underline">
-          Sign in →
-        </Link>
-      </p>
+      <div className="text-center text-xs text-soil/55 italic mt-10 space-y-2">
+        <p>
+          Have a magic link already?{" "}
+          <Link href="/come-in" className="text-brick hover:underline">
+            Sign in →
+          </Link>
+        </p>
+        <p>
+          In a hurry?{" "}
+          <button
+            type="button"
+            onClick={() => {
+              bypassDemo();
+              router.replace(next);
+            }}
+            className="text-brick hover:underline not-italic"
+          >
+            Skip the form — open the demo →
+          </button>
+        </p>
+      </div>
     </div>
   );
 }

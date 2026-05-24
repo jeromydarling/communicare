@@ -9,6 +9,8 @@ import {
   type GeneratedHomepage,
 } from "@/lib/homepage-schema";
 import { sampleGenerated } from "@/lib/sample-homepages";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const SAMPLE_PREFILL: GenerateInput = {
   farmName: "Wren Hollow Farm",
@@ -57,53 +59,58 @@ export default function HomepageGenerator() {
     setError(null);
     setResult(null);
 
-    // The deployed site is a static GitHub Pages build, so we serve a
-    // pre-baked sample homepage (one per farm kind) to show what the AI
-    // generator produces. When this app is self-hosted with an
-    // ANTHROPIC_API_KEY set, the route /api/generate-homepage calls Claude
-    // Opus 4.7 for a homepage drafted live for each farm.
-    const isStatic =
-      typeof window !== "undefined" &&
-      (window.location.hostname.endsWith("github.io") ||
-        process.env.NEXT_PUBLIC_STATIC === "true");
+    // Priority:
+    //   1. Supabase Edge Function (live Claude generation) — when env vars set
+    //   2. Pre-baked sample homepage per farm kind — fallback for static demo
+    const supabase = getSupabaseBrowser();
 
-    if (isStatic) {
-      await new Promise((r) => setTimeout(r, 2200));
-      const baked = sampleGenerated[form.kind] ?? sampleGenerated["Mixed farm"];
-      setResult(baked);
-      setUsage(null);
-      requestAnimationFrame(() =>
-        document
-          .getElementById("preview")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-      );
-      setLoading(false);
+    if (supabase) {
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke(
+          "generate-homepage",
+          { body: form },
+        );
+        if (fnError) {
+          setError(fnError.message ?? "The model didn't respond.");
+          setLoading(false);
+          return;
+        }
+        if (!data?.homepage) {
+          setError(data?.error ?? "The model returned no homepage.");
+          setLoading(false);
+          return;
+        }
+        setResult(data.homepage);
+        setUsage(data.usage ?? null);
+        requestAnimationFrame(() =>
+          document
+            .getElementById("preview")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "We couldn't reach the generator. Try again in a moment.",
+        );
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
-    try {
-      const res = await fetch("/api/generate-homepage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Something went wrong");
-        return;
-      }
-      setResult(data.homepage);
-      setUsage(data.usage);
-      requestAnimationFrame(() =>
-        document
-          .getElementById("preview")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-      );
-    } catch {
-      setError("We couldn't reach the model. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
+    // No Supabase — show a pre-baked sample homepage so visitors can see
+    // what the generator produces.
+    await new Promise((r) => setTimeout(r, 2000));
+    const baked = sampleGenerated[form.kind] ?? sampleGenerated["Mixed farm"];
+    setResult(baked);
+    setUsage(null);
+    requestAnimationFrame(() =>
+      document
+        .getElementById("preview")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+    setLoading(false);
   }
 
   return (
@@ -127,10 +134,24 @@ export default function HomepageGenerator() {
                 like and publish in a click.
               </p>
               <p className="mt-3 text-sm italic text-soil/55 max-w-xl">
-                Note: this public preview serves a pre-baked sample (one per
-                farm kind) so you can see the format. The live generator —
-                which drafts a unique homepage from your inputs — runs in the
-                self-hosted version with an Anthropic API key.
+                {isSupabaseConfigured ? (
+                  <>
+                    <span className="not-italic small-caps text-[10px] text-moss mr-2">
+                      Live
+                    </span>
+                    The generator is wired to the Supabase Edge Function — each
+                    draft is unique to your inputs and may take 10–25 seconds.
+                  </>
+                ) : (
+                  <>
+                    <span className="not-italic small-caps text-[10px] text-wheat mr-2">
+                      Demo mode
+                    </span>
+                    This public preview serves a pre-baked sample (one per
+                    farm kind) so you can see the format. The live generator
+                    runs when the Supabase backend is configured.
+                  </>
+                )}
               </p>
             </div>
             <div className="md:col-span-4 flex justify-end">

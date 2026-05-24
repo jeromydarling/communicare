@@ -69,5 +69,10 @@ enabled = true
 policy = "oneshot"
 inspector_port = 8083
 
+# Public demo function — anyone can call it; rate-limit at the gateway.
+# Flip to verify_jwt = true once we want to gate it to authenticated users.
+[functions.generate-homepage]
+verify_jwt = false
+
 [analytics]
 enabled = false

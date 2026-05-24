@@ -48,6 +48,11 @@ jobs:
       - name: Build
         env:
           BASE_PATH: ${{ steps.basepath.outputs.base_path }}
+          # Optional — set as repo secrets to wire the live Supabase backend.
+          # The site builds and runs fine without them ("Demo mode" notices
+          # appear on /join, /come-in, and the homepage generator).
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npx next build
 
       - name: Add .nojekyll

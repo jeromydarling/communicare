@@ -13,8 +13,13 @@ import { useEffect, useRef, useState } from "react";
 // than showing a broken player.
 // =============================================================================
 
-const SRC = "/video/screencast.mp4";
-const POSTER = "/video/screencast-poster.jpg";
+// Honor the deploy-time base path (e.g. "/communicare" on a GitHub Pages
+// project page) so the asset URLs resolve against the right origin.
+// Next.js handles this automatically for <Link> and <Image>, but raw
+// <video src=…> needs the prefix prepended manually.
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const SRC = `${BASE}/video/screencast.mp4`;
+const POSTER = `${BASE}/video/screencast-poster.jpg`;
 
 export function ScreencastEmbed() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -80,23 +85,24 @@ export function ScreencastEmbed() {
         >
           <source src={SRC} type="video/mp4" />
         </video>
-
-        {/* Soft "unmute" toggle bottom-right while muted — invites the user
-            to turn the music on without competing with the native controls */}
-        {muted && (
-          <button
-            type="button"
-            onClick={toggleSound}
-            className="absolute bottom-16 right-5 z-10 display italic text-xs bg-parchment/90 backdrop-blur px-3 py-1.5 rounded-full border border-soil/15 hover:bg-parchment shadow-md"
-          >
-            Turn the music on →
-          </button>
-        )}
       </div>
 
-      <p className="text-center text-xs text-soil/55 italic mt-5">
-        Music: ElevenLabs · animation: Remotion · words: us
-      </p>
+      {/* "Turn the music on" lives BELOW the video — not over the play
+          button. Keeping it out of the touch zone matters on mobile
+          where the entire video face is tappable. */}
+      <div className="flex items-center justify-center gap-4 mt-5">
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="display italic text-sm text-brick hover:underline"
+        >
+          {muted ? "Turn the music on →" : "Mute the music ←"}
+        </button>
+        <span className="text-soil/30">·</span>
+        <span className="text-xs text-soil/55 italic">
+          Music: ElevenLabs · animation: Remotion · words: us
+        </span>
+      </div>
     </section>
   );
 }

@@ -208,3 +208,72 @@ body {
 .fade-up-delay-3 {
   animation-delay: 450ms;
 }
+
+/* -- Map: the breathing pin and its halo ring ------------------------------ */
+@keyframes pin-heartbeat {
+  0%, 100% {
+    transform: translate(-50%, -100%) scale(1);
+  }
+  40% {
+    transform: translate(-50%, -100%) scale(1.08);
+  }
+  55% {
+    transform: translate(-50%, -100%) scale(1.16);
+  }
+}
+
+@keyframes pin-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes pin-glow {
+  0%, 100% {
+    opacity: 0.18;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.32;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+.pin-heartbeat {
+  animation: pin-heartbeat 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.pin-ring {
+  animation: pin-ring 2.4s ease-out infinite;
+}
+.pin-glow {
+  animation: pin-glow 4.5s ease-in-out infinite;
+}
+
+/* -- Map: subtle drifting motion on contour lines -------------------------- */
+@keyframes contour-drift {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(8px) translateY(-4px);
+  }
+}
+
+.contour-drift-a {
+  animation: contour-drift 18s ease-in-out infinite;
+}
+.contour-drift-b {
+  animation: contour-drift 22s ease-in-out infinite reverse;
+}
+.contour-drift-c {
+  animation: contour-drift 28s ease-in-out infinite;
+  animation-delay: -4s;
+}

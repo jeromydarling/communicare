@@ -7,10 +7,56 @@ import {
   ShareCardScreenshot,
   HomepageGeneratorScreenshot,
 } from "@/components/screenshots";
+import { JsonLd } from "@/components/json-ld";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+
+const HOME_JSON_LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description: SITE_DESCRIPTION,
+    inLanguage: "en-US",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/find/?zip={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE_NAME,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "Farm-share management software for CSAs, herd shares, and pastured meat shares. SMS swap loop, free AI-generated homepage, member-facing directory.",
+    offers: {
+      "@type": "Offer",
+      price: "9",
+      priceCurrency: "USD",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: 9,
+        priceCurrency: "USD",
+        unitText: "MONTH",
+      },
+    },
+    audience: {
+      "@type": "Audience",
+      audienceType: "Small farms",
+    },
+  },
+];
 
 export default function Home() {
   return (
     <>
+      <JsonLd data={HOME_JSON_LD} />
       {/* HERO */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-grain opacity-40 pointer-events-none" />

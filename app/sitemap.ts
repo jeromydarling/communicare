@@ -1,41 +1,53 @@
-// Sitemap covering the public marketing surface. Dashboards are not
-// indexable (auth-gated). Includes every farm + journal entry.
+// Sitemap covering the public marketing surface. Dashboards (/farmer/*,
+// /share/*) are auth-gated and not indexable. Auth-only pages
+// (/auth/callback, /farmer/forgot-password, /farmer/reset-password) are
+// excluded — they're not content pages.
 import type { MetadataRoute } from "next";
 import { sampleFarms } from "@/lib/sample-farms";
 import { journalEntries } from "@/lib/journal-entries";
+import { SITE_URL } from "@/lib/site";
 
-// Required for `output: 'export'` so Next bakes the sitemap at build time
-// instead of generating per-request.
 export const dynamic = "force-static";
-
-const BASE = "https://jeromydarling.github.io/communicare";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  const staticRoutes = [
-    "",
-    "/manifesto",
-    "/homepage",
-    "/find",
-    "/come-in",
-    "/join",
-    "/demo",
+
+  // Static marketing routes worth indexing. The auth landing pages
+  // (/come-in, /farmer/come-in, /farmer/sign-up) are intentionally in
+  // here at low priority — somebody searching "communicare sign in"
+  // should find them.
+  const staticRoutes: Array<[string, number, "weekly" | "monthly"]> = [
+    ["", 1.0, "weekly"],
+    ["/manifesto", 0.9, "monthly"],
+    ["/find", 0.95, "weekly"],
+    ["/homepage", 0.7, "monthly"],
+    ["/join", 0.8, "weekly"],
+    ["/demo", 0.6, "monthly"],
+    ["/come-in", 0.3, "monthly"],
+    ["/farmer/come-in", 0.3, "monthly"],
+    ["/farmer/sign-up", 0.5, "monthly"],
   ];
 
-  const farmRoutes = sampleFarms.flatMap((f) => [
-    `/farm/${f.slug}`,
-    `/farm/${f.slug}/subscribe`,
-    `/farm/${f.slug}/journal`,
-  ]);
+  const farmRoutes: Array<[string, number, "weekly" | "monthly"]> =
+    sampleFarms.flatMap((f) => [
+      [`/farm/${f.slug}`, 0.85, "weekly"],
+      [`/farm/${f.slug}/subscribe`, 0.7, "weekly"],
+      [`/farm/${f.slug}/journal`, 0.6, "weekly"],
+    ]);
 
-  const journalRoutes = journalEntries.map(
-    (e) => `/farm/${e.farmSlug}/journal/${e.slug}`,
+  const journalRoutes: Array<[string, number, "weekly" | "monthly"]> =
+    journalEntries.map((e) => [
+      `/farm/${e.farmSlug}/journal/${e.slug}`,
+      0.5,
+      "monthly",
+    ]);
+
+  return [...staticRoutes, ...farmRoutes, ...journalRoutes].map(
+    ([path, priority, freq]) => ({
+      url: `${SITE_URL}${path}/`,
+      lastModified: now,
+      changeFrequency: freq,
+      priority,
+    }),
   );
-
-  return [...staticRoutes, ...farmRoutes, ...journalRoutes].map((path) => ({
-    url: `${BASE}${path}/`,
-    lastModified: now,
-    changeFrequency: "weekly" as const,
-    priority: path === "" ? 1 : 0.8,
-  }));
 }

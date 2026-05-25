@@ -1,15 +1,43 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Wheat, Sun } from "@/components/mark";
+import { JsonLd } from "@/components/json-ld";
+import { SITE_URL, SITE_NAME } from "@/lib/site";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Why we built Communicare — A manifesto",
   description:
     "An open letter on the dignity of small farms, the duty of software made for them, and what we promise never to do.",
+  alternates: { canonical: "/manifesto" },
+  openGraph: {
+    title: "On the dignity of small farms — A manifesto",
+    description:
+      "What we owe the people who feed us, and what we promise never to do.",
+    url: "/manifesto",
+    type: "article",
+  },
+};
+
+const MANIFESTO_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "On the dignity of small farms",
+  description:
+    "An open letter on the dignity of small farms, the duty of software made for them, and what we promise never to do.",
+  url: `${SITE_URL}/manifesto/`,
+  publisher: {
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+  },
+  inLanguage: "en-US",
+  about: ["Small farms", "CSA", "Catholic Worker", "Wendell Berry", "Agrarianism"],
 };
 
 export default function ManifestoPage() {
   return (
     <article className="max-w-3xl mx-auto px-6 py-20 md:py-28">
+      <JsonLd data={MANIFESTO_JSON_LD} />
       <div className="text-center mb-16">
         <Sun className="w-14 h-14 text-wheat mx-auto mb-6" />
         <div className="small-caps text-xs text-brick mb-4">

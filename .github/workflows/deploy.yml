@@ -54,12 +54,6 @@ jobs:
           fi
 
       - name: Report which Mapbox secret is set (debug)
-        # Prints a single line saying which (if any) of the Mapbox secret
-        # names is configured in this repo. Doesn't leak the token — just
-        # length + first three chars, enough to confirm "yes there is a
-        # secret called VITE_MAPBOX_KEY that starts with pk." If all three
-        # report "unset," the user needs to add the secret in
-        # Settings → Secrets and variables → Actions.
         env:
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
           VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
@@ -78,49 +72,48 @@ jobs:
           summarize VITE_MAPBOX_KEY "$VITE_MAPBOX_KEY"
           summarize MAPBOX_TOKEN "$MAPBOX_TOKEN"
 
-      - name: Resolve Mapbox token to NEXT_PUBLIC_MAPBOX_TOKEN
-        # Writes the resolved token into GITHUB_ENV so the Build step (and
-        # every step after) sees NEXT_PUBLIC_MAPBOX_TOKEN in process.env
-        # directly. This is more reliable than the alias in next.config.mjs,
-        # which can race with Next's NEXT_PUBLIC_* auto-inlining when the
-        # base name isn't set in the environment.
-        env:
-          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
-          VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
-          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
-        run: |
-          TOKEN="${NEXT_PUBLIC_MAPBOX_TOKEN:-${VITE_MAPBOX_KEY:-${MAPBOX_TOKEN:-}}}"
-          if [ -z "$TOKEN" ]; then
-            echo "No Mapbox token in any secret — atlas fallback will deploy."
-          else
-            # Append to GITHUB_ENV so all subsequent steps see it. Don't
-            # echo the value itself — that would surface it in the log.
-            echo "NEXT_PUBLIC_MAPBOX_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-            echo "Resolved NEXT_PUBLIC_MAPBOX_TOKEN (len=${#TOKEN}, prefix=${TOKEN:0:3})"
-          fi
-
-      - name: Build
+      - name: Build (with verified Mapbox token inline)
+        # Resolves, exports, builds, AND verifies in one step. The export
+        # lives in the same shell as `next build`, eliminating the
+        # cross-step propagation question entirely. Then grep the built
+        # bundle for a prefix of the token — if it's not there, fail
+        # loudly so the broken bundle never ships.
         env:
           BASE_PATH: ${{ steps.basepath.outputs.base_path }}
-          # The deploy commit SHA gets baked into the build so cache-busted
-          # asset URLs (like the screencast video) can include it as a
-          # query string — without changing the file path, which would
-          # break HTML caching on the next push.
           NEXT_PUBLIC_BUILD_SHA: ${{ github.sha }}
-          # Optional secrets — the site builds and runs fine without them
-          # ("Demo mode" notices appear on /join, /come-in, /find, and the
-          # homepage generator when their respective backend isn't wired).
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          # NEXT_PUBLIC_MAPBOX_TOKEN comes from the "Resolve" step above via
-          # GITHUB_ENV — no need to re-declare it here.
-        run: npx next build
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          # Resolve from any of the three names. After this line, the
+          # canonical name is in scope for `next build`.
+          export NEXT_PUBLIC_MAPBOX_TOKEN="${NEXT_PUBLIC_MAPBOX_TOKEN:-${VITE_MAPBOX_KEY:-${MAPBOX_TOKEN:-}}}"
+
+          if [ -z "$NEXT_PUBLIC_MAPBOX_TOKEN" ]; then
+            echo "::warning::No Mapbox token configured. /find will deploy the atlas fallback."
+          else
+            echo "Build env has NEXT_PUBLIC_MAPBOX_TOKEN (len=${#NEXT_PUBLIC_MAPBOX_TOKEN}, prefix=${NEXT_PUBLIC_MAPBOX_TOKEN:0:3})"
+          fi
+
+          npx next build
+
+          # Verify the token actually got inlined into the build output.
+          # We use the first 12 chars of the token as a fingerprint and
+          # grep the JS chunks. If it's missing, the bundle is broken and
+          # we should not ship.
+          if [ -n "$NEXT_PUBLIC_MAPBOX_TOKEN" ]; then
+            FINGERPRINT="${NEXT_PUBLIC_MAPBOX_TOKEN:0:12}"
+            if grep -rqF "$FINGERPRINT" out/_next/static/chunks/ 2>/dev/null; then
+              echo "✓ Mapbox token confirmed in built bundle"
+            else
+              echo "::error::Mapbox token did NOT land in out/_next/static/chunks/. The build is broken; aborting before deploy."
+              exit 1
+            fi
+          fi
 
       - name: Regenerate /find map preview against the live Mapbox tiles
-        # Replaces the placeholder atlas-mode screenshot at
-        # public/find-map-preview.jpg with a real Mapbox render whenever a
-        # token is available. Without a key, the existing placeholder
-        # stays in place so the section still has something to show.
         env:
           BASE_PATH: ${{ steps.basepath.outputs.base_path }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
@@ -129,15 +122,10 @@ jobs:
         run: |
           TOKEN="${NEXT_PUBLIC_MAPBOX_TOKEN:-${VITE_MAPBOX_KEY:-${MAPBOX_TOKEN:-}}}"
           if [ -z "$TOKEN" ]; then
-            echo "No Mapbox token in any of NEXT_PUBLIC_MAPBOX_TOKEN, VITE_MAPBOX_KEY, MAPBOX_TOKEN."
-            echo "Skipping live screenshot; the placeholder atlas preview will be deployed."
+            echo "No Mapbox token — skipping live screenshot; placeholder ships."
             exit 0
           fi
-          # Install playwright (the npm package only — the screenshot script
-          # prefers the system Chrome that ubuntu-latest runners already
-          # ship at /usr/bin/google-chrome, which saves a ~100 MB download).
           npm install --no-save --no-audit --no-fund playwright@1.49.1
-          # Serve the static export at the right base path
           npx --yes http-server@14 out -p 3091 -s &
           HTTP_PID=$!
           sleep 3

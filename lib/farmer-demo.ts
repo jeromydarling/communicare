@@ -11,6 +11,9 @@ export type DemoProduct = {
   inventory_cap: number | null;
   inventory_now: number | null;
   is_sold_out: boolean;
+  is_limited?: boolean;
+  available_through?: string | null;
+  broadcast_sent_at?: string | null;
 };
 
 export type DemoMember = {
@@ -109,13 +112,15 @@ export const demoProducts: DemoProduct[] = [
   {
     id: 5,
     name: "Sunflower bouquet",
-    description: "12 stems, mixed varieties",
+    description: "12 stems, mixed varieties — while the field is in bloom",
     kind: "fixed",
     price_cents: 1500,
     unit_label: "bouquet",
     inventory_cap: 25,
     inventory_now: 25,
     is_sold_out: false,
+    is_limited: true,
+    available_through: "2026-09-15T00:00:00Z",
   },
   {
     id: 6,
@@ -127,6 +132,34 @@ export const demoProducts: DemoProduct[] = [
     inventory_cap: 10,
     inventory_now: 6,
     is_sold_out: false,
+  },
+  {
+    id: 7,
+    name: "Aged cheddar wheel",
+    description: "We only have these when the make turns out. ~2 lb each.",
+    kind: "fixed",
+    price_cents: 2400,
+    unit_label: "wheel",
+    inventory_cap: 8,
+    inventory_now: 8,
+    is_sold_out: false,
+    is_limited: true,
+    available_through: null,
+    broadcast_sent_at: null,
+  },
+  {
+    id: 8,
+    name: "Ground beef — extra this week",
+    description: "Steer we processed Monday came in heavier than expected.",
+    kind: "fixed",
+    price_cents: 950,
+    unit_label: "lb",
+    inventory_cap: 30,
+    inventory_now: 0,
+    is_sold_out: true,
+    is_limited: true,
+    available_through: null,
+    broadcast_sent_at: "2026-05-23T14:00:00Z",
   },
 ];
 

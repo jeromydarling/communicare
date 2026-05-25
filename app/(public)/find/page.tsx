@@ -314,7 +314,10 @@ export default function FindPage() {
       <div className="grid lg:grid-cols-[1fr_360px] gap-0 border-t border-soil/15">
         <div
           className="relative bg-cream"
-          style={{ height: "72vh", minHeight: 520 }}
+          // 75dvh gives the mobile dynamic-viewport-height proper treatment
+          // (browser chrome doesn't eat it like static vh does); minHeight
+          // is the floor so it stays usable on very short windows.
+          style={{ height: "75dvh", minHeight: 540 }}
         >
           {useMapbox ? (
             <MapboxLive
@@ -359,7 +362,7 @@ export default function FindPage() {
 
         <aside
           className="bg-cream border-l border-soil/15 overflow-y-auto"
-          style={{ maxHeight: "72vh" }}
+          style={{ maxHeight: "75dvh" }}
         >
           {selected && (
             <FarmCard
@@ -860,6 +863,7 @@ function MapboxLive({
     if (!containerRef.current) return;
     let cancelled = false;
     let resizeObserver: ResizeObserver | null = null;
+    const resizeTimers: number[] = [];
     (async () => {
       const mapboxgl = (await import("mapbox-gl")).default;
       if (cancelled) return;
@@ -883,22 +887,32 @@ function MapboxLive({
         "bottom-right",
       );
       mapRef.current = map;
+      const m = map as unknown as { resize: () => void };
+
+      // Brute-force resize sweep covering every plausible time the container
+      // could finish settling — mobile dynamic viewports take a few frames
+      // to commit, the URL bar collapse is on a delay, the canvas needs to
+      // catch up. Cheap calls; the visual is worth the certainty.
+      [16, 80, 200, 500, 1000, 2000].forEach((delay) => {
+        resizeTimers.push(
+          window.setTimeout(() => {
+            if (!cancelled) m.resize();
+          }, delay),
+        );
+      });
+
       map.on("load", () => {
-        // Force a resize on load — on mobile the container's layout
-        // dimensions aren't always settled at init time, so the canvas
-        // is undersized and pins project to the wrong place. Triggering
-        // resize here (and on every container size change below) fixes it.
-        map.resize();
+        m.resize();
         setReady(true);
       });
-      // Re-fit whenever the container changes size (orientation change,
-      // dynamic viewport on mobile, dev-tools opening, etc.)
-      const m = map as unknown as { resize: () => void };
+
+      // Re-fit on any subsequent container size change.
       resizeObserver = new ResizeObserver(() => m.resize());
       resizeObserver.observe(containerRef.current!);
     })();
     return () => {
       cancelled = true;
+      resizeTimers.forEach((t) => clearTimeout(t));
       resizeObserver?.disconnect();
       const m = mapRef.current as { remove?: () => void } | null;
       m?.remove?.();
@@ -1004,7 +1018,17 @@ function MapboxLive({
     });
   }, [flyToCenter, ready]);
 
-  return <div ref={containerRef} className="absolute inset-0" />;
+  // Explicit width/height instead of `absolute inset-0`. Mapbox-GL reads
+  // dimensions from the container at init time; `inset-0` on an absolutely
+  // positioned div sometimes resolves to 0×0 on mobile before layout
+  // completes, even when the parent has an explicit height. Setting
+  // 100%/100% directly gives the canvas a stable size to read.
+  return (
+    <div
+      ref={containerRef}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+    />
+  );
 }
 
 // -----------------------------------------------------------------------------

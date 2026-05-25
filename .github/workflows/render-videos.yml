@@ -68,8 +68,15 @@ jobs:
             public/video/communicare-poster.jpg
           # Invalidate when remotion source, scripts, or audio change.
           # The audio file hash is part of the key so a regenerated music
-          # bed forces a rerender.
-          key: rendered-videos-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}
+          # bed forces a rerender. The "v2" prefix lets us bust the cache
+          # by bumping the number when we change the schema.
+          key: rendered-videos-v2-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}
+
+      - name: Report cache state
+        run: |
+          echo "cache-hit: ${{ steps.video-cache.outputs.cache-hit }}"
+          echo "If 'true', render steps will skip. If 'false' or unset, they'll run."
+          ls -la public/video/ || echo "(public/video/ doesn't exist yet)"
 
       - name: Install Remotion deps
         if: steps.video-cache.outputs.cache-hit != 'true'
@@ -112,6 +119,10 @@ jobs:
             --crf 22 \
             --pixel-format yuv420p \
             --concurrency 2
+          # Fail loudly if the render exited 0 but didn't write the file.
+          test -s ../public/video/screencast.mp4 \
+            || (echo "ERROR: screencast.mp4 was not produced" && exit 1)
+          ls -lh ../public/video/screencast.mp4
 
       - name: Render screencast poster
         if: steps.video-cache.outputs.cache-hit != 'true'
@@ -121,6 +132,9 @@ jobs:
             --frame 60 \
             ../public/video/screencast-poster.jpg \
             --quality 85
+          test -s ../public/video/screencast-poster.jpg \
+            || (echo "ERROR: screencast-poster.jpg was not produced" && exit 1)
+          ls -lh ../public/video/screencast-poster.jpg
 
       - name: Render communicare — 33s pitch promo
         if: steps.video-cache.outputs.cache-hit != 'true'
@@ -131,6 +145,9 @@ jobs:
             --crf 22 \
             --pixel-format yuv420p \
             --concurrency 2
+          test -s ../public/video/communicare.mp4 \
+            || (echo "ERROR: communicare.mp4 was not produced" && exit 1)
+          ls -lh ../public/video/communicare.mp4
 
       - name: Render communicare poster
         if: steps.video-cache.outputs.cache-hit != 'true'
@@ -140,9 +157,18 @@ jobs:
             --frame 30 \
             ../public/video/communicare-poster.jpg \
             --quality 85
+          test -s ../public/video/communicare-poster.jpg \
+            || (echo "ERROR: communicare-poster.jpg was not produced" && exit 1)
+          ls -lh ../public/video/communicare-poster.jpg
 
       - name: Report file sizes
-        run: ls -lh public/video/ || true
+        if: always()
+        run: |
+          echo "Final state of public/video/:"
+          ls -lh public/video/ 2>&1 || true
+          echo "---"
+          echo "Git status:"
+          git status --short public/video/ 2>&1 || true
 
       - name: Commit rendered videos
         id: commit

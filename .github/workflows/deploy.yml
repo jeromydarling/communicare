@@ -114,6 +114,12 @@ jobs:
           fi
 
       - name: Regenerate /find map preview against the live Mapbox tiles
+        # OPTIONAL — runs the homepage's /find screenshot against the live
+        # Mapbox tiles so the marketing card stays in sync. The deploy must
+        # NOT fail if this step has trouble (it depends on Playwright +
+        # Chromium being available); the committed placeholder JPEG is good
+        # enough on its own, and the live /find page is the real prize.
+        continue-on-error: true
         env:
           BASE_PATH: ${{ steps.basepath.outputs.base_path }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
@@ -125,13 +131,26 @@ jobs:
             echo "No Mapbox token — skipping live screenshot; placeholder ships."
             exit 0
           fi
-          npm install --no-save --no-audit --no-fund playwright@1.49.1
+          # Install playwright + its bundled chromium so we don't depend on
+          # the runner having a system Chrome at a particular path.
+          npm install --no-save --no-audit --no-fund playwright@1.49.1 || {
+            echo "playwright install failed — skipping screenshot."
+            exit 0
+          }
+          npx playwright install --with-deps chromium || {
+            echo "chromium install failed — skipping screenshot."
+            exit 0
+          }
           npx --yes http-server@14 out -p 3091 -s &
           HTTP_PID=$!
           sleep 3
           node scripts/screenshot-find-map.mjs \
             "http://localhost:3091${BASE_PATH}/find/" \
-            out${BASE_PATH}/find-map-preview.jpg
+            out${BASE_PATH}/find-map-preview.jpg || {
+            echo "Screenshot script failed — placeholder JPEG stays."
+            kill $HTTP_PID || true
+            exit 0
+          }
           kill $HTTP_PID || true
           ls -lh out${BASE_PATH}/find-map-preview.jpg
 

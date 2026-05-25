@@ -66,8 +66,44 @@ jobs:
           # homepage generator when their respective backend isn't wired).
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Mapbox token — try all three common secret names. next.config.mjs
+          # falls back through them and normalizes whichever is set to
+          # NEXT_PUBLIC_MAPBOX_TOKEN inside the bundle.
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
         run: npx next build
+
+      - name: Regenerate /find map preview against the live Mapbox tiles
+        # Replaces the placeholder atlas-mode screenshot at
+        # public/find-map-preview.jpg with a real Mapbox render whenever a
+        # token is available. Without a key, the existing placeholder
+        # stays in place so the section still has something to show.
+        env:
+          BASE_PATH: ${{ steps.basepath.outputs.base_path }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          TOKEN="${NEXT_PUBLIC_MAPBOX_TOKEN:-${VITE_MAPBOX_KEY:-${MAPBOX_TOKEN:-}}}"
+          if [ -z "$TOKEN" ]; then
+            echo "No Mapbox token in any of NEXT_PUBLIC_MAPBOX_TOKEN, VITE_MAPBOX_KEY, MAPBOX_TOKEN."
+            echo "Skipping live screenshot; the placeholder atlas preview will be deployed."
+            exit 0
+          fi
+          # Install playwright (the npm package only — the screenshot script
+          # prefers the system Chrome that ubuntu-latest runners already
+          # ship at /usr/bin/google-chrome, which saves a ~100 MB download).
+          npm install --no-save --no-audit --no-fund playwright@1.49.1
+          # Serve the static export at the right base path
+          npx --yes http-server@14 out -p 3091 -s &
+          HTTP_PID=$!
+          sleep 3
+          node scripts/screenshot-find-map.mjs \
+            "http://localhost:3091${BASE_PATH}/find/" \
+            out${BASE_PATH}/find-map-preview.jpg
+          kill $HTTP_PID || true
+          ls -lh out${BASE_PATH}/find-map-preview.jpg
 
       - name: Add .nojekyll
         run: touch out/.nojekyll

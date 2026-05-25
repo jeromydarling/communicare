@@ -53,6 +53,31 @@ jobs:
             echo "Project page → base_path is /$REPO_NAME"
           fi
 
+      - name: Report which Mapbox secret is set (debug)
+        # Prints a single line saying which (if any) of the Mapbox secret
+        # names is configured in this repo. Doesn't leak the token — just
+        # length + first three chars, enough to confirm "yes there is a
+        # secret called VITE_MAPBOX_KEY that starts with pk." If all three
+        # report "unset," the user needs to add the secret in
+        # Settings → Secrets and variables → Actions.
+        env:
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          summarize() {
+            local name=$1 val=$2
+            if [ -z "$val" ]; then
+              echo "  $name: UNSET"
+            else
+              echo "  $name: set (len=${#val}, prefix=${val:0:3})"
+            fi
+          }
+          echo "Mapbox secret status:"
+          summarize NEXT_PUBLIC_MAPBOX_TOKEN "$NEXT_PUBLIC_MAPBOX_TOKEN"
+          summarize VITE_MAPBOX_KEY "$VITE_MAPBOX_KEY"
+          summarize MAPBOX_TOKEN "$MAPBOX_TOKEN"
+
       - name: Build
         env:
           BASE_PATH: ${{ steps.basepath.outputs.base_path }}

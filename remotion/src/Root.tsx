@@ -2,6 +2,10 @@ import { Composition, staticFile } from "remotion";
 import { loadFont as loadFraunces } from "@remotion/google-fonts/Fraunces";
 import { loadFont as loadSourceSerif } from "@remotion/google-fonts/SourceSerif4";
 import { Communicare } from "./compositions/Communicare";
+import {
+  Screencast,
+  TOTAL as SCREENCAST_FRAMES,
+} from "./compositions/Screencast";
 
 // Preload fonts so they're available during render
 loadFraunces();
@@ -38,6 +42,20 @@ export const Root: React.FC = () => {
         defaultProps={{
           audioSrc: staticFile("audio/soundtrack.mp3"),
           narrationSrc: staticFile("audio/narration.mp3"),
+        }}
+      />
+
+      {/* 90-second product walkthrough — see remotion/SCREENCAST_SCRIPT.md */}
+      <Composition
+        id="Screencast"
+        component={Screencast}
+        durationInFrames={SCREENCAST_FRAMES}
+        fps={FPS}
+        width={1920}
+        height={1080}
+        defaultProps={{
+          audioSrc: staticFile("audio/screencast-soundtrack.mp3"),
+          narrationSrc: staticFile("audio/screencast-narration.mp3"),
         }}
       />
     </>

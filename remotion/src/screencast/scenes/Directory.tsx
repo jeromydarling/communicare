@@ -63,7 +63,7 @@ export const Directory: React.FC = () => {
     >
       <div
         style={{
-          maxWidth: 500,
+          maxWidth: 560,
           opacity: captionIn,
           transform: `translateX(${(1 - captionIn) * -20}px)`,
         }}
@@ -71,11 +71,11 @@ export const Directory: React.FC = () => {
         <div
           style={{
             fontFamily: fonts.body,
-            fontSize: 20,
+            fontSize: 22,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
             color: palette.brick,
-            marginBottom: 14,
+            marginBottom: 18,
           }}
         >
           № 05 · The discovery map
@@ -83,30 +83,31 @@ export const Directory: React.FC = () => {
         <h2
           style={{
             fontFamily: fonts.display,
-            fontSize: 64,
+            fontSize: 76,
             fontWeight: 500,
-            lineHeight: 1.02,
-            letterSpacing: "-0.02em",
+            lineHeight: 1.0,
+            letterSpacing: "-0.025em",
             margin: 0,
-            marginBottom: 20,
+            marginBottom: 22,
             color: palette.soil,
           }}
         >
-          A neighbor in your zip code{" "}
-          <em style={{ color: palette.brick }}>finds you.</em>
+          A neighbor finds you.{" "}
+          <em style={{ color: palette.brick }}>You wake up to a new member.</em>
         </h2>
         <p
           style={{
             fontFamily: fonts.body,
-            fontSize: 22,
+            fontSize: 24,
             fontStyle: "italic",
-            lineHeight: 1.45,
-            color: `${palette.soil}AA`,
+            lineHeight: 1.42,
+            color: `${palette.soil}B5`,
             margin: 0,
           }}
         >
-          Listed whether you&apos;re on Communicare or not. The directory is
-          a gift; you keep the relationship.
+          Every farm we know about is listed — whether they&apos;re on
+          Communicare or not. The directory is a gift. You keep the
+          relationship.
         </p>
       </div>
 

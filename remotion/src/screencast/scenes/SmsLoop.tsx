@@ -64,7 +64,7 @@ export const SmsLoop: React.FC = () => {
       <div
         style={{
           textAlign: "center",
-          paddingTop: 48,
+          paddingTop: 56,
           opacity: captionIn,
           transform: `translateY(${(1 - captionIn) * -12}px)`,
         }}
@@ -72,11 +72,11 @@ export const SmsLoop: React.FC = () => {
         <div
           style={{
             fontFamily: fonts.body,
-            fontSize: 18,
+            fontSize: 22,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
             color: palette.brick,
-            marginBottom: 8,
+            marginBottom: 14,
           }}
         >
           № 03 · Monday morning
@@ -84,10 +84,10 @@ export const SmsLoop: React.FC = () => {
         <h2
           style={{
             fontFamily: fonts.display,
-            fontSize: 60,
+            fontSize: 76,
             fontWeight: 500,
-            lineHeight: 1.0,
-            letterSpacing: "-0.02em",
+            lineHeight: 0.98,
+            letterSpacing: "-0.025em",
             margin: 0,
             color: palette.soil,
           }}
@@ -95,6 +95,19 @@ export const SmsLoop: React.FC = () => {
           Members swap. Skip. Donate.{" "}
           <em style={{ color: palette.brick }}>By texting back.</em>
         </h2>
+        <p
+          style={{
+            fontFamily: fonts.body,
+            fontSize: 22,
+            fontStyle: "italic",
+            color: `${palette.soil}AA`,
+            margin: "16px auto 0",
+            maxWidth: 720,
+          }}
+        >
+          The roster updates in real time. No phone calls. No inbox
+          archaeology.
+        </p>
       </div>
 
       {/* Phone + Browser side by side */}

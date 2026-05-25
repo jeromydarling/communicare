@@ -7,6 +7,7 @@ import {
   ShareCardScreenshot,
   HomepageGeneratorScreenshot,
 } from "@/components/screenshots";
+import { ScreencastEmbed } from "@/components/screencast-embed";
 import { JsonLd } from "@/components/json-ld";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
@@ -109,6 +110,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* SCREENCAST — 90-second product walkthrough, music + animation */}
+      <ScreencastEmbed />
 
       {/* OPENING STATEMENT — manifesto-lite */}
       <section className="border-t border-b border-soil/15 bg-cream">

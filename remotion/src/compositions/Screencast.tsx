@@ -14,13 +14,15 @@ import { TellTheList } from "../screencast/scenes/TellTheList";
 import { Directory } from "../screencast/scenes/Directory";
 import { Close } from "../screencast/scenes/Close";
 
+// Deliberately no narration prop. Farms hear hired voiceover and know it
+// isn't us — they distrust it. The story reads itself: big on-screen type,
+// concrete subtitles under each tap, an instrumental bed. Quiet. Honest.
 export const screencastPropsSchema = z.object({
   audioSrc: z.string().optional(),
-  narrationSrc: z.string().optional(),
 });
 
 // 90 seconds at 30fps. Six scenes, see SCREENCAST_SCRIPT.md for the beat
-// sheet and the narration the timing was tuned to.
+// sheet and the on-screen copy.
 const FPS = 30;
 const SCENES = {
   open: 10 * FPS, // 300
@@ -35,7 +37,7 @@ export const TOTAL = Object.values(SCENES).reduce((a, b) => a + b, 0); // 2700
 
 export const Screencast: React.FC<
   z.infer<typeof screencastPropsSchema>
-> = ({ audioSrc, narrationSrc }) => {
+> = ({ audioSrc }) => {
   const { fps } = useVideoConfig();
   return (
     <AbsoluteFill style={{ backgroundColor: palette.parchment }}>
@@ -62,12 +64,12 @@ export const Screencast: React.FC<
         </Series.Sequence>
       </Series>
 
-      {audioSrc && <Audio src={audioSrc} volume={0.32} />}
-      {narrationSrc && <Audio src={narrationSrc} volume={0.9} />}
+      {/* Music bed only — louder than the old version because nothing else
+          competes for the ear. Falls back to silence if the MP3 isn't present
+          (e.g. local dev without an ELEVENLABS key). */}
+      {audioSrc && <Audio src={audioSrc} volume={0.62} />}
 
-      {!audioSrc && !narrationSrc && (
-        <span style={{ display: "none" }}>{fps}</span>
-      )}
+      {!audioSrc && <span style={{ display: "none" }}>{fps}</span>}
     </AbsoluteFill>
   );
 };

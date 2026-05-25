@@ -1,0 +1,176 @@
+name: Render videos
+
+# Renders the Remotion compositions to MP4 + still posters, places the
+# binaries into public/video/, and commits them back to main. The Deploy
+# workflow then picks up the new files on its next run and ships them with
+# the static export.
+#
+# Triggered:
+#   - whenever anything under remotion/ changes on main
+#   - manually via the Actions tab (workflow_dispatch)
+#
+# Renders are cached by the hash of the remotion source tree, so a deploy
+# that doesn't touch the video compositions skips the (~3 minute) render.
+#
+# Secrets the workflow reads:
+#   ELEVENLABS_API_KEY      — optional. When set, regenerates the music
+#                              beds before rendering. When unset, the
+#                              compositions render silent.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "remotion/**"
+      - ".github/workflows/render-videos.yml"
+  workflow_dispatch:
+    inputs:
+      regenerate_audio:
+        description: "Regenerate music beds (uses ElevenLabs credits)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # we push the rendered videos back to main
+  actions:  write # we kick off the deploy workflow when render is done
+
+concurrency:
+  group: render-videos
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need write access to push the rendered binaries back
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: remotion/package-lock.json
+
+      - name: Cache rendered videos
+        id: video-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/video/screencast.mp4
+            public/video/screencast-poster.jpg
+            public/video/communicare.mp4
+            public/video/communicare-poster.jpg
+          # Invalidate when remotion source, scripts, or audio change.
+          # The audio file hash is part of the key so a regenerated music
+          # bed forces a rerender.
+          key: rendered-videos-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}
+
+      - name: Install Remotion deps
+        if: steps.video-cache.outputs.cache-hit != 'true'
+        working-directory: remotion
+        run: npm ci --no-audit --no-fund --legacy-peer-deps
+
+      - name: Install Chromium dependencies
+        if: steps.video-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxkbcommon0 \
+            libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 \
+            libpango-1.0-0 libcairo2
+
+      - name: Regenerate music beds
+        # Secrets can't be referenced in if-conditions; guard inside the
+        # script instead. Skips when the API key isn't configured.
+        if: |
+          steps.video-cache.outputs.cache-hit != 'true' &&
+          github.event.inputs.regenerate_audio == 'true'
+        working-directory: remotion
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        run: |
+          if [ -n "$ELEVENLABS_API_KEY" ]; then
+            npm run audio
+          else
+            echo "ELEVENLABS_API_KEY not set — skipping audio regeneration."
+            echo "Rendering will use whatever's already in remotion/public/audio/."
+          fi
+
+      - name: Render screencast — 90s product walkthrough
+        if: steps.video-cache.outputs.cache-hit != 'true'
+        working-directory: remotion
+        run: |
+          mkdir -p ../public/video
+          npx remotion render Screencast ../public/video/screencast.mp4 \
+            --codec h264 \
+            --crf 22 \
+            --pixel-format yuv420p \
+            --concurrency 2
+
+      - name: Render screencast poster
+        if: steps.video-cache.outputs.cache-hit != 'true'
+        working-directory: remotion
+        run: |
+          npx remotion still Screencast \
+            --frame 60 \
+            ../public/video/screencast-poster.jpg \
+            --quality 85
+
+      - name: Render communicare — 33s pitch promo
+        if: steps.video-cache.outputs.cache-hit != 'true'
+        working-directory: remotion
+        run: |
+          npx remotion render Communicare ../public/video/communicare.mp4 \
+            --codec h264 \
+            --crf 22 \
+            --pixel-format yuv420p \
+            --concurrency 2
+
+      - name: Render communicare poster
+        if: steps.video-cache.outputs.cache-hit != 'true'
+        working-directory: remotion
+        run: |
+          npx remotion still Communicare \
+            --frame 30 \
+            ../public/video/communicare-poster.jpg \
+            --quality 85
+
+      - name: Report file sizes
+        run: ls -lh public/video/ || true
+
+      - name: Commit rendered videos
+        id: commit
+        if: steps.video-cache.outputs.cache-hit != 'true'
+        run: |
+          if git diff --quiet public/video/; then
+            echo "Nothing changed — skip commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name  "communicare-render-bot"
+          git config user.email "render-bot@communicare.farm"
+          git add public/video/
+          git commit -m "Rendered videos $(date -u +%Y-%m-%dT%H:%MZ)
+
+Triggered by ${{ github.event_name }}. Re-render cache key:
+${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}"
+          # Push, but rebase on top of anything that landed while we
+          # were rendering.
+          git pull --rebase origin main
+          git push origin main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # GITHUB_TOKEN-authored pushes don't trigger downstream workflows by
+      # default, so we have to dispatch the Deploy workflow explicitly to
+      # ship the new videos to the static site.
+      - name: Trigger deploy
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main

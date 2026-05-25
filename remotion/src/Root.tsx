@@ -28,7 +28,6 @@ export const Root: React.FC = () => {
         height={1080}
         defaultProps={{
           audioSrc: staticFile("audio/soundtrack.mp3"),
-          narrationSrc: staticFile("audio/narration.mp3"),
         }}
       />
 
@@ -41,7 +40,6 @@ export const Root: React.FC = () => {
         height={1920}
         defaultProps={{
           audioSrc: staticFile("audio/soundtrack.mp3"),
-          narrationSrc: staticFile("audio/narration.mp3"),
         }}
       />
 
@@ -55,7 +53,6 @@ export const Root: React.FC = () => {
         height={1080}
         defaultProps={{
           audioSrc: staticFile("audio/screencast-soundtrack.mp3"),
-          narrationSrc: staticFile("audio/screencast-narration.mp3"),
         }}
       />
     </>

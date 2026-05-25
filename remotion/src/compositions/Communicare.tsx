@@ -15,9 +15,10 @@ import { Closing } from "./scenes/Closing";
 import { palette } from "../brand/tokens";
 import { Grain } from "../brand/Logo";
 
+// Music-only. Voiceover removed — see the Screencast composition for the
+// reasoning; the same logic applies here. Farms distrust hired voices.
 export const communicarePropsSchema = z.object({
   audioSrc: z.string().optional(),
-  narrationSrc: z.string().optional(),
 });
 
 const SCENE = 150; // 5s @ 30fps
@@ -25,7 +26,6 @@ const CLOSING_SCENE = 240; // 8s — needs room for the pitch line to land
 
 export const Communicare: React.FC<z.infer<typeof communicarePropsSchema>> = ({
   audioSrc,
-  narrationSrc,
 }) => {
   const { fps } = useVideoConfig();
   return (
@@ -53,15 +53,15 @@ export const Communicare: React.FC<z.infer<typeof communicarePropsSchema>> = ({
         </Series.Sequence>
       </Series>
 
-      {/* Music bed — soft fingerpicked acoustic; falls back gracefully if
-          the audio file doesn't exist (a 404 on the Remotion dev server). */}
-      {audioSrc && <Audio src={audioSrc} volume={0.35} />}
-      {/* Narration on top; quieter than music until the closing line */}
-      {narrationSrc && <Audio src={narrationSrc} volume={0.85} />}
+      {/* Instrumental bed only. Bumped from 0.35 to 0.6 since voiceover is
+          gone and the music can carry more weight without overpowering. */}
+      {audioSrc && <Audio src={audioSrc} volume={0.6} />}
 
-      {/* Avoid unused-variable warning when audio is omitted in dev */}
-      {!audioSrc && !narrationSrc && (
-        <span style={{ display: "none" }}>{fps}</span>
+      {!audioSrc && (
+        <>
+          <span style={{ display: "none" }}>{fps}</span>
+          <span style={{ display: "none" }}>{staticFile("/")}</span>
+        </>
       )}
     </AbsoluteFill>
   );

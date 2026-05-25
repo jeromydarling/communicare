@@ -61,11 +61,11 @@ export const TellTheList: React.FC = () => {
         <div
           style={{
             fontFamily: fonts.body,
-            fontSize: 20,
+            fontSize: 22,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
             color: palette.brick,
-            marginBottom: 10,
+            marginBottom: 14,
           }}
         >
           № 04 · A surprise wheel of cheddar
@@ -73,16 +73,29 @@ export const TellTheList: React.FC = () => {
         <h2
           style={{
             fontFamily: fonts.display,
-            fontSize: 64,
+            fontSize: 76,
             fontWeight: 500,
-            lineHeight: 1.0,
-            letterSpacing: "-0.02em",
+            lineHeight: 0.98,
+            letterSpacing: "-0.025em",
             margin: 0,
             color: palette.soil,
           }}
         >
           Tap once. <em style={{ color: palette.brick }}>Tell the list.</em>
         </h2>
+        <p
+          style={{
+            fontFamily: fonts.body,
+            fontSize: 22,
+            fontStyle: "italic",
+            color: `${palette.soil}AA`,
+            margin: "14px auto 0",
+            maxWidth: 720,
+          }}
+        >
+          Eight in stock. First eight to reply win one. The rest get put on
+          the alert list for next time.
+        </p>
       </div>
 
       <div

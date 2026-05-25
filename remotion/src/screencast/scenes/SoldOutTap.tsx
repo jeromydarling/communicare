@@ -55,7 +55,7 @@ export const SoldOutTap: React.FC = () => {
     >
       <div
         style={{
-          maxWidth: 540,
+          maxWidth: 600,
           opacity: captionIn,
           transform: `translateX(${(1 - captionIn) * -20}px)`,
         }}
@@ -67,7 +67,7 @@ export const SoldOutTap: React.FC = () => {
             letterSpacing: "0.22em",
             textTransform: "uppercase",
             color: palette.brick,
-            marginBottom: 16,
+            marginBottom: 18,
           }}
         >
           № 02 · The market, eight a.m.
@@ -75,29 +75,30 @@ export const SoldOutTap: React.FC = () => {
         <h2
           style={{
             fontFamily: fonts.display,
-            fontSize: 72,
+            fontSize: 88,
             fontWeight: 500,
-            lineHeight: 1.02,
-            letterSpacing: "-0.02em",
+            lineHeight: 0.98,
+            letterSpacing: "-0.025em",
             margin: 0,
-            marginBottom: 20,
+            marginBottom: 24,
             color: palette.soil,
           }}
         >
-          One tap.<br />
-          The web store knows.
+          The eggs are gone.{" "}
+          <em style={{ color: palette.brick }}>One tap.</em>
         </h2>
         <p
           style={{
             fontFamily: fonts.body,
-            fontSize: 24,
+            fontSize: 26,
             fontStyle: "italic",
-            lineHeight: 1.45,
-            color: `${palette.soil}AA`,
+            lineHeight: 1.42,
+            color: `${palette.soil}B5`,
             margin: 0,
           }}
         >
-          Members on the wait list get a text the moment a share opens.
+          The web store updates the same second. Members on the wait list
+          get a text.
         </p>
       </div>
 

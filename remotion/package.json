@@ -12,8 +12,8 @@
     "render:screencast": "remotion render Screencast out/screencast.mp4",
     "still:screencast": "remotion still Screencast --frame=1500 out/screencast-poster.png",
     "audio": "tsx scripts/generate-audio.ts",
-    "voiceover": "tsx scripts/generate-audio.ts --voiceover-only",
-    "music": "tsx scripts/generate-audio.ts --music-only"
+    "audio:short": "tsx scripts/generate-audio.ts --short-only",
+    "audio:screencast": "tsx scripts/generate-audio.ts --screencast-only"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.300",

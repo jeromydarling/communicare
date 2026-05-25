@@ -859,6 +859,7 @@ function MapboxLive({
   useEffect(() => {
     if (!containerRef.current) return;
     let cancelled = false;
+    let resizeObserver: ResizeObserver | null = null;
     (async () => {
       const mapboxgl = (await import("mapbox-gl")).default;
       if (cancelled) return;
@@ -882,10 +883,23 @@ function MapboxLive({
         "bottom-right",
       );
       mapRef.current = map;
-      map.on("load", () => setReady(true));
+      map.on("load", () => {
+        // Force a resize on load — on mobile the container's layout
+        // dimensions aren't always settled at init time, so the canvas
+        // is undersized and pins project to the wrong place. Triggering
+        // resize here (and on every container size change below) fixes it.
+        map.resize();
+        setReady(true);
+      });
+      // Re-fit whenever the container changes size (orientation change,
+      // dynamic viewport on mobile, dev-tools opening, etc.)
+      const m = map as unknown as { resize: () => void };
+      resizeObserver = new ResizeObserver(() => m.resize());
+      resizeObserver.observe(containerRef.current!);
     })();
     return () => {
       cancelled = true;
+      resizeObserver?.disconnect();
       const m = mapRef.current as { remove?: () => void } | null;
       m?.remove?.();
       mapRef.current = null;

@@ -292,6 +292,131 @@ export async function handleGift(
 }
 
 // -----------------------------------------------------------------------------
+// CLAIM — atomic FCFS lock on a limited-quantity drop.
+//
+// Member texts a keyword like "EGGS" or "CREAM". We look up the active,
+// in-stock limited product on this farm whose name starts with that
+// keyword, then decrement inventory_now in a single UPDATE — the WHERE
+// inventory_now > 0 clause is the lock, since Postgres serializes the
+// row-level update. Whoever's row touches first wins; everyone else sees
+// 0 rows affected and gets "sorry, gone."
+// -----------------------------------------------------------------------------
+export async function handleClaim(
+  ctx: IntentContext,
+  keyword: string,
+): Promise<IntentResult> {
+  const term = keyword.trim().toLowerCase();
+  if (!term) {
+    return { reply: `Reply with the item name to claim — for example, EGGS.` };
+  }
+
+  // Match the keyword against active, in-stock limited products on this
+  // farm. We use a left-anchored ilike so "EGGS" matches "Pastured eggs"
+  // without matching unrelated items that happen to contain the word.
+  const { data: candidates } = await ctx.admin
+    .from("products")
+    .select(
+      "id, name, price_cents, unit_label, inventory_now, available_through",
+    )
+    .eq("farm_id", ctx.farmId)
+    .eq("is_active", true)
+    .eq("is_limited", true)
+    .eq("is_sold_out", false)
+    .ilike("name", `${term}%`)
+    .limit(2);
+
+  type Row = {
+    id: number;
+    name: string;
+    price_cents: number;
+    unit_label: string;
+    inventory_now: number | null;
+    available_through: string | null;
+  };
+  const matches = (candidates ?? []) as Row[];
+
+  if (matches.length === 0) {
+    return {
+      reply: `Sorry — we don't have "${keyword}" available right now. Reply ALERT and we'll text you the next time it comes in.`,
+    };
+  }
+
+  if (matches.length > 1) {
+    const names = matches.map((m) => m.name).join(", ");
+    return {
+      reply: `We have a few things that could match "${keyword}": ${names}. Reply with the full name to claim one.`,
+    };
+  }
+
+  const product = matches[0];
+
+  // Out-of-season guard — the index already excludes this, but check
+  // available_through explicitly in case it changed between query and now.
+  if (
+    product.available_through &&
+    new Date(product.available_through).getTime() < Date.now()
+  ) {
+    return {
+      reply: `Sorry — ${product.name} is out of season now. We'll text you when it's back.`,
+    };
+  }
+
+  // Atomic FCFS lock. The WHERE clause is the serialization point —
+  // Postgres row-locks the update, so two concurrent claims for the last
+  // unit can't both succeed. The returning row tells us whether we won.
+  const { data: locked, error } = await ctx.admin
+    .from("products")
+    .update({ inventory_now: (product.inventory_now ?? 0) - 1 })
+    .eq("id", product.id)
+    .gt("inventory_now", 0)
+    .select("id, inventory_now")
+    .maybeSingle();
+
+  if (error || !locked) {
+    return {
+      reply: `Just gone — someone else claimed the last ${product.name} a moment before you. Reply ALERT for the next batch.`,
+    };
+  }
+
+  type LockedRow = { id: number; inventory_now: number };
+  const remaining = (locked as LockedRow).inventory_now;
+
+  // Flip sold-out flag when we hit zero.
+  if (remaining <= 0) {
+    await ctx.admin
+      .from("products")
+      .update({ is_sold_out: true })
+      .eq("id", product.id);
+  }
+
+  // Add the claim to the member's next pickup order — same pattern as a
+  // swap, but inserting rather than updating.
+  const order = await findUpcomingOrder(ctx);
+  if (order) {
+    await ctx.admin.from("order_items").insert({
+      order_id: order.id,
+      product_id: product.id,
+      quantity: 1,
+      unit_price_cents: product.price_cents,
+    });
+  }
+
+  const dollars = (product.price_cents / 100).toFixed(2);
+  return {
+    reply: `Got it. ${product.name} added to your next pickup — $${dollars}/${product.unit_label}. You'll see it on Friday's invoice.${
+      remaining <= 3 && remaining > 0
+        ? ` Only ${remaining} left after yours.`
+        : ""
+    }`,
+    details: {
+      product_id: product.id,
+      order_id: order?.id ?? null,
+      inventory_remaining: remaining,
+    },
+  };
+}
+
+// -----------------------------------------------------------------------------
 // CONFIRM — light acknowledgement
 // -----------------------------------------------------------------------------
 export async function handleConfirm(ctx: IntentContext): Promise<IntentResult> {

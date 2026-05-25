@@ -32,6 +32,7 @@ import {
   handleDonate,
   handleGift,
   handleConfirm,
+  handleClaim,
   handleOptOut,
   makeAdmin,
   type IntentContext,
@@ -83,6 +84,7 @@ type Intent = {
     | "donate"
     | "gift"
     | "confirm"
+    | "claim"
     | "opt_out"
     | "unknown";
   payload?: Record<string, string>;
@@ -171,10 +173,22 @@ function parseIntent(body: string): Intent {
     };
   }
 
+  // A short single-word or two-word reply that didn't match anything above
+  // is most likely a claim for a limited-quantity drop ("EGGS", "RAW CREAM").
+  // Let handleClaim resolve the keyword against the farm's live drops.
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 2 && /^[a-z][a-z\s-]{1,30}$/.test(text)) {
+    return {
+      kind: "claim",
+      payload: { keyword: text },
+      reply: `Looking for ${text}…`,
+    };
+  }
+
   return {
     kind: "unknown",
     reply:
-      "I didn't catch that. Try: SWAP kale for chard, SKIP, PAUSE 2, DONATE, GIFT <name>, or CONFIRM.",
+      "I didn't catch that. Try: SWAP kale for chard, SKIP, PAUSE 2, DONATE, GIFT <name>, or CONFIRM. To claim a limited item, reply with its name (e.g. EGGS).",
   };
 }
 
@@ -304,6 +318,9 @@ Deno.serve(async (req: Request) => {
             break;
           case "confirm":
             result = await handleConfirm(ctx);
+            break;
+          case "claim":
+            result = await handleClaim(ctx, intent.payload?.keyword ?? "");
             break;
           case "opt_out":
             result = await handleOptOut(admin, fromPhone);

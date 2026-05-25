@@ -114,7 +114,21 @@ jobs:
         working-directory: remotion
         run: |
           mkdir -p ../public/video
+          # defaultProps points at a soundtrack MP3 that may not exist yet
+          # (audio is gitignored; regenerate by re-running this workflow with
+          # regenerate_audio=true and an ELEVENLABS_API_KEY secret set).
+          # When the file is missing, override audioSrc to null so Remotion
+          # renders the composition silent instead of 404-ing on the bundle
+          # fetch.
+          if [ -f public/audio/screencast-soundtrack.mp3 ]; then
+            PROPS='{}'
+            echo "Audio present — rendering with soundtrack."
+          else
+            PROPS='{"audioSrc": null}'
+            echo "No audio — rendering silent (set ELEVENLABS_API_KEY + rerun with regenerate_audio=true to add music)."
+          fi
           npx remotion render Screencast ../public/video/screencast.mp4 \
+            --props="$PROPS" \
             --codec h264 \
             --crf 22 \
             --pixel-format yuv420p \
@@ -128,7 +142,10 @@ jobs:
         if: steps.video-cache.outputs.cache-hit != 'true'
         working-directory: remotion
         run: |
+          # Stills don't need audio, but the composition still references
+          # audioSrc — pass empty props to skip the soundtrack lookup.
           npx remotion still Screencast \
+            --props='{"audioSrc": null}' \
             --frame 60 \
             ../public/video/screencast-poster.jpg \
             --quality 85
@@ -140,7 +157,15 @@ jobs:
         if: steps.video-cache.outputs.cache-hit != 'true'
         working-directory: remotion
         run: |
+          if [ -f public/audio/soundtrack.mp3 ]; then
+            PROPS='{}'
+            echo "Audio present — rendering with soundtrack."
+          else
+            PROPS='{"audioSrc": null}'
+            echo "No audio — rendering silent."
+          fi
           npx remotion render Communicare ../public/video/communicare.mp4 \
+            --props="$PROPS" \
             --codec h264 \
             --crf 22 \
             --pixel-format yuv420p \
@@ -154,6 +179,7 @@ jobs:
         working-directory: remotion
         run: |
           npx remotion still Communicare \
+            --props='{"audioSrc": null}' \
             --frame 30 \
             ../public/video/communicare-poster.jpg \
             --quality 85

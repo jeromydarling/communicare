@@ -1,0 +1,289 @@
+# Supabase setup for Communicare
+
+This is the "here's the code, here's the SQL, bam it works" doc for getting
+the Communicare backend running on a fresh Supabase project. Lovable, or
+anyone else, can follow it top to bottom.
+
+Total time: about ten minutes if the secrets are ready, twenty if you're
+also setting up Resend, Twilio, Mapbox, and Perplexity accounts.
+
+---
+
+## 0. Prerequisites
+
+You'll need:
+
+- A Supabase project (free tier is fine to start). Note the **Project ref**
+  (e.g. `abcdefgh`), the **Project URL** (`https://abcdefgh.supabase.co`),
+  and the **publishable anon key**. They're all on the Supabase dashboard
+  under Project Settings → API.
+- The Supabase CLI installed locally: `brew install supabase/tap/supabase`
+  or `npm install -g supabase`.
+- A copy of this repo, with the working directory at the repo root.
+
+```bash
+supabase login              # pastes a token into your CLI
+supabase link --project-ref abcdefgh
+```
+
+The link command writes `.supabase/config` and you're ready.
+
+---
+
+## 1. Run the migrations
+
+Three migration files live in `supabase/migrations/`. They run in
+timestamp order. Run them all at once:
+
+```bash
+supabase db push
+```
+
+Or, if you'd rather paste SQL directly into the Supabase SQL Editor, the
+order is:
+
+| # | File                                          | What it creates                                                                                                                                  |
+|---|-----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | `20260524180000_initial_schema.sql`           | Profiles, farms, memberships, share definitions, products, subscriptions, orders, order_items, credit_ledger (append-only), herd-share contracts, SMS messages, waitlist. 30+ tables, 50+ RLS policies, indexes. The whole multi-tenant skeleton. |
+| 2 | `20260525120000_limited_quantity.sql`         | Two columns on `products` — `is_limited` and `available_through` — plus two indexes for the live-drops query and the SMS keyword lookup.          |
+| 3 | `20260525130000_farm_discovery.sql`           | `discovered_farms`, `farm_inquiries`, `discovery_searches`, the `bump_discovered_farm_inquiry_count` trigger, RLS policies for the public directory + the claim-page reads. |
+
+**Verify** with one query in the SQL Editor:
+
+```sql
+select count(*) from pg_tables where schemaname = 'public';
+-- should return 32 (give or take, depending on Postgres version)
+```
+
+---
+
+## 2. Set Edge Function secrets
+
+The Edge Functions read these from `Deno.env`. They're not used at build
+time, only at function runtime, so a missing secret won't break the static
+site — it'll just degrade the corresponding feature to a graceful fallback.
+
+```bash
+# Always set:
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+
+# For /find (Perplexity-powered ZIP search):
+supabase secrets set PERPLEXITY_API_KEY=pplx-...
+supabase secrets set MAPBOX_TOKEN=pk....
+
+# For "Send them a note" outbound emails (optional — falls back to mailto):
+supabase secrets set RESEND_API_KEY=re_...
+supabase secrets set RESEND_FROM=hello@communicare.farm
+supabase secrets set PUBLIC_SITE_URL=https://communicare.farm
+
+# For the SMS swap loop (only if you're wiring Twilio):
+supabase secrets set TWILIO_AUTH_TOKEN=...
+
+# For the Stripe Connect onboarding flow (only if billing is on):
+supabase secrets set STRIPE_SECRET_KEY=sk_test_or_live_...
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are populated automatically
+inside every Edge Function — you don't set them.
+
+---
+
+## 3. Deploy the Edge Functions
+
+Five functions live in `supabase/functions/`. The ones with public webhooks
+or anonymous callers deploy with `--no-verify-jwt`; the ones gated to
+logged-in users would deploy without that flag.
+
+```bash
+supabase functions deploy generate-homepage --no-verify-jwt
+supabase functions deploy find-nearby-farms --no-verify-jwt
+supabase functions deploy record-farm-inquiry --no-verify-jwt
+supabase functions deploy twilio-webhook --no-verify-jwt
+supabase functions deploy stripe-connect --no-verify-jwt
+```
+
+**Verify** in the Supabase dashboard under Edge Functions — all five
+should show "Active" with green dots. Try one:
+
+```bash
+curl -i https://abcdefgh.supabase.co/functions/v1/find-nearby-farms \
+  -H "Content-Type: application/json" \
+  -d '{"zip":"24091"}'
+# expect 200 with a JSON body containing { farms: [...] }
+```
+
+---
+
+## 4. Configure Auth
+
+In the Supabase dashboard under Authentication → URL Configuration:
+
+| Field                       | Value                                                                                  |
+|-----------------------------|----------------------------------------------------------------------------------------|
+| Site URL                    | `https://communicare.farm` (or your real domain)                                       |
+| Redirect URLs (allowlist)   | `https://communicare.farm/auth/callback/`, `http://localhost:3000/auth/callback/`, plus any preview / Lovable URLs |
+
+Under Authentication → Providers → **Email**:
+
+| Setting                     | Value                                                                                  |
+|-----------------------------|----------------------------------------------------------------------------------------|
+| Email signup enabled        | On                                                                                     |
+| Confirm email               | On                                                                                     |
+| Secure email change         | On                                                                                     |
+| Magic link                  | On (this is the primary entry today)                                                   |
+| Mailer rate limit           | 1/min default is fine                                                                  |
+
+Currently we ship **magic-link only**. Password sign-in, Google OAuth,
+show/hide password, and forgot-password flows are not yet scaffolded —
+see the "Optional: enabling passwords + Google" section at the bottom
+for the steps if you want them.
+
+---
+
+## 5. Configure Storage (optional — only for photos)
+
+If farms will upload photos for their homepages / product images, create
+two buckets in the dashboard under Storage:
+
+```sql
+-- Run in SQL Editor
+insert into storage.buckets (id, name, public) values ('farm-photos', 'farm-photos', true);
+insert into storage.buckets (id, name, public) values ('product-photos', 'product-photos', true);
+```
+
+Then this RLS lets only a farm's members upload to their own farm's
+subfolder:
+
+```sql
+create policy "Farm members can upload farm photos"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'farm-photos'
+    and public.is_farm_member((storage.foldername(name))[1]::uuid)
+  );
+
+create policy "Farm members can upload product photos"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'product-photos'
+    and public.is_farm_member((storage.foldername(name))[1]::uuid)
+  );
+
+create policy "Photos are publicly readable"
+  on storage.objects for select to anon, authenticated
+  using (bucket_id in ('farm-photos', 'product-photos'));
+```
+
+---
+
+## 6. Front-end environment variables
+
+In Lovable (or wherever the Next.js app runs):
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://abcdefgh.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhb...   # publishable anon key, safe to expose
+
+# Required for the live Mapbox topography view on /find
+NEXT_PUBLIC_MAPBOX_TOKEN=pk....
+
+# Optional — only for the Remotion video subproject
+ELEVENLABS_API_KEY=...
+ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
+```
+
+When deploying as a GitHub Pages project page, also set
+`BASE_PATH=/communicare` in the GitHub Actions secret store. For custom
+domains or Lovable hosting, leave it unset.
+
+---
+
+## 7. Verification checklist
+
+Run through these once after setup:
+
+- [ ] `select count(*) from public.farms` returns 0 (clean install)
+- [ ] `select count(*) from public.discovered_farms` returns 0
+- [ ] All five Edge Functions show Active in the dashboard
+- [ ] Visiting `/come-in` lets you send yourself a magic link
+- [ ] Magic-link email arrives, clicking it lands on `/auth/callback/`
+  and forwards into the app
+- [ ] Visiting `/find` and typing a ZIP returns at least one farm within
+  twenty miles (if PERPLEXITY_API_KEY is set)
+- [ ] Clicking "Send them a note" on a discovered farm logs a row in
+  `farm_inquiries` and bumps `inquiry_count` on `discovered_farms`
+- [ ] Visiting `/claim?slug=<one-of-the-slugs>` shows the listing
+
+---
+
+## Optional: enabling passwords + Google OAuth
+
+If you want password sign-in alongside the existing magic-link, three
+config changes and three new pages to build:
+
+### Supabase config
+
+In `supabase/config.toml`:
+
+```toml
+[auth]
+enable_anonymous_sign_ins = false
+minimum_password_length = 12              # NIST-recommended floor
+password_requirements = "lower_upper_digits"  # require mixed-case + digit
+
+[auth.email]
+secure_password_change = true             # require re-auth for password change
+```
+
+Then in the Supabase dashboard under Authentication → Providers:
+
+- **Email** — flip "Enable password" to On
+- **Google** — flip on, paste in OAuth Client ID + Client Secret from
+  Google Cloud Console (create OAuth credentials at
+  https://console.cloud.google.com/apis/credentials). The redirect URI
+  Google needs is `https://abcdefgh.supabase.co/auth/v1/callback`.
+
+### Client-side pages to add
+
+These don't exist yet in the repo. Scope:
+
+| Route                       | What it is                                                                                |
+|-----------------------------|-------------------------------------------------------------------------------------------|
+| `/come-in` (extend)         | Add tabs: "Magic link" (current) and "Password" (new). Add a "Sign in with Google" button at the top. |
+| `/sign-up`                  | Email + password (with strength meter) + name. Posts to `signUp({ email, password })`.    |
+| `/forgot-password`          | Email input. Calls `resetPasswordForEmail({ email, redirectTo: '/reset-password' })`.     |
+| `/reset-password`           | New password + confirm. Reads the recovery code from URL, calls `updateUser({ password })`. |
+| Shared `<PasswordInput />`  | Show/hide eye-icon toggle. Live strength meter (zxcvbn or a small heuristic). Enforces the same rules Postgres enforces. |
+
+The OAuth callback path (`/auth/callback/`) already exists and handles
+both magic-link `code` exchange and OAuth `code` exchange identically —
+no changes needed there.
+
+If you want, ask Claude to scaffold those four route changes — the
+pieces above are all standard Supabase patterns and take about an hour
+to build cleanly in the Communicare voice.
+
+---
+
+## Troubleshooting
+
+**"Magic link arrives but the callback page says 'invalid code'"**
+The redirect URL in the link doesn't match an allowlisted URL in the
+Supabase dashboard. Add it to Authentication → URL Configuration →
+Redirect URLs.
+
+**"find-nearby-farms returns 500"**
+Check `supabase functions logs find-nearby-farms`. Most common cause:
+PERPLEXITY_API_KEY or MAPBOX_TOKEN unset. Set them with
+`supabase secrets set ...` and the function picks them up on the next
+call (no redeploy needed).
+
+**"The inquiry email never arrives"**
+Without RESEND_API_KEY set, the function falls back to returning a
+mailto: URL and the client opens the visitor's email app. Set Resend
+to make sending automatic.
+
+**"Migrations error: function is_farm_member already exists"**
+You ran the initial schema twice. To start over:
+`supabase db reset` (wipes everything and replays migrations).

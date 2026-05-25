@@ -6,62 +6,72 @@ import {
   AbsoluteFill,
 } from "remotion";
 import { palette, fonts } from "../../brand/tokens";
-import { BrowserFrame } from "../frames";
+import { SceneBackground } from "../SceneBackground";
 
-// 15s — "Tell the list" broadcast. We open the modal on a cheddar wheel
-// drop, hit send, watch replies stream in with a counter.
+// =============================================================================
+// Scene 4 — Tell the list (12s)
+// =============================================================================
+// No browser frame — the message card IS the scene. Send button pulses,
+// then a giant counter (1 of 8 → 8 of 8) animates as replies arrive. Each
+// new claim flashes a brief +1 particle that floats up.
+// =============================================================================
 
 const REPLIES = [
-  { name: "Esther", at: 115 },
-  { name: "Caleb", at: 130 },
-  { name: "Tomás", at: 145 },
-  { name: "Jana", at: 160 },
-  { name: "Linda", at: 180 },
-  { name: "Marcus", at: 200 },
-  { name: "Hannah", at: 225 },
-  { name: "Frances", at: 255 },
+  { name: "Esther", at: 120 },
+  { name: "Caleb", at: 135 },
+  { name: "Tomás", at: 150 },
+  { name: "Jana", at: 170 },
+  { name: "Linda", at: 195 },
+  { name: "Marcus", at: 220 },
+  { name: "Hannah", at: 250 },
+  { name: "Frances", at: 290 },
 ];
 
 export const TellTheList: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const captionIn = spring({ frame, fps, config: { damping: 18 } });
-  const browserIn = spring({
-    frame: frame - 15,
-    fps,
-    config: { damping: 18 },
-  });
-  // Modal opens fast (20→50), send press at ~3s, replies start flowing right after.
-  const modalIn = interpolate(frame, [20, 50], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const SEND_AT = 85;
+  const eyebrow = spring({ frame, fps, config: { damping: 18 } });
+  const title = spring({ frame: frame - 8, fps, config: { damping: 18 } });
+  const cardIn = spring({ frame: frame - 20, fps, config: { damping: 18 } });
+
+  const SEND_AT = 100;
   const sendPulse = spring({
     frame: frame - SEND_AT,
     fps,
-    config: { damping: 12, stiffness: 220 },
+    config: { damping: 10, stiffness: 220 },
   });
+  const sent = frame > SEND_AT + 12;
 
-  // How many replies have arrived by this frame
   const arrived = REPLIES.filter((r) => frame >= r.at).length;
   const counter = Math.min(arrived, 8);
 
+  // +1 particle on the most recent claim
+  const lastReply = REPLIES.slice(0, counter).pop();
+  const particleAge = lastReply ? frame - lastReply.at : 999;
+  const particleVisible = particleAge >= 0 && particleAge < 40;
+  const particleY = interpolate(particleAge, [0, 40], [0, -80]);
+  const particleOpacity = interpolate(particleAge, [0, 10, 30, 40], [0, 1, 1, 0]);
+
   return (
-    <AbsoluteFill style={{ background: palette.parchment }}>
-      <div
+    <AbsoluteFill>
+      <SceneBackground accent={palette.wheat} />
+
+      <AbsoluteFill
         style={{
-          textAlign: "center",
-          paddingTop: 56,
-          opacity: captionIn,
-          transform: `translateY(${(1 - captionIn) * -10}px)`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "50px 80px",
         }}
       >
         <div
           style={{
+            opacity: eyebrow,
+            transform: `translateY(${(1 - eyebrow) * 14}px)`,
             fontFamily: fonts.body,
-            fontSize: 22,
+            fontSize: 24,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
             color: palette.brick,
@@ -70,333 +80,189 @@ export const TellTheList: React.FC = () => {
         >
           № 04 · A surprise wheel of cheddar
         </div>
+
         <h2
           style={{
+            opacity: title,
+            transform: `translateY(${(1 - title) * 18}px)`,
             fontFamily: fonts.display,
-            fontSize: 76,
+            fontSize: 104,
             fontWeight: 500,
-            lineHeight: 0.98,
-            letterSpacing: "-0.025em",
-            margin: 0,
+            lineHeight: 0.96,
+            letterSpacing: "-0.03em",
             color: palette.soil,
+            textAlign: "center",
+            margin: 0,
+            marginBottom: 36,
           }}
         >
-          Tap once. <em style={{ color: palette.brick }}>Tell the list.</em>
+          Tap once.{" "}
+          <em style={{ color: palette.brick, fontStyle: "italic" }}>
+            Tell the list.
+          </em>
         </h2>
-        <p
+
+        <div
           style={{
-            fontFamily: fonts.body,
-            fontSize: 22,
-            fontStyle: "italic",
-            color: `${palette.soil}AA`,
-            margin: "14px auto 0",
-            maxWidth: 720,
+            display: "flex",
+            gap: 50,
+            alignItems: "flex-start",
+            opacity: cardIn,
+            transform: `translateY(${(1 - cardIn) * 30}px)`,
           }}
         >
-          Eight in stock. First eight to reply win one. The rest get put on
-          the alert list for next time.
-        </p>
-      </div>
-
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px 80px",
-          opacity: browserIn,
-          transform: `scale(${0.96 + browserIn * 0.04})`,
-        }}
-      >
-        <BrowserFrame
-          url="communicare.farm/farmer/inventory"
-          width={1280}
-          height={720}
-        >
-          <div style={{ position: "relative", padding: 36 }}>
-            {/* Background — three product cards, the cheddar in the middle */}
+          {/* The message card — looks like the broadcast modal */}
+          <div
+            style={{
+              width: 640,
+              background: palette.parchment,
+              border: `1px solid ${palette.outlineSoft}`,
+              borderRadius: 18,
+              padding: 32,
+              boxShadow: "0 40px 70px -20px rgba(26,20,16,0.3)",
+            }}
+          >
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: 16,
-                filter: modalIn > 0.1 ? "blur(2px) brightness(0.94)" : "none",
-                transition: "filter 200ms",
+                fontFamily: fonts.body,
+                fontSize: 13,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                color: palette.brick,
+                marginBottom: 10,
               }}
             >
-              <SmallProductCard name="Pastured eggs" sub="40 left" />
-              <SmallProductCard
-                name="Aged cheddar wheel"
-                sub="8 in stock · limited"
-                highlight
-              />
-              <SmallProductCard name="Raw cream" sub="6 left" />
+              Tell the share list
+            </div>
+            <div
+              style={{
+                fontFamily: fonts.display,
+                fontSize: 36,
+                fontWeight: 500,
+                lineHeight: 1.05,
+                color: palette.soil,
+                marginBottom: 16,
+              }}
+            >
+              Aged cheddar wheel
+            </div>
+            <div
+              style={{
+                background: `${palette.cream2}55`,
+                border: `1px solid ${palette.outlineSoft}`,
+                borderRadius: 12,
+                padding: 18,
+                fontFamily: fonts.body,
+                fontSize: 18,
+                lineHeight: 1.5,
+                color: palette.soil,
+              }}
+            >
+              Aged cheddar wheel just came in — 8 wheels at $24 a wheel.
+              Reply CHEDDAR to claim one. First come, first served.
             </div>
 
-            {/* Broadcast modal */}
-            {modalIn > 0.01 && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: `${palette.soil}66`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: modalIn,
-                }}
-              >
-                <div
-                  style={{
-                    width: 580,
-                    background: palette.parchment,
-                    border: `1px solid ${palette.outlineSoft}`,
-                    borderRadius: 14,
-                    padding: 28,
-                    boxShadow:
-                      "0 40px 80px -10px rgba(26,20,16,0.4)",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: fonts.body,
-                      fontSize: 13,
-                      letterSpacing: "0.22em",
-                      textTransform: "uppercase",
-                      color: palette.brick,
-                      marginBottom: 10,
-                    }}
-                  >
-                    Tell the share list
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: fonts.display,
-                      fontSize: 36,
-                      fontWeight: 500,
-                      lineHeight: 1.05,
-                      color: palette.soil,
-                      marginBottom: 8,
-                    }}
-                  >
-                    Aged cheddar wheel
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: fonts.body,
-                      fontStyle: "italic",
-                      fontSize: 13,
-                      color: `${palette.soil}88`,
-                      marginBottom: 16,
-                    }}
-                  >
-                    This will text every active shareholder. Once.
-                  </div>
-                  <div
-                    style={{
-                      background: `${palette.cream2}55`,
-                      border: `1px solid ${palette.outlineSoft}`,
-                      borderRadius: 10,
-                      padding: 16,
-                      fontFamily: fonts.body,
-                      fontSize: 14,
-                      lineHeight: 1.5,
-                      color: palette.soil,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10,
-                        letterSpacing: "0.2em",
-                        textTransform: "uppercase",
-                        color: `${palette.soil}55`,
-                        marginBottom: 6,
-                      }}
-                    >
-                      Message preview
-                    </div>
-                    Aged cheddar wheel just came in — 8 wheels at $24 a wheel.
-                    Reply CHEDDAR to claim one. First come, first served.
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 18,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          letterSpacing: "0.2em",
-                          textTransform: "uppercase",
-                          color: `${palette.soil}55`,
-                        }}
-                      >
-                        Recipients
-                      </div>
-                      <div
-                        style={{
-                          fontFamily: fonts.display,
-                          fontSize: 20,
-                          color: palette.soil,
-                        }}
-                      >
-                        38 shareholders
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        background: palette.brick,
-                        color: palette.parchment,
-                        padding: "12px 22px",
-                        borderRadius: 999,
-                        fontFamily: fonts.display,
-                        fontSize: 14,
-                        letterSpacing: "0.18em",
-                        textTransform: "uppercase",
-                        position: "relative",
-                        boxShadow:
-                          sendPulse > 0
-                            ? `0 0 0 ${sendPulse * 14}px ${palette.brick}22`
-                            : "none",
-                      }}
-                    >
-                      Send to 38 →
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Replies stream — appears after send */}
-            {frame > SEND_AT + 20 && (
-              <div
-                style={{
-                  position: "absolute",
-                  right: 36,
-                  top: 36,
-                  width: 280,
-                  background: palette.parchment,
-                  border: `1px solid ${palette.outlineSoft}`,
-                  borderRadius: 12,
-                  padding: 18,
-                  boxShadow: "0 20px 40px -10px rgba(26,20,16,0.18)",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 10,
-                    letterSpacing: "0.22em",
-                    textTransform: "uppercase",
-                    color: palette.brick,
-                    marginBottom: 4,
-                  }}
-                >
-                  Replies — first come, first served
-                </div>
-                <div
-                  style={{
-                    fontFamily: fonts.display,
-                    fontSize: 36,
-                    fontWeight: 500,
-                    color: palette.soil,
-                    lineHeight: 1,
-                  }}
-                >
-                  {counter} <span style={{ color: `${palette.soil}55`, fontSize: 24 }}>of 8</span>
-                </div>
-                <div
-                  style={{
-                    marginTop: 14,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                  }}
-                >
-                  {REPLIES.slice(0, counter).map((r, i) => {
-                    const enter = spring({
-                      frame: frame - r.at,
-                      fps,
-                      config: { damping: 16 },
-                    });
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          opacity: enter,
-                          transform: `translateX(${(1 - enter) * 12}px)`,
-                          fontFamily: fonts.body,
-                          fontSize: 13,
-                          color: palette.soil,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: 999,
-                            background: palette.mossDark,
-                          }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>{r.name}</strong>
-                        <span style={{ fontStyle: "italic", color: `${palette.soil}66` }}>
-                          claimed one
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <div
+              style={{
+                marginTop: 24,
+                background: sent ? palette.mossDark : palette.brick,
+                color: palette.parchment,
+                padding: "16px 28px",
+                borderRadius: 999,
+                fontFamily: fonts.display,
+                fontSize: 18,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                textAlign: "center",
+                position: "relative",
+                boxShadow:
+                  sendPulse > 0 && sendPulse < 2
+                    ? `0 0 0 ${sendPulse * 18}px ${palette.brick}22`
+                    : "none",
+                transition: "background 0.2s",
+              }}
+            >
+              {sent ? "Sent to 38 ✓" : "Send to 38 →"}
+            </div>
           </div>
-        </BrowserFrame>
-      </div>
-    </AbsoluteFill>
-  );
-};
 
-const SmallProductCard: React.FC<{
-  name: string;
-  sub: string;
-  highlight?: boolean;
-}> = ({ name, sub, highlight }) => {
-  return (
-    <div
-      style={{
-        background: highlight ? `${palette.wheat}15` : palette.parchment,
-        border: `1px solid ${highlight ? palette.wheat : palette.outlineSoft}`,
-        borderRadius: 12,
-        padding: 18,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: fonts.display,
-          fontSize: 18,
-          fontWeight: 500,
-          color: palette.soil,
-        }}
-      >
-        {name}
-      </div>
-      <div
-        style={{
-          fontFamily: fonts.body,
-          fontSize: 13,
-          color: `${palette.soil}66`,
-          fontStyle: "italic",
-          marginTop: 4,
-        }}
-      >
-        {sub}
-      </div>
-    </div>
+          {/* The counter — dominant element, gets every eye */}
+          <div
+            style={{
+              position: "relative",
+              minWidth: 360,
+              paddingTop: 20,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: fonts.body,
+                fontSize: 14,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                color: palette.brick,
+                marginBottom: 14,
+              }}
+            >
+              Replies
+            </div>
+            <div
+              style={{
+                fontFamily: fonts.display,
+                fontSize: 200,
+                fontWeight: 500,
+                lineHeight: 0.9,
+                color: palette.soil,
+                letterSpacing: "-0.04em",
+                position: "relative",
+                transform: `scale(${1 + (counter > 0 && frame - (REPLIES[counter - 1]?.at ?? 0) < 8 ? 0.05 : 0)})`,
+                transition: "transform 0.1s",
+              }}
+            >
+              {counter}
+              <span
+                style={{
+                  fontSize: 56,
+                  color: `${palette.soil}55`,
+                  marginLeft: 16,
+                }}
+              >
+                of 8
+              </span>
+
+              {particleVisible && (
+                <span
+                  style={{
+                    position: "absolute",
+                    right: -50,
+                    top: 0,
+                    fontSize: 40,
+                    fontFamily: fonts.display,
+                    color: palette.mossDark,
+                    transform: `translateY(${particleY}px)`,
+                    opacity: particleOpacity,
+                  }}
+                >
+                  +1
+                </span>
+              )}
+            </div>
+            <div
+              style={{
+                marginTop: 16,
+                fontFamily: fonts.body,
+                fontSize: 18,
+                fontStyle: "italic",
+                color: `${palette.soil}88`,
+              }}
+            >
+              {lastReply
+                ? `${lastReply.name} just claimed one.`
+                : "Waiting on the share list…"}
+            </div>
+          </div>
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
   );
 };

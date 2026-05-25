@@ -74,7 +74,7 @@ jobs:
           # When regenerate_audio=true on a manual run, we also bust by
           # including the run id, so the audio gets freshly produced and
           # the videos get freshly rendered over it.
-          key: rendered-videos-v3-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}-${{ github.event.inputs.regenerate_audio == 'true' && github.run_id || 'cached' }}
+          key: rendered-videos-v4-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}-${{ github.event.inputs.regenerate_audio == 'true' && github.run_id || 'cached' }}
 
       - name: Report cache state
         run: |
@@ -96,21 +96,35 @@ jobs:
             libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 \
             libpango-1.0-0 libcairo2
 
-      - name: Regenerate music beds
-        # Secrets can't be referenced in if-conditions; guard inside the
-        # script instead. Skips when the API key isn't configured.
-        if: |
-          steps.video-cache.outputs.cache-hit != 'true' &&
-          github.event.inputs.regenerate_audio == 'true'
+      - name: Generate music beds (auto when key is set)
+        # Auto-regenerates audio whenever ELEVENLABS_API_KEY is configured
+        # AND either (a) the soundtrack files don't exist yet, or
+        # (b) the manual regenerate_audio flag was passed. No more need to
+        # toggle the workflow input — the first run after the key is added
+        # produces the music automatically.
+        if: steps.video-cache.outputs.cache-hit != 'true'
         working-directory: remotion
         env:
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          REGEN: ${{ github.event.inputs.regenerate_audio }}
         run: |
-          if [ -n "$ELEVENLABS_API_KEY" ]; then
+          if [ -z "$ELEVENLABS_API_KEY" ]; then
+            echo "No ELEVENLABS_API_KEY — rendering silent."
+            exit 0
+          fi
+          if [ "$REGEN" = "true" ]; then
+            echo "Manual regenerate requested — producing both beds."
+            npm run audio
+            exit 0
+          fi
+          missing=0
+          [ -f public/audio/screencast-soundtrack.mp3 ] || missing=1
+          [ -f public/audio/soundtrack.mp3 ] || missing=1
+          if [ $missing -eq 1 ]; then
+            echo "Audio missing — generating."
             npm run audio
           else
-            echo "ELEVENLABS_API_KEY not set — skipping audio regeneration."
-            echo "Rendering will use whatever's already in remotion/public/audio/."
+            echo "Both audio files present — skipping generation."
           fi
 
       - name: Render screencast — 90s product walkthrough

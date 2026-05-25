@@ -6,184 +6,149 @@ import {
   AbsoluteFill,
 } from "remotion";
 import { palette, fonts } from "../../brand/tokens";
-import { BrowserFrame } from "../frames";
+import { SceneBackground } from "../SceneBackground";
 
-// 10 seconds — establishes Mary, the farm, and the promise of "five minutes
-// a day." The browser frame settles in, the dashboard appears, the stat
-// numbers count up as the narration lands.
+// =============================================================================
+// Scene 1 — Cold open (8s)
+// =============================================================================
+// "Mary, at the farm desk." Three big stats count up. No browser frame, no
+// busy chrome — just the three numbers, each anchoring a corner, each
+// hitting its final value with a subtle scale-pulse. Drifting background.
+// =============================================================================
 
 export const ColdOpen: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const titleIn = spring({ frame, fps, config: { damping: 18 } });
-  const frameIn = spring({
-    frame: frame - 30,
-    fps,
-    config: { damping: 20, stiffness: 70 },
-  });
-  const dashIn = interpolate(frame, [60, 120], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const eyebrow = spring({ frame, fps, config: { damping: 18 } });
+  const title = spring({ frame: frame - 12, fps, config: { damping: 18 } });
 
-  // Stat counters — finish counting well before the 7s scene ends so the
-  // viewer reads the numbers, not the count animation.
-  const shareholders = Math.floor(interpolate(frame, [70, 140], [0, 38], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  }));
-  const cows = Math.floor(interpolate(frame, [85, 150], [0, 12], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  }));
-  const revenue = Math.floor(interpolate(frame, [95, 165], [0, 4370], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  }));
+  // Three counters, staggered. Each finishes well before scene end.
+  const shareholders = Math.floor(
+    interpolate(frame, [50, 130], [0, 38], { extrapolateRight: "clamp" }),
+  );
+  const cows = Math.floor(
+    interpolate(frame, [70, 150], [0, 12], { extrapolateRight: "clamp" }),
+  );
+  const revenue = Math.floor(
+    interpolate(frame, [90, 175], [0, 4370], { extrapolateRight: "clamp" }),
+  );
+
+  // Each number gets a subtle scale-pulse on every tick it changes.
+  const pulse = (target: number, lastChangeFrame: number) => {
+    const delta = frame - lastChangeFrame;
+    return delta >= 0 && delta < 6 ? 1 + (6 - delta) * 0.01 : 1;
+  };
 
   return (
-    <AbsoluteFill
-      style={{
-        background: palette.parchment,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
+    <AbsoluteFill>
+      <SceneBackground />
+
+      <AbsoluteFill
         style={{
-          opacity: titleIn,
-          transform: `translateY(${(1 - titleIn) * 20}px)`,
-          textAlign: "center",
-          marginBottom: 36,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 100,
+          gap: 60,
         }}
       >
         <div
           style={{
+            opacity: eyebrow,
+            transform: `translateY(${(1 - eyebrow) * 16}px)`,
             fontFamily: fonts.body,
-            fontSize: 22,
+            fontSize: 28,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
             color: palette.brick,
-            marginBottom: 18,
+            textAlign: "center",
           }}
         >
           № 01 · Five minutes a day
         </div>
+
         <h1
           style={{
+            opacity: title,
+            transform: `translateY(${(1 - title) * 24}px)`,
             fontFamily: fonts.display,
-            fontSize: 84,
+            fontSize: 140,
             fontWeight: 500,
-            lineHeight: 1.0,
-            letterSpacing: "-0.02em",
-            margin: 0,
+            lineHeight: 0.96,
+            letterSpacing: "-0.03em",
             color: palette.soil,
+            textAlign: "center",
+            margin: 0,
           }}
         >
-          Mary, at the farm desk.
+          Mary,{" "}
+          <em style={{ color: palette.brick, fontStyle: "italic" }}>
+            at the farm desk.
+          </em>
         </h1>
-      </div>
 
-      <div
-        style={{
-          opacity: frameIn,
-          transform: `translateY(${(1 - frameIn) * 60}px) scale(${0.96 + frameIn * 0.04})`,
-        }}
-      >
-        <BrowserFrame
-          url="communicare.farm/farmer"
-          width={1180}
-          height={480}
+        <div
+          style={{
+            marginTop: 30,
+            display: "flex",
+            gap: 80,
+            opacity: interpolate(frame, [40, 80], [0, 1], {
+              extrapolateRight: "clamp",
+            }),
+          }}
         >
-          <div
-            style={{
-              padding: 36,
-              opacity: dashIn,
-              transform: `translateY(${(1 - dashIn) * 12}px)`,
-            }}
-          >
-            <div
-              style={{
-                fontFamily: fonts.body,
-                fontSize: 14,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: palette.brick,
-                marginBottom: 12,
-              }}
-            >
-              Monday, May 25
-            </div>
-            <h2
-              style={{
-                fontFamily: fonts.display,
-                fontSize: 56,
-                fontWeight: 500,
-                lineHeight: 1,
-                letterSpacing: "-0.015em",
-                margin: 0,
-                marginBottom: 32,
-                color: palette.soil,
-              }}
-            >
-              Today on the farm.
-            </h2>
-            <div style={{ display: "flex", gap: 18 }}>
-              <DashStat label="Active shareholders" value={shareholders} />
-              <DashStat label="Jersey cows" value={cows} />
-              <DashStat
-                label="This week's revenue"
-                value={revenue}
-                prefix="$"
-                comma
-              />
-            </div>
-          </div>
-        </BrowserFrame>
-      </div>
+          <BigStat
+            value={shareholders}
+            label="shareholders"
+            scale={pulse(shareholders, 50 + shareholders * 2)}
+          />
+          <BigStat
+            value={cows}
+            label="jersey cows"
+            scale={pulse(cows, 70 + cows * 6)}
+          />
+          <BigStat
+            value={`$${revenue.toLocaleString()}`}
+            label="this week"
+            scale={pulse(revenue, 90 + Math.floor(revenue / 50))}
+          />
+        </div>
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-const DashStat: React.FC<{
+const BigStat: React.FC<{
+  value: number | string;
   label: string;
-  value: number;
-  prefix?: string;
-  comma?: boolean;
-}> = ({ label, value, prefix = "", comma = false }) => {
-  const display = comma ? value.toLocaleString() : value.toString();
+  scale: number;
+}> = ({ value, label, scale }) => {
   return (
-    <div
-      style={{
-        flex: 1,
-        background: palette.parchment,
-        border: `1px solid ${palette.outlineSoft}`,
-        borderRadius: 10,
-        padding: 24,
-      }}
-    >
+    <div style={{ textAlign: "center" }}>
       <div
         style={{
           fontFamily: fonts.display,
-          fontSize: 56,
+          fontSize: 86,
           fontWeight: 500,
           color: palette.soil,
+          letterSpacing: "-0.025em",
           lineHeight: 1,
-          letterSpacing: "-0.02em",
+          transform: `scale(${scale})`,
+          transition: "transform 0.1s",
         }}
       >
-        {prefix}
-        {display}
+        {value}
       </div>
       <div
         style={{
+          marginTop: 10,
           fontFamily: fonts.body,
-          fontSize: 14,
-          letterSpacing: "0.18em",
+          fontSize: 16,
+          letterSpacing: "0.2em",
           textTransform: "uppercase",
           color: `${palette.soil}88`,
-          marginTop: 10,
         }}
       >
         {label}

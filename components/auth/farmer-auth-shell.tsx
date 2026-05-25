@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FarmScene } from "@/components/farm-scene";
+import { WatercolorScene } from "@/components/watercolor-scene";
 import { Mark } from "@/components/mark";
 
 // Shared two-pane layout for all four /farmer auth pages. Mirrors the
@@ -30,7 +30,7 @@ export function FarmerAuthShell({
   return (
     <div className="min-h-[calc(100vh-64px)] grid md:grid-cols-2">
       <div className="relative bg-soil overflow-hidden order-2 md:order-1 min-h-[280px] md:min-h-0">
-        <FarmScene className="absolute inset-0 w-full h-full" />
+        <WatercolorScene name="dawn-pasture" className="absolute inset-0 w-full h-full" />
         <div className="absolute top-8 left-8 text-parchment/85 z-10">
           <div className="small-caps text-[10px] text-parchment/60 tracking-[0.2em]">
             The farm desk · for operators

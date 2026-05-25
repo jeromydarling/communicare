@@ -226,26 +226,22 @@ Run through these once after setup:
 
 ---
 
-## Google OAuth — one dashboard step
+## Google OAuth — nothing to do
 
 Password sign-in works out of the box once you `supabase db push` —
 `supabase/config.toml` enables it and the `/farmer/*` pages are ready.
 
-For **Google sign-in** to work, paste the OAuth credentials into the
-Supabase dashboard (we don't keep them in the repo):
+Lovable ships Google OAuth out of the box. Flip it on in their
+auth panel and the "Continue with Google" button on `/farmer/come-in`
+and `/farmer/sign-up` is live. No Google Cloud Console step, no
+Client ID / Client Secret to paste, no dashboard edit.
 
-1. Go to https://console.cloud.google.com/apis/credentials → Create
-   credentials → OAuth client ID → Web application.
-2. Add this Authorized redirect URI:
-   `https://<your-project-ref>.supabase.co/auth/v1/callback`
-3. Copy the Client ID + Client Secret.
-4. In Supabase dashboard → Authentication → Providers → Google:
-   - Flip Enabled to On
-   - Paste Client ID + Client Secret
-   - Save
-
-That's it. The "Continue with Google" button on `/farmer/come-in` and
-`/farmer/sign-up` becomes live the next time someone clicks it.
+If you're hosting somewhere without managed OAuth (Vercel, Fly,
+self-host), the manual path is: create OAuth credentials at
+https://console.cloud.google.com/apis/credentials, add
+`https://<your-project-ref>.supabase.co/auth/v1/callback` as an
+authorized redirect URI, then paste the Client ID + Secret into
+Supabase dashboard → Authentication → Providers → Google.
 
 ### What's in the repo for auth
 

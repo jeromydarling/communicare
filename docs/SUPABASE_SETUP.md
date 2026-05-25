@@ -134,10 +134,19 @@ Under Authentication → Providers → **Email**:
 | Magic link                  | On (this is the primary entry today)                                                   |
 | Mailer rate limit           | 1/min default is fine                                                                  |
 
-Currently we ship **magic-link only**. Password sign-in, Google OAuth,
-show/hide password, and forgot-password flows are not yet scaffolded —
-see the "Optional: enabling passwords + Google" section at the bottom
-for the steps if you want them.
+**Two audiences, two doors:**
+
+- **Members** (CSA buyers, herd-share holders, meat-share customers) sign in
+  at `/come-in` with a magic link. No password. One field, one tap.
+- **Farms** (operators, staff) sign in at `/farmer/come-in` with a password
+  or with Google. Sign-up at `/farmer/sign-up`, password reset at
+  `/farmer/forgot-password` → `/farmer/reset-password`. Magic link is still
+  offered as a fallback on the operator sign-in page for anyone who'd
+  rather skip passwords.
+
+The Auth-Gate on `/farmer/*` dashboard pages redirects un-signed-in
+visitors to `/farmer/come-in/?next=...` so they land back where they
+were trying to go.
 
 ---
 
@@ -217,52 +226,45 @@ Run through these once after setup:
 
 ---
 
-## Optional: enabling passwords + Google OAuth
+## Google OAuth — one dashboard step
 
-If you want password sign-in alongside the existing magic-link, three
-config changes and three new pages to build:
+Password sign-in works out of the box once you `supabase db push` —
+`supabase/config.toml` enables it and the `/farmer/*` pages are ready.
 
-### Supabase config
+For **Google sign-in** to work, paste the OAuth credentials into the
+Supabase dashboard (we don't keep them in the repo):
 
-In `supabase/config.toml`:
+1. Go to https://console.cloud.google.com/apis/credentials → Create
+   credentials → OAuth client ID → Web application.
+2. Add this Authorized redirect URI:
+   `https://<your-project-ref>.supabase.co/auth/v1/callback`
+3. Copy the Client ID + Client Secret.
+4. In Supabase dashboard → Authentication → Providers → Google:
+   - Flip Enabled to On
+   - Paste Client ID + Client Secret
+   - Save
 
-```toml
-[auth]
-enable_anonymous_sign_ins = false
-minimum_password_length = 12              # NIST-recommended floor
-password_requirements = "lower_upper_digits"  # require mixed-case + digit
+That's it. The "Continue with Google" button on `/farmer/come-in` and
+`/farmer/sign-up` becomes live the next time someone clicks it.
 
-[auth.email]
-secure_password_change = true             # require re-auth for password change
-```
+### What's in the repo for auth
 
-Then in the Supabase dashboard under Authentication → Providers:
+These are all built and shipped:
 
-- **Email** — flip "Enable password" to On
-- **Google** — flip on, paste in OAuth Client ID + Client Secret from
-  Google Cloud Console (create OAuth credentials at
-  https://console.cloud.google.com/apis/credentials). The redirect URI
-  Google needs is `https://abcdefgh.supabase.co/auth/v1/callback`.
+| Route                            | What it is                                                                          |
+|----------------------------------|-------------------------------------------------------------------------------------|
+| `/come-in`                       | Member magic-link sign-in. One email field, one button.                             |
+| `/farmer/come-in`                | Operator sign-in: Google, then email + password, then magic-link fallback below.    |
+| `/farmer/sign-up`                | Operator sign-up: Google or email + name + farm name + password (with strength meter). |
+| `/farmer/forgot-password`        | Operator password reset request — sends an email with a recovery link.              |
+| `/farmer/reset-password`         | Lands here from the recovery email. Exchanges the code, sets a new password.        |
+| `/auth/callback/`                | Shared post-auth landing. Handles both magic-link and OAuth code exchanges.         |
+| `components/auth/password-input` | Shared input with show/hide toggle and a live four-rule strength meter (no zxcvbn). |
 
-### Client-side pages to add
-
-These don't exist yet in the repo. Scope:
-
-| Route                       | What it is                                                                                |
-|-----------------------------|-------------------------------------------------------------------------------------------|
-| `/come-in` (extend)         | Add tabs: "Magic link" (current) and "Password" (new). Add a "Sign in with Google" button at the top. |
-| `/sign-up`                  | Email + password (with strength meter) + name. Posts to `signUp({ email, password })`.    |
-| `/forgot-password`          | Email input. Calls `resetPasswordForEmail({ email, redirectTo: '/reset-password' })`.     |
-| `/reset-password`           | New password + confirm. Reads the recovery code from URL, calls `updateUser({ password })`. |
-| Shared `<PasswordInput />`  | Show/hide eye-icon toggle. Live strength meter (zxcvbn or a small heuristic). Enforces the same rules Postgres enforces. |
-
-The OAuth callback path (`/auth/callback/`) already exists and handles
-both magic-link `code` exchange and OAuth `code` exchange identically —
-no changes needed there.
-
-If you want, ask Claude to scaffold those four route changes — the
-pieces above are all standard Supabase patterns and take about an hour
-to build cleanly in the Communicare voice.
+Voice rules followed throughout: editorial copy, the Berry pull-quote
+on every operator page, "the desk is waiting for you" instead of
+"Welcome to your dashboard," and `Pax tibi.` on the confirmation
+screens. Members never see a password field; farms get the full kit.
 
 ---
 

@@ -45,18 +45,31 @@ jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
-# We use magic links + SMS OTP. Passwords are disabled.
 enable_anonymous_sign_ins = false
-minimum_password_length = 16  # cosmetic; passwords are off
+# Members sign in with magic links. Farms sign in with email+password OR Google
+# OR magic link — see /farmer/come-in. Minimum length follows NIST guidance.
+minimum_password_length = 12
+# Require mixed case + a digit for farm operator passwords.
+password_requirements = "lower_upper_letters_digits"
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
-# Magic-link emails only — no password reset templates needed
+# Magic-link AND password reset templates both live here.
 max_frequency = "1m0s"
 otp_length = 6
 otp_expiry = 3600
+
+# Google OAuth — provider config lives in the Supabase dashboard (the Client
+# ID / Client Secret are too sensitive for the config file). This block just
+# turns it on locally; the dashboard still needs the credentials.
+[auth.external.google]
+enabled = true
+# client_id = "env(GOOGLE_OAUTH_CLIENT_ID)"
+# secret    = "env(GOOGLE_OAUTH_CLIENT_SECRET)"
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
+skip_nonce_check = false
 
 [auth.sms]
 # Phone OTP fallback — wire to Twilio in the dashboard

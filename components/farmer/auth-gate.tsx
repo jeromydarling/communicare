@@ -67,8 +67,11 @@ export function AuthGate({
           return;
         }
         setState({ kind: "anon" });
+        // Farms with no session go to the operator sign-in. The form-gated
+        // demo lives at /demo for unsigned-in visitors who want to poke
+        // around with sample data instead.
         const next = encodeURIComponent(pathname);
-        router.replace(`/demo/?next=${next}`);
+        router.replace(`/farmer/come-in/?next=${next}`);
         return;
       }
       setState({

@@ -24,8 +24,10 @@ export const SoldOutTap: React.FC = () => {
     config: { damping: 18, stiffness: 80 },
   });
 
-  // Tap happens at ~6s into the scene (frame 180)
-  const TAP_AT = 180;
+  // Tap happens at ~3.5s (frame 105) so the badge flip + notification both
+  // land while the eye is still focused on the inventory row, not after a
+  // long dwell.
+  const TAP_AT = 105;
   const tapScale = spring({
     frame: frame - TAP_AT,
     fps,
@@ -34,8 +36,8 @@ export const SoldOutTap: React.FC = () => {
   // After the tap, the eggs row badge flips
   const flipped = frame > TAP_AT + 8;
 
-  // Wait-list notification slides up at ~9s
-  const NOTIFY_AT = 270;
+  // Wait-list notification slides up at ~6s
+  const NOTIFY_AT = 180;
   const notifyIn = spring({
     frame: frame - NOTIFY_AT,
     fps,
@@ -108,7 +110,7 @@ export const SoldOutTap: React.FC = () => {
           transform: `translateX(${(1 - phoneIn) * 60}px)`,
         }}
       >
-        <PhoneFrame width={420}>
+        <PhoneFrame width={380}>
           {/* Header */}
           <div
             style={{

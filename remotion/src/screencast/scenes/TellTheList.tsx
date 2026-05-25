@@ -12,14 +12,14 @@ import { BrowserFrame } from "../frames";
 // drop, hit send, watch replies stream in with a counter.
 
 const REPLIES = [
-  { name: "Esther", at: 130 },
-  { name: "Caleb", at: 145 },
-  { name: "Tomás", at: 160 },
-  { name: "Jana", at: 180 },
-  { name: "Linda", at: 200 },
-  { name: "Marcus", at: 230 },
-  { name: "Hannah", at: 260 },
-  { name: "Frances", at: 300 },
+  { name: "Esther", at: 115 },
+  { name: "Caleb", at: 130 },
+  { name: "Tomás", at: 145 },
+  { name: "Jana", at: 160 },
+  { name: "Linda", at: 180 },
+  { name: "Marcus", at: 200 },
+  { name: "Hannah", at: 225 },
+  { name: "Frances", at: 255 },
 ];
 
 export const TellTheList: React.FC = () => {
@@ -32,12 +32,12 @@ export const TellTheList: React.FC = () => {
     fps,
     config: { damping: 18 },
   });
-  // Modal fades open at 30, send pressed at 100, replies start flowing at 130
-  const modalIn = interpolate(frame, [30, 60], [0, 1], {
+  // Modal opens fast (20→50), send press at ~3s, replies start flowing right after.
+  const modalIn = interpolate(frame, [20, 50], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const SEND_AT = 100;
+  const SEND_AT = 85;
   const sendPulse = spring({
     frame: frame - SEND_AT,
     fps,
@@ -112,7 +112,7 @@ export const TellTheList: React.FC = () => {
         <BrowserFrame
           url="communicare.farm/farmer/inventory"
           width={1280}
-          height={560}
+          height={720}
         >
           <div style={{ position: "relative", padding: 36 }}>
             {/* Background — three product cards, the cheddar in the middle */}
@@ -149,11 +149,11 @@ export const TellTheList: React.FC = () => {
               >
                 <div
                   style={{
-                    width: 600,
+                    width: 580,
                     background: palette.parchment,
                     border: `1px solid ${palette.outlineSoft}`,
                     borderRadius: 14,
-                    padding: 30,
+                    padding: 28,
                     boxShadow:
                       "0 40px 80px -10px rgba(26,20,16,0.4)",
                   }}
@@ -161,11 +161,11 @@ export const TellTheList: React.FC = () => {
                   <div
                     style={{
                       fontFamily: fonts.body,
-                      fontSize: 12,
+                      fontSize: 13,
                       letterSpacing: "0.22em",
                       textTransform: "uppercase",
                       color: palette.brick,
-                      marginBottom: 8,
+                      marginBottom: 10,
                     }}
                   >
                     Tell the share list
@@ -173,10 +173,11 @@ export const TellTheList: React.FC = () => {
                   <div
                     style={{
                       fontFamily: fonts.display,
-                      fontSize: 28,
+                      fontSize: 36,
                       fontWeight: 500,
+                      lineHeight: 1.05,
                       color: palette.soil,
-                      marginBottom: 6,
+                      marginBottom: 8,
                     }}
                   >
                     Aged cheddar wheel

@@ -27,12 +27,12 @@ export const Close: React.FC = () => {
     config: { damping: 18 },
   });
   const urlIn = spring({
-    frame: frame - 150,
+    frame: frame - 130,
     fps,
     config: { damping: 18 },
   });
   const priceIn = spring({
-    frame: frame - 220,
+    frame: frame - 175,
     fps,
     config: { damping: 18 },
   });
@@ -135,22 +135,23 @@ export const Close: React.FC = () => {
         style={{
           opacity: priceIn,
           transform: `translateY(${(1 - priceIn) * 14}px)`,
-          marginTop: 18,
+          marginTop: 22,
           background: palette.soil,
           color: palette.parchment,
-          padding: "16px 36px",
+          padding: "20px 44px",
           borderRadius: 999,
           display: "flex",
-          alignItems: "center",
-          gap: 18,
+          alignItems: "baseline",
+          gap: 22,
           position: "relative",
         }}
       >
         <span
           style={{
             fontFamily: fonts.display,
-            fontSize: 30,
+            fontSize: 44,
             fontWeight: 500,
+            lineHeight: 1,
           }}
         >
           $9
@@ -158,10 +159,11 @@ export const Close: React.FC = () => {
         <span
           style={{
             fontFamily: fonts.body,
-            fontSize: 14,
+            fontSize: 22,
             fontStyle: "italic",
-            letterSpacing: "0.1em",
-            opacity: 0.85,
+            letterSpacing: "0.06em",
+            opacity: 0.9,
+            lineHeight: 1,
           }}
         >
           a month · no setup · no contracts

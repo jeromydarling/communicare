@@ -21,16 +21,18 @@ export const screencastPropsSchema = z.object({
   audioSrc: z.string().optional(),
 });
 
-// 90 seconds at 30fps. Six scenes, see SCREENCAST_SCRIPT.md for the beat
-// sheet and the on-screen copy.
+// 70 seconds at 30fps. Six scenes, retimed without narration. The earlier
+// 90-second cut was paced against a voice that no longer exists; without
+// it the dwells felt slow, so each scene is tightened ~25% with the action
+// pulled earlier so something moves in every second.
 const FPS = 30;
 const SCENES = {
-  open: 10 * FPS, // 300
-  soldOut: 15 * FPS, // 450
-  sms: 20 * FPS, // 600
-  broadcast: 15 * FPS, // 450
-  directory: 15 * FPS, // 450
-  close: 15 * FPS, // 450
+  open: 7 * FPS, // 210 — establish + go
+  soldOut: 12 * FPS, // 360 — tap lands at ~5s, notification slides at ~8s
+  sms: 16 * FPS, // 480 — three messages over 12s, roster reacts
+  broadcast: 12 * FPS, // 360 — modal in fast, replies stream over 6s
+  directory: 12 * FPS, // 360 — ZIP types fast, pins drop, send confirmation
+  close: 11 * FPS, // 330 — mark, line, line, URL, price — all visible by 8s
 } as const;
 
 export const TOTAL = Object.values(SCENES).reduce((a, b) => a + b, 0); // 2700

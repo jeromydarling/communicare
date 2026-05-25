@@ -68,9 +68,13 @@ jobs:
             public/video/communicare-poster.jpg
           # Invalidate when remotion source, scripts, or audio change.
           # The audio file hash is part of the key so a regenerated music
-          # bed forces a rerender. The "v2" prefix lets us bust the cache
-          # by bumping the number when we change the schema.
-          key: rendered-videos-v2-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}
+          # bed forces a rerender. The "v3" prefix is bumped manually
+          # whenever we want to bust everything cached — e.g. the screencast
+          # scene retiming + ELEVENLABS_API_KEY now being available.
+          # When regenerate_audio=true on a manual run, we also bust by
+          # including the run id, so the audio gets freshly produced and
+          # the videos get freshly rendered over it.
+          key: rendered-videos-v3-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}-${{ github.event.inputs.regenerate_audio == 'true' && github.run_id || 'cached' }}
 
       - name: Report cache state
         run: |

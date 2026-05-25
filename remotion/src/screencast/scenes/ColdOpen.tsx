@@ -27,16 +27,17 @@ export const ColdOpen: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
-  // Stat counters
-  const shareholders = Math.floor(interpolate(frame, [90, 180], [0, 38], {
+  // Stat counters — finish counting well before the 7s scene ends so the
+  // viewer reads the numbers, not the count animation.
+  const shareholders = Math.floor(interpolate(frame, [70, 140], [0, 38], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   }));
-  const cows = Math.floor(interpolate(frame, [110, 190], [0, 12], {
+  const cows = Math.floor(interpolate(frame, [85, 150], [0, 12], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   }));
-  const revenue = Math.floor(interpolate(frame, [130, 220], [0, 4370], {
+  const revenue = Math.floor(interpolate(frame, [95, 165], [0, 4370], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   }));

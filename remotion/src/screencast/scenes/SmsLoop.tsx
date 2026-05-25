@@ -20,13 +20,13 @@ const MESSAGES: Array<{
   {
     from: "them",
     text: "Hey Linda — kale, chard, eggs, half-gallon milk in your Tuesday share. Reply SWAP, SKIP, or DONATE.",
-    at: 60,
+    at: 45,
   },
-  { from: "me", text: "skip 2", at: 220 },
+  { from: "me", text: "skip 2", at: 165 },
   {
     from: "them",
     text: "Done. Skipped May 27 and June 3. Account credited $72. Back on the roster after that.",
-    at: 320,
+    at: 250,
   },
 ];
 
@@ -46,8 +46,9 @@ export const SmsLoop: React.FC = () => {
     config: { damping: 20 },
   });
 
-  // Roster Linda row flips to "PAUSED — 2 WEEKS" at frame 280
-  const PAUSED_AT = 280;
+  // Roster Linda row flips to "PAUSED — 2 WEEKS" right after the "skip 2"
+  // reply lands, before the confirmation message arrives.
+  const PAUSED_AT = 220;
   const pausedHilite = spring({
     frame: frame - PAUSED_AT,
     fps,

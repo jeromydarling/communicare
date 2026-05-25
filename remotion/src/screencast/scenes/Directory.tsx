@@ -13,11 +13,11 @@ import { PhoneFrame } from "../frames";
 
 // Pin positions on the map (% of map width/height)
 const PINS = [
-  { x: 24, y: 38, at: 90, focus: false },
-  { x: 38, y: 28, at: 100, focus: false },
-  { x: 50, y: 50, at: 110, focus: true }, // Mary's farm
-  { x: 62, y: 32, at: 120, focus: false },
-  { x: 75, y: 56, at: 130, focus: false },
+  { x: 24, y: 38, at: 70, focus: false },
+  { x: 38, y: 28, at: 80, focus: false },
+  { x: 50, y: 50, at: 95, focus: true }, // Mary's farm
+  { x: 62, y: 32, at: 105, focus: false },
+  { x: 75, y: 56, at: 115, focus: false },
 ];
 
 const ZIP = "80440";
@@ -32,18 +32,18 @@ export const Directory: React.FC = () => {
     fps,
     config: { damping: 18 },
   });
-  // ZIP letters type in one per 4 frames starting at f=30
-  const typed = Math.max(0, Math.min(ZIP.length, Math.floor((frame - 30) / 4)));
+  // ZIP letters type in fast — one per 3 frames starting at f=20
+  const typed = Math.max(0, Math.min(ZIP.length, Math.floor((frame - 20) / 3)));
   const visibleZip = ZIP.slice(0, typed);
 
-  const NOTE_AT = 240;
+  const NOTE_AT = 180;
   const noteIn = spring({
     frame: frame - NOTE_AT,
     fps,
     config: { damping: 18 },
   });
 
-  const CONFIRM_AT = 350;
+  const CONFIRM_AT = 270;
   const confirmIn = spring({
     frame: frame - CONFIRM_AT,
     fps,
@@ -57,8 +57,8 @@ export const Directory: React.FC = () => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 80,
-        padding: "0 100px",
+        gap: 70,
+        padding: "60px 100px",
       }}
     >
       <div
@@ -117,7 +117,7 @@ export const Directory: React.FC = () => {
           transform: `translateX(${(1 - phoneIn) * 50}px)`,
         }}
       >
-        <PhoneFrame width={420}>
+        <PhoneFrame width={360}>
           {/* Header */}
           <div
             style={{
@@ -162,7 +162,7 @@ export const Directory: React.FC = () => {
               }}
             >
               {visibleZip}
-              {frame < 90 && (
+              {frame < 60 && (
                 <span
                   style={{
                     display: "inline-block",
@@ -171,7 +171,7 @@ export const Directory: React.FC = () => {
                     background: palette.brick,
                     marginLeft: 2,
                     verticalAlign: "text-bottom",
-                    opacity: Math.floor(frame / 15) % 2 ? 1 : 0,
+                    opacity: Math.floor(frame / 10) % 2 ? 1 : 0,
                   }}
                 />
               )}
@@ -232,7 +232,7 @@ export const Directory: React.FC = () => {
                     position: "absolute",
                     left: `${p.x}%`,
                     top: `${p.y}%`,
-                    transform: `translate(-50%, -100%) scale(${drop * (p.focus && frame > 200 ? 1.2 : 1)})`,
+                    transform: `translate(-50%, -100%) scale(${drop * (p.focus && frame > 150 ? 1.2 : 1)})`,
                     opacity: drop,
                   }}
                 >

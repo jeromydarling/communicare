@@ -147,6 +147,12 @@ jobs:
       - name: Commit rendered videos
         id: commit
         if: steps.video-cache.outputs.cache-hit != 'true'
+        env:
+          # Pre-computed so the bash heredoc below doesn't have to
+          # interpolate GitHub Actions expressions inside a multi-line
+          # quoted string (which broke YAML indentation in the first cut).
+          CACHE_KEY: ${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}
+          TRIGGER: ${{ github.event_name }}
         run: |
           if git diff --quiet public/video/; then
             echo "Nothing changed — skip commit"
@@ -156,10 +162,8 @@ jobs:
           git config user.name  "communicare-render-bot"
           git config user.email "render-bot@communicare.farm"
           git add public/video/
-          git commit -m "Rendered videos $(date -u +%Y-%m-%dT%H:%MZ)
-
-Triggered by ${{ github.event_name }}. Re-render cache key:
-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}"
+          MSG="Rendered videos $(date -u +%Y-%m-%dT%H:%MZ) (trigger=${TRIGGER}, key=${CACHE_KEY})"
+          git commit -m "${MSG}"
           # Push, but rebase on top of anything that landed while we
           # were rendering.
           git pull --rebase origin main

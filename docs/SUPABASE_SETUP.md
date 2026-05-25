@@ -32,7 +32,7 @@ The link command writes `.supabase/config` and you're ready.
 
 ## 1. Run the migrations
 
-Three migration files live in `supabase/migrations/`. They run in
+Four migration files live in `supabase/migrations/`. They run in
 timestamp order. Run them all at once:
 
 ```bash
@@ -47,12 +47,18 @@ order is:
 | 1 | `20260524180000_initial_schema.sql`           | Profiles, farms, memberships, share definitions, products, subscriptions, orders, order_items, credit_ledger (append-only), herd-share contracts, SMS messages, waitlist. 30+ tables, 50+ RLS policies, indexes. The whole multi-tenant skeleton. |
 | 2 | `20260525120000_limited_quantity.sql`         | Two columns on `products` — `is_limited` and `available_through` — plus two indexes for the live-drops query and the SMS keyword lookup.          |
 | 3 | `20260525130000_farm_discovery.sql`           | `discovered_farms`, `farm_inquiries`, `discovery_searches`, the `bump_discovered_farm_inquiry_count` trigger, RLS policies for the public directory + the claim-page reads. |
+| 4 | `20260525200000_drop_sites.sql`               | Adds `drop_sites` jsonb column to `discovered_farms` so the `/find` ZIP search can match by *pickup distance* (closest of: farm address, any drop site) rather than just the farm's primary location. A farm two hours away with a CSA drop four miles from you now surfaces in the search. |
 
 **Verify** with one query in the SQL Editor:
 
 ```sql
 select count(*) from pg_tables where schemaname = 'public';
 -- should return 32 (give or take, depending on Postgres version)
+
+-- Also confirm the drop_sites column landed:
+select column_name from information_schema.columns
+ where table_name = 'discovered_farms' and column_name = 'drop_sites';
+-- expect one row
 ```
 
 ---
@@ -109,9 +115,22 @@ should show "Active" with green dots. Try one:
 ```bash
 curl -i https://abcdefgh.supabase.co/functions/v1/find-nearby-farms \
   -H "Content-Type: application/json" \
-  -d '{"zip":"24091"}'
-# expect 200 with a JSON body containing { farms: [...] }
+  -d '{"zip":"24091", "radiusMiles": 25}'
+# expect 200 with a JSON body containing:
+#   { center, city, state, radius_miles, farms: [
+#       { ..., drop_sites: [...], nearest_pickup_miles, nearest_pickup_label }
+#   ]}
+# nearest_pickup_label is "farm" or "drop: <site name>" depending on which
+# pickup point was actually closest to the searcher's ZIP.
 ```
+
+The body schema for the function:
+
+| Field          | Type     | Default | Notes                                           |
+|----------------|----------|---------|-------------------------------------------------|
+| `zip`          | string   | —       | Required. Five-digit US ZIP.                    |
+| `radiusMiles`  | int      | 20      | 5 – 50 typical; 200 max. The pickup-distance gate. |
+| `force`        | boolean  | false   | Bypass the 7-day search cache.                  |
 
 ---
 
@@ -218,8 +237,21 @@ Run through these once after setup:
 - [ ] Visiting `/come-in` lets you send yourself a magic link
 - [ ] Magic-link email arrives, clicking it lands on `/auth/callback/`
   and forwards into the app
-- [ ] Visiting `/find` and typing a ZIP returns at least one farm within
-  twenty miles (if PERPLEXITY_API_KEY is set)
+- [ ] `/find` loads with an empty map (no preloaded sample farms) and
+  a "Type a ZIP above to fill it" message centered over the map
+- [ ] Typing a ZIP + picking a radius (5/10/25/50/100/200 mi) and
+  submitting returns farms sorted by **pickup distance** — including
+  farms whose primary address is outside the radius but whose drop
+  site is inside it (if PERPLEXITY_API_KEY is set)
+- [ ] The map fits bounds to (search center + radius) so every result
+  is visible in one screen
+- [ ] Each result in the side list shows a distance pill (e.g. "4.2 mi")
+  and, when applicable, a "via &lt;drop site name&gt;" line
+- [ ] Selecting a farm with drop sites shows "Nearest pickup · N mi
+  from you" plus an "All pickup points" list with each location's
+  day/time
+- [ ] `discovered_farms` rows have a non-null `drop_sites` array when
+  Perplexity surfaced any (verify in the Supabase Studio data view)
 - [ ] Clicking "Send them a note" on a discovered farm logs a row in
   `farm_inquiries` and bumps `inquiry_count` on `discovered_farms`
 - [ ] Visiting `/claim?slug=<one-of-the-slugs>` shows the listing
@@ -276,6 +308,22 @@ Check `supabase functions logs find-nearby-farms`. Most common cause:
 PERPLEXITY_API_KEY or MAPBOX_TOKEN unset. Set them with
 `supabase secrets set ...` and the function picks them up on the next
 call (no redeploy needed).
+
+**"/find returns farms but nothing is showing drop_sites"**
+Re-run the migrations (`supabase db push`) to apply
+`20260525200000_drop_sites.sql` — without that column the upsert will
+fail or skip the drop-site array. Then redeploy the function so it
+picks up the new prompt asking Perplexity for drop sites:
+`supabase functions deploy find-nearby-farms --no-verify-jwt`. Existing
+cached searches still won't have drop sites — pass `force: true` in
+the request body once to bust the cache for a given ZIP, or wait the
+7-day TTL.
+
+**"Map starts empty even after I type a ZIP"**
+The map is supposed to start empty (no sample farms) and fill on
+search. If it stays empty after submit, check the browser console for
+fetch errors — usually the Supabase URL/anon-key env vars aren't set
+on the deploy. Without them the client can't reach the edge function.
 
 **"The inquiry email never arrives"**
 Without RESEND_API_KEY set, the function falls back to returning a

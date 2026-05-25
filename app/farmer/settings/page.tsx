@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/farmer/shell";
 import {
   demoFarm,
@@ -9,8 +11,29 @@ import {
   demoSms,
 } from "@/lib/farmer-demo";
 import { downloadBundle, downloadCsv } from "@/lib/csv-export";
+import { HortusIntegrationCard } from "./HortusIntegrationCard";
+import { PendingCropMappings } from "./PendingCropMappings";
 
 export default function FarmerSettingsPage() {
+  const [farmId, setFarmId] = useState<string | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function loadFarmId() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("farm_members")
+        .select("farm_id")
+        .eq("user_id", user.id)
+        .eq("role", "owner")
+        .limit(1)
+        .single();
+      if (data) setFarmId(data.farm_id);
+    }
+    loadFarmId();
+  }, []);
+
   return (
     <div>
       <PageHeader
@@ -95,6 +118,20 @@ export default function FarmerSettingsPage() {
             <button className="btn btn-ghost text-sm">+ Invite someone</button>
           </div>
         </section>
+
+        {/* Integrations */}
+        {farmId && (
+          <section className="paper p-8">
+            <div className="small-caps text-xs text-brick mb-2">Integrations</div>
+            <h2 className="display text-2xl font-medium mb-6">
+              Connect your other tools.
+            </h2>
+            <div className="space-y-4">
+              <HortusIntegrationCard farmId={farmId} />
+              <PendingCropMappings farmId={farmId} />
+            </div>
+          </section>
+        )}
 
         <section className="paper p-8 border-brick/30 bg-brick/5">
           <div className="small-caps text-xs text-brickDark mb-2">

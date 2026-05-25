@@ -9,8 +9,8 @@ import { useEffect, useRef, useState } from "react";
 // The MP4 + poster are produced by the Render Videos workflow
 // (.github/workflows/render-videos.yml) and committed to /public/video/.
 // If the files aren't there yet (e.g. first deploy after a fresh clone),
-// the component hides itself gracefully via an onError handler — better
-// than showing a broken player.
+// the component hides itself gracefully — better than showing a broken
+// player.
 // =============================================================================
 
 // Honor the deploy-time base path (e.g. "/communicare" on a GitHub Pages
@@ -21,21 +21,40 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const SRC = `${BASE}/video/screencast.mp4`;
 const POSTER = `${BASE}/video/screencast-poster.jpg`;
 
+type Status = "checking" | "present" | "missing";
+
 export function ScreencastEmbed() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [missing, setMissing] = useState(false);
+  const [status, setStatus] = useState<Status>("checking");
   const [muted, setMuted] = useState(true);
 
-  // Try to autoplay muted on mount; fall back gracefully if blocked.
+  // HEAD-check the MP4 on mount. <video> doesn't reliably fire onError on a
+  // missing source in all browsers (Chrome shows a broken-image glyph
+  // silently), so we probe the file ourselves. If it's not there, hide.
   useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.play().catch(() => {
-      // Autoplay was blocked — that's fine, user can press play.
-    });
+    let cancelled = false;
+    fetch(SRC, { method: "HEAD" })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          setStatus("present");
+          // Start playback once we know the source resolves.
+          requestAnimationFrame(() => {
+            videoRef.current?.play().catch(() => {});
+          });
+        } else {
+          setStatus("missing");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("missing");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  if (missing) return null;
+  if (status === "missing") return null;
 
   function toggleSound() {
     const v = videoRef.current;
@@ -57,7 +76,10 @@ export function ScreencastEmbed() {
         </h2>
       </div>
 
-      <div className="relative paper overflow-hidden mx-auto" style={{ maxWidth: 1100 }}>
+      <div
+        className="relative paper overflow-hidden mx-auto"
+        style={{ maxWidth: 1100 }}
+      >
         {/* The "Mac window" header bar — matches the landing screenshots */}
         <div className="bg-cream border-b border-soil/15 px-4 py-2.5 flex items-center gap-3">
           <div className="flex gap-1.5">
@@ -70,27 +92,34 @@ export function ScreencastEmbed() {
           </div>
         </div>
 
-        <video
-          ref={videoRef}
-          className="block w-full bg-soil"
-          style={{ aspectRatio: "16 / 9" }}
-          poster={POSTER}
-          controls
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          onError={() => setMissing(true)}
-        >
-          <source src={SRC} type="video/mp4" />
-        </video>
+        {status === "checking" ? (
+          <div
+            className="bg-soil flex items-center justify-center"
+            style={{ aspectRatio: "16 / 9" }}
+          >
+            <div className="display italic text-parchment/55 text-sm">
+              Loading…
+            </div>
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            className="block w-full bg-soil"
+            style={{ aspectRatio: "16 / 9" }}
+            poster={POSTER}
+            controls
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+          >
+            <source src={SRC} type="video/mp4" />
+          </video>
+        )}
       </div>
 
-      {/* "Turn the music on" lives BELOW the video — not over the play
-          button. Keeping it out of the touch zone matters on mobile
-          where the entire video face is tappable. */}
-      <div className="flex items-center justify-center gap-4 mt-5">
+      <div className="flex items-center justify-center gap-4 mt-5 flex-wrap">
         <button
           type="button"
           onClick={toggleSound}

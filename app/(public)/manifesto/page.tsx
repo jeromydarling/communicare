@@ -188,6 +188,17 @@ export default function ManifestoPage() {
           Nine dollars a month. No tiers. No tricks. Forever.
         </p>
 
+        <div className="mt-16 border-y border-soil/15 py-10 bg-cream2/40 -mx-4 px-6">
+          <p className="display text-2xl md:text-3xl leading-snug text-soil text-center font-medium">
+            HelloFresh extracted value from the relationship between farms and
+            the people they feed.
+            <br />
+            <span className="text-brick">
+              Communicare hands that relationship back.
+            </span>
+          </p>
+        </div>
+
         <p className="display italic text-2xl text-brick text-center mt-12">
           Pax tibi. Welcome.
         </p>

@@ -7,9 +7,9 @@ import { Communicare } from "./compositions/Communicare";
 loadFraunces();
 loadSourceSerif();
 
-// 30 seconds @ 30fps = 900 frames. Six scenes of 5 seconds each.
+// 33 seconds @ 30fps = 990 frames. Five 5s scenes + an 8s closing.
 const FPS = 30;
-const DURATION_SECONDS = 30;
+const DURATION_SECONDS = 33;
 const DURATION = FPS * DURATION_SECONDS;
 
 export const Root: React.FC = () => {

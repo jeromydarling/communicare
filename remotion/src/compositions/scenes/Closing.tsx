@@ -14,13 +14,16 @@ export const Closing: React.FC = () => {
   const portrait = height > width;
 
   const logoIn = spring({ frame, fps, config: { damping: 16 } });
-  const tagIn = interpolate(frame, [40, 70], [0, 1], {
+  const tagIn = interpolate(frame, [30, 55], [0, 1], {
     extrapolateRight: "clamp",
   });
-  const urlIn = interpolate(frame, [80, 110], [0, 1], {
+  const pitchIn = interpolate(frame, [70, 110], [0, 1], {
     extrapolateRight: "clamp",
   });
-  const blessingIn = interpolate(frame, [110, 135], [0, 1], {
+  const urlIn = interpolate(frame, [150, 175], [0, 1], {
+    extrapolateRight: "clamp",
+  });
+  const blessingIn = interpolate(frame, [185, 215], [0, 1], {
     extrapolateRight: "clamp",
   });
 
@@ -64,6 +67,27 @@ export const Closing: React.FC = () => {
         }}
       >
         for the farms that feed us
+      </div>
+      <div
+        style={{
+          fontFamily: fonts.display,
+          fontStyle: "italic",
+          fontSize: portrait ? 26 : 30,
+          lineHeight: 1.35,
+          color: "rgba(26,20,16,0.78)",
+          opacity: pitchIn,
+          textAlign: "center",
+          maxWidth: portrait ? 720 : 1100,
+          marginTop: 8,
+        }}
+      >
+        HelloFresh extracted value from the relationship
+        <br />
+        between farms and the people they feed.
+        <br />
+        <span style={{ color: palette.brick }}>
+          Communicare hands that relationship back.
+        </span>
       </div>
       <div style={{ marginTop: 20, opacity: urlIn }}>
         <div

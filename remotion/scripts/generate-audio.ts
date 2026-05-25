@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(__dirname, "..", "public", "audio");
 
-const NARRATION_TEXT = `For the farms that feed us. Communicare is software for your farm share — nine dollars a month, no setup, no contract, and a free homepage written for you. Members order by texting back. Find a farm near you at communicare dot farm. Pax tibi.`;
+const NARRATION_TEXT = `For the farms that feed us. Communicare is software for your farm share — nine dollars a month, no setup, no contract, and a free homepage written for you. Members order by texting back. HelloFresh extracted value from the relationship between farms and the people they feed. Communicare hands that relationship back. Find a farm near you at communicare dot farm. Pax tibi.`;
 
 const MUSIC_PROMPT =
   "Soft fingerpicked acoustic guitar in C major. Slow tempo around 70 BPM. Sparse, contemplative, hopeful. The feeling of a farm field at dawn in early summer. Solo guitar, no drums, no synths. Warm and patient. Thirty seconds long, with a gentle resolution at the end.";

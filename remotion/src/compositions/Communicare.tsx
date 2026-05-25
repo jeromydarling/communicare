@@ -21,6 +21,7 @@ export const communicarePropsSchema = z.object({
 });
 
 const SCENE = 150; // 5s @ 30fps
+const CLOSING_SCENE = 240; // 8s — needs room for the pitch line to land
 
 export const Communicare: React.FC<z.infer<typeof communicarePropsSchema>> = ({
   audioSrc,
@@ -47,7 +48,7 @@ export const Communicare: React.FC<z.infer<typeof communicarePropsSchema>> = ({
         <Series.Sequence durationInFrames={SCENE}>
           <Map />
         </Series.Sequence>
-        <Series.Sequence durationInFrames={SCENE}>
+        <Series.Sequence durationInFrames={CLOSING_SCENE}>
           <Closing />
         </Series.Sequence>
       </Series>

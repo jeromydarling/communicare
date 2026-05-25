@@ -25,7 +25,12 @@ export default function Home() {
                 <br />
                 that feed us.
               </h1>
-              <p className="mt-8 max-w-2xl text-xl md:text-2xl leading-relaxed text-soil/85 fade-up fade-up-delay-2">
+              <p className="mt-8 max-w-2xl text-xl md:text-2xl leading-snug text-soil font-medium fade-up fade-up-delay-2">
+                HelloFresh extracted value from the relationship between farms
+                and the people they feed. Communicare hands that relationship
+                back.
+              </p>
+              <p className="mt-6 max-w-2xl text-lg md:text-xl leading-relaxed text-soil/75 fade-up fade-up-delay-2">
                 A small, slow-built tool for the farm shares, raw-milk dairies,
                 meat shares, and market gardens that hold this country
                 together. Members order by texting back. You keep your own

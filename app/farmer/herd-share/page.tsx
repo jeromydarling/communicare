@@ -9,6 +9,7 @@ import {
 } from "@/lib/herd-share-templates";
 import { Jar, Mark } from "@/components/mark";
 import { ScrollFade } from "@/components/scroll-fade";
+import { DataTable, type Column } from "@/components/data-table";
 import { formatCents } from "@/lib/farmer-demo";
 
 type Shareholder = {
@@ -231,43 +232,64 @@ function ShareholdersTab({
         </h3>
         <div className="paper overflow-hidden">
           <ScrollFade fadeColor="parchment">
-          <table className="w-full text-sm min-w-[520px]">
-            <thead className="bg-cream border-b border-outline">
-              <tr className="text-left small-caps text-xs text-soil/55">
-                <th className="px-5 py-3 font-medium">Shareholder</th>
-                <th className="px-5 py-3 font-medium">Share</th>
-                <th className="px-5 py-3 font-medium">Allotment</th>
-                <th className="px-5 py-3 font-medium">Since</th>
-                <th className="px-5 py-3 font-medium text-right">Monthly fee</th>
-              </tr>
-            </thead>
-            <tbody>
-              {active.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-soil/8 last:border-0 hover:bg-cream/50"
-                >
-                  <td className="px-5 py-4">
-                    <div className="display">{s.name}</div>
-                    <div className="text-[11px] text-soil/55">{s.email}</div>
-                  </td>
-                  <td className="px-5 py-4 font-mono text-sm">
-                    {s.shareFraction}
-                  </td>
-                  <td className="px-5 py-4 text-soil/75">{s.allotment}</td>
-                  <td className="px-5 py-4 text-soil/55 text-xs">
-                    {new Date(s.signedOn).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td className="px-5 py-4 text-right display">
-                    {formatCents(s.monthlyBoardingCents)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <DataTable<Shareholder>
+              rows={active}
+              getKey={(s) => s.id}
+              minWidth={520}
+              columns={[
+                {
+                  key: "name",
+                  label: "Shareholder",
+                  mobile: "primary",
+                  render: (s) => (
+                    <>
+                      <div className="display">{s.name}</div>
+                      <div className="text-[11px] text-soil/55 font-body normal-case">
+                        {s.email}
+                      </div>
+                    </>
+                  ),
+                },
+                {
+                  key: "share",
+                  label: "Share",
+                  mobile: "secondary",
+                  render: (s) => (
+                    <span className="font-mono">{s.shareFraction}</span>
+                  ),
+                },
+                {
+                  key: "allotment",
+                  label: "Allotment",
+                  render: (s) => (
+                    <span className="text-soil/75">{s.allotment}</span>
+                  ),
+                },
+                {
+                  key: "since",
+                  label: "Since",
+                  render: (s) => (
+                    <span className="text-soil/55 text-xs">
+                      {new Date(s.signedOn).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  ),
+                },
+                {
+                  key: "fee",
+                  label: "Monthly fee",
+                  align: "right",
+                  mobile: "badge",
+                  render: (s) => (
+                    <span className="display">
+                      {formatCents(s.monthlyBoardingCents)}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           </ScrollFade>
         </div>
       </section>
@@ -300,31 +322,50 @@ function ContractsTab() {
 
       <div className="paper overflow-hidden">
         <ScrollFade fadeColor="parchment">
-        <table className="w-full text-sm min-w-[520px]">
-          <thead className="bg-cream border-b border-outline">
-            <tr className="text-left small-caps text-xs text-soil/55">
-              <th className="px-5 py-3 font-medium">Shareholder</th>
-              <th className="px-5 py-3 font-medium">State</th>
-              <th className="px-5 py-3 font-medium">Signed</th>
-              <th className="px-5 py-3 font-medium">Retention</th>
-              <th className="px-5 py-3 font-medium text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((s) => (
-              <tr key={s.id} className="border-b border-soil/8 last:border-0">
-                <td className="px-5 py-4 display">{s.name}</td>
-                <td className="px-5 py-4 font-mono">{s.state}</td>
-                <td className="px-5 py-4 text-xs text-soil/65">
-                  {s.status === "active"
-                    ? new Date(s.signedOn).toLocaleDateString()
-                    : "—"}
-                </td>
-                <td className="px-5 py-4 text-xs text-soil/55">
-                  {s.status === "active" ? "3 years" : "—"}
-                </td>
-                <td className="px-5 py-4 text-right">
-                  {s.status === "active" ? (
+          <DataTable<Shareholder>
+            rows={filtered}
+            getKey={(s) => s.id}
+            minWidth={520}
+            columns={[
+              {
+                key: "name",
+                label: "Shareholder",
+                mobile: "primary",
+                render: (s) => <span className="display">{s.name}</span>,
+              },
+              {
+                key: "state",
+                label: "State",
+                mobile: "secondary",
+                render: (s) => <span className="font-mono">{s.state}</span>,
+              },
+              {
+                key: "signed",
+                label: "Signed",
+                render: (s) => (
+                  <span className="text-xs text-soil/65">
+                    {s.status === "active"
+                      ? new Date(s.signedOn).toLocaleDateString()
+                      : "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "retention",
+                label: "Retention",
+                render: (s) => (
+                  <span className="text-xs text-soil/55">
+                    {s.status === "active" ? "3 years" : "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "status",
+                label: "Status",
+                align: "right",
+                mobile: "badge",
+                render: (s) =>
+                  s.status === "active" ? (
                     <span className="small-caps text-[10px] px-2 py-0.5 rounded-full bg-moss/15 text-mossDark">
                       Signed
                     </span>
@@ -332,12 +373,10 @@ function ContractsTab() {
                     <span className="small-caps text-[10px] px-2 py-0.5 rounded-full bg-wheat/20 text-wheatDark">
                       Pending
                     </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  ),
+              },
+            ]}
+          />
         </ScrollFade>
       </div>
       <p className="text-xs text-soil/55 italic">
@@ -375,47 +414,72 @@ function MilkTestsTab() {
 
       <div className="paper overflow-hidden">
         <ScrollFade fadeColor="parchment">
-        <table className="w-full text-sm min-w-[600px]">
-          <thead className="bg-cream border-b border-outline">
-            <tr className="text-left small-caps text-xs text-soil/55">
-              <th className="px-5 py-3 font-medium">Date</th>
-              <th className="px-5 py-3 font-medium">Standard plate count</th>
-              <th className="px-5 py-3 font-medium">Coliforms</th>
-              <th className="px-5 py-3 font-medium">Lab</th>
-              <th className="px-5 py-3 font-medium">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MILK_TESTS.map((t) => {
-              const safe = t.plateCount < 15000 && t.coliforms === 0;
-              return (
-                <tr key={t.id} className="border-b border-soil/8 last:border-0">
-                  <td className="px-5 py-4 display">
+          <DataTable<MilkTest>
+            rows={MILK_TESTS}
+            getKey={(t) => t.id}
+            minWidth={600}
+            columns={[
+              {
+                key: "date",
+                label: "Date",
+                mobile: "primary",
+                render: (t) => (
+                  <span className="display">
                     {new Date(t.date).toLocaleDateString("en-US", {
                       month: "long",
                       day: "numeric",
                       year: "numeric",
                     })}
-                  </td>
-                  <td
-                    className={`px-5 py-4 font-mono ${safe ? "text-mossDark" : "text-brick"}`}
-                  >
-                    {t.plateCount.toLocaleString()} CFU/mL
-                  </td>
-                  <td
-                    className={`px-5 py-4 font-mono ${t.coliforms === 0 ? "text-mossDark" : "text-brick"}`}
+                  </span>
+                ),
+              },
+              {
+                key: "plate",
+                label: "Standard plate count",
+                mobile: "badge",
+                render: (t) => {
+                  const safe = t.plateCount < 15000 && t.coliforms === 0;
+                  return (
+                    <span
+                      className={`font-mono ${safe ? "text-mossDark" : "text-brick"}`}
+                    >
+                      {t.plateCount.toLocaleString()} CFU/mL
+                    </span>
+                  );
+                },
+              },
+              {
+                key: "coliforms",
+                label: "Coliforms",
+                render: (t) => (
+                  <span
+                    className={`font-mono ${t.coliforms === 0 ? "text-mossDark" : "text-brick"}`}
                   >
                     {t.coliforms === 0 ? "Not detected" : `${t.coliforms}`}
-                  </td>
-                  <td className="px-5 py-4 text-xs text-soil/65">{t.lab}</td>
-                  <td className="px-5 py-4 text-xs text-soil/55 italic">
+                  </span>
+                ),
+              },
+              {
+                key: "lab",
+                label: "Lab",
+                mobile: "secondary",
+                render: (t) => (
+                  <span className="text-xs text-soil/65 font-body normal-case">
+                    {t.lab}
+                  </span>
+                ),
+              },
+              {
+                key: "notes",
+                label: "Notes",
+                render: (t) => (
+                  <span className="text-xs text-soil/55 italic">
                     {t.notes ?? "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  </span>
+                ),
+              },
+            ]}
+          />
         </ScrollFade>
       </div>
 

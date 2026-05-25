@@ -182,7 +182,7 @@ function Inner() {
         <DemoChoice
           icon={<Wheat className="w-7 h-9 text-wheatDark" />}
           label="As a farmer"
-          blurb="Today's roster, inventory, members, messages, the AI homepage editor, and payments."
+          blurb="Today's roster, inventory, members, messages, the homepage drafter, and payments."
           active={role === "farmer"}
           href={`/demo/?as=farmer&next=${encodeURIComponent("/farmer/")}`}
         />

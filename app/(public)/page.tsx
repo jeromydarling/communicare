@@ -34,7 +34,7 @@ const HOME_JSON_LD = [
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description:
-      "Farm-share management software for CSAs, herd shares, and pastured meat shares. SMS swap loop, free AI-generated homepage, member-facing directory.",
+      "Farm-share management software for CSAs, herd shares, and pastured meat shares. SMS swap loop, free homepage drafted from your own sentences, member-facing directory.",
     offers: {
       "@type": "Offer",
       price: "9",
@@ -88,7 +88,7 @@ export default function Home() {
                   Open the demo →
                 </Link>
                 <Link href="/homepage" className="btn btn-ghost">
-                  Try the AI homepage
+                  Draft a homepage
                 </Link>
                 <Link href="/find" className="btn btn-ghost">
                   Find a farm
@@ -320,7 +320,7 @@ export default function Home() {
               href="/homepage"
               className="btn border-parchment/40 text-parchment hover:bg-parchment hover:text-soil"
             >
-              Try the AI homepage
+              Draft a homepage
             </Link>
           </div>
         </div>
@@ -331,18 +331,18 @@ export default function Home() {
         <div className="grid md:grid-cols-12 gap-10 items-center">
           <div className="md:col-span-5">
             <div className="small-caps text-xs text-brick mb-3">
-              The AI homepage
+              A homepage in a minute
             </div>
             <h2 className="display text-4xl md:text-5xl font-medium leading-tight">
               A site for your farm,
               <br />
-              drafted in under a minute.
+              drafted from your own words.
             </h2>
             <p className="mt-6 text-soil/80 leading-relaxed">
-              Answer six questions in your own words. Our model — Claude
-              Opus 4.7 — drafts a warm, specific one-page site that sounds
-              like a person, not a brand. Edit any paragraph; ask the AI to
-              rewrite a section in a different tone; publish in one click.
+              Answer six questions about your farm in your own voice. We
+              draft a warm, specific one-page site that reads like a person
+              wrote it — because you did, mostly. Edit any paragraph; ask
+              for a rewrite in a different tone; publish in one click.
             </p>
             <div className="mt-8">
               <Link href="/homepage" className="btn btn-primary">

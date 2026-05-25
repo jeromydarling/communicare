@@ -240,7 +240,7 @@ export default function ClaimPage() {
         </h2>
         <p className="text-sm text-soil/65 italic mb-5 leading-snug">
           This is the public listing as it appears today. It came from
-          public sources and AI research, and may need correcting. When you
+          public sources and automated research, and may need correcting. When you
           claim the listing, you take over the keys.
         </p>
         <dl className="grid sm:grid-cols-[140px_1fr] gap-x-5 gap-y-3 text-sm">
@@ -336,8 +336,9 @@ export default function ClaimPage() {
         </h2>
         <p className="text-sm text-soil/75 leading-relaxed mb-5">
           Joining Communicare gets you the full notes from your neighbors,
-          the keys to edit your listing, a free homepage written for your
-          farm by AI, and the SMS swap loop your members will actually use.
+          the keys to edit your listing, a free homepage drafted from a few
+          sentences in your own voice, and the SMS swap loop your members
+          will actually use.
           Nine dollars a month, no setup, no contract. The directory listing
           is yours either way.
         </p>

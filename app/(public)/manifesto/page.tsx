@@ -184,12 +184,13 @@ export default function ManifestoPage() {
         </p>
         <p>
           But we want to be clear about what this is and what it is not. The
-          AI does not know your farm. It does not know your daughter's name,
-          or the cow that broke its leg, or the field that grows the best
-          cabbage. It can give you a starting place — a competent, warm, and
-          un-embarrassing first draft. After that, you write your farm. You
-          tell us about the creek, about the year of the drought, about why
-          you came home. The AI is a scaffold. You are the building.
+          drafting machine does not know your farm. It does not know your
+          daughter&apos;s name, or the cow that broke its leg, or the field
+          that grows the best cabbage. It can give you a starting place — a
+          competent, warm, and un-embarrassing first draft. After that, you
+          write your farm. You tell us about the creek, about the year of
+          the drought, about why you came home. The machine is a scaffold.
+          You are the building.
         </p>
 
         <h2 className="display text-3xl font-medium text-soil mt-12">
@@ -208,12 +209,12 @@ export default function ManifestoPage() {
         </p>
         <p>
           We will not get this right immediately. We are two people working
-          out of a kitchen, with the help of an AI that we are honest about
-          using. But we have read the old books, and we have decided to take
-          them at their word: that the labor of feeding one another is sacred
-          work, and that those of us who build the tools for that labor have
-          a duty to build them in a spirit of service and not of extraction.
-          Nine dollars a month. No tiers. No tricks. Forever.
+          out of a kitchen, with the help of a writing machine we are honest
+          about using. But we have read the old books, and we have decided
+          to take them at their word: that the labor of feeding one another
+          is sacred work, and that those of us who build the tools for that
+          labor have a duty to build them in a spirit of service and not of
+          extraction. Nine dollars a month. No tiers. No tricks. Forever.
         </p>
 
         <div className="mt-16 border-y border-soil/15 py-10 bg-cream2/40 -mx-4 px-6">

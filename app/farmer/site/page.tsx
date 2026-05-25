@@ -16,7 +16,7 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: "content", label: "Content", hint: "what your homepage says" },
   { id: "theme", label: "Theme", hint: "palette + typography" },
   { id: "photos", label: "Photos", hint: "your gallery" },
-  { id: "domain", label: "Domain", hint: "wren-hollow.communicare.farm" },
+  { id: "domain", label: "Web address", hint: "communicare.farm/wren-hollow" },
   { id: "seo", label: "Search & social", hint: "what Google + Instagram see" },
 ];
 
@@ -113,7 +113,7 @@ export default function FarmerSiteBuilder() {
       <PageHeader
         eyebrow="Your farm's homepage"
         title="Site builder."
-        subtitle="One page. Drafted by the AI. Edited by you. Published when ready."
+        subtitle="One page. Drafted from a few sentences. Edited by you. Published when ready."
         action={
           <div className="flex gap-2">
             <Link
@@ -305,7 +305,7 @@ function ContentTab() {
         <div className="text-xs small-caps text-brick mb-2">Live preview</div>
         <div className="paper overflow-hidden">
           <div className="bg-cream border-b border-soil/15 px-4 py-2 text-[10px] text-soil/55 font-mono">
-            wren-hollow.communicare.farm
+            communicare.farm/wren-hollow
           </div>
           <div className="p-6 text-soil">
             <h2 className="display text-2xl font-medium leading-tight">
@@ -459,7 +459,7 @@ function ThemeTab() {
           }}
         >
           <div className="bg-cream border-b border-soil/15 px-4 py-2 text-[10px] text-soil/55 font-mono">
-            wren-hollow.communicare.farm
+            communicare.farm/wren-hollow
           </div>
           <div className="p-7">
             <h2
@@ -741,7 +741,7 @@ function shade(id: string, opacity: number): string {
 /* -------------------------------------------------------------------------- */
 
 function DomainTab() {
-  const [subdomain, setSubdomain] = useState("wren-hollow");
+  const [slug, setSlug] = useState("wren-hollow");
   const [custom, setCustom] = useState("");
 
   return (
@@ -749,20 +749,24 @@ function DomainTab() {
       <div className="space-y-8">
         <section className="paper p-7">
           <div className="small-caps text-xs text-brick mb-2">
-            Communicare subdomain
+            Your web address
           </div>
           <h2 className="display text-2xl font-medium mb-4">
-            Your address on the internet.
+            Where neighbors find you.
           </h2>
           <p className="text-sm text-soil/65 italic mb-5">
-            Every farm gets one of these. Free. Always.
+            Every farm gets one of these. Free. Always. Nothing to set up,
+            it&apos;s ready the moment you publish.
           </p>
           <div className="flex items-stretch border border-soil/15 rounded-md overflow-hidden bg-parchment">
+            <span className="px-4 py-3 bg-cream text-soil/55 text-sm font-mono border-r border-soil/15">
+              communicare.farm/
+            </span>
             <input
               type="text"
-              value={subdomain}
+              value={slug}
               onChange={(e) =>
-                setSubdomain(
+                setSlug(
                   e.target.value
                     .toLowerCase()
                     .replace(/[^a-z0-9-]/g, "")
@@ -771,25 +775,26 @@ function DomainTab() {
               }
               className="flex-1 px-4 py-3 outline-none font-mono text-sm"
             />
-            <span className="px-4 py-3 bg-cream text-soil/55 text-sm font-mono border-l border-soil/15">
-              .communicare.farm
-            </span>
           </div>
           <div className="text-xs text-mossDark mt-2 italic">
-            ✓ Available
+            ✓ Available — print it on share cards, hand it to neighbors at
+            the market, paste it in Instagram bios.
           </div>
         </section>
 
         <section className="paper p-7">
           <div className="small-caps text-xs text-brick mb-2">
-            Your own domain
+            Point your own domain here
           </div>
           <h2 className="display text-2xl font-medium mb-4">
-            Bring a domain you already own.
+            Already own a domain?
           </h2>
           <p className="text-sm text-soil/65 italic mb-5">
-            We&apos;ll issue a free SSL certificate and serve your homepage on
-            your domain. No extra fee — same $9/month.
+            Lots of farms already own something like{" "}
+            <span className="font-mono not-italic">yourfarm.com</span>. You
+            don&apos;t have to give it up. Point it at us with two DNS
+            records and it&apos;ll serve your Communicare homepage. We&apos;ll
+            issue a free SSL certificate. No extra fee — same $9/month.
           </p>
           <input
             type="text"
@@ -801,55 +806,84 @@ function DomainTab() {
           {custom && (
             <div className="mt-5 p-4 bg-cream rounded-md">
               <div className="small-caps text-xs text-soil/55 mb-2">
-                DNS setup
+                The two records you&apos;ll add at your registrar
               </div>
-              <p className="text-sm text-soil/85 mb-3">
-                In your domain registrar (GoDaddy, Cloudflare, Namecheap),
-                point your domain at us with these records:
+              <p className="text-sm text-soil/85 mb-4 italic">
+                Open the DNS settings page at GoDaddy, Cloudflare, Namecheap,
+                or wherever you bought{" "}
+                <span className="font-mono not-italic">{custom}</span>. Look
+                for &ldquo;DNS records&rdquo; or &ldquo;manage DNS.&rdquo;
+                Then add these two rows exactly as written.
               </p>
-              <table className="w-full text-xs font-mono">
-                <thead className="border-b border-soil/15">
-                  <tr className="text-left text-soil/55">
-                    <th className="py-2">Type</th>
-                    <th className="py-2">Name</th>
-                    <th className="py-2">Value</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-soil/10">
-                  <tr>
-                    <td className="py-2">CNAME</td>
-                    <td className="py-2">www</td>
-                    <td className="py-2">
-                      {subdomain}.communicare.farm
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2">A</td>
-                    <td className="py-2">@</td>
-                    <td className="py-2">76.76.21.21</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p className="text-[11px] italic text-soil/55 mt-3">
-                Propagation usually takes 5 minutes to an hour. We&apos;ll
-                email when your domain is live.
-              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono min-w-[420px]">
+                  <thead className="border-b border-soil/15">
+                    <tr className="text-left text-soil/55">
+                      <th className="py-2 pr-3">Type</th>
+                      <th className="py-2 pr-3">Name (host)</th>
+                      <th className="py-2">Value (target)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-soil/10">
+                    <tr>
+                      <td className="py-3 pr-3">A</td>
+                      <td className="py-3 pr-3">@</td>
+                      <td className="py-3">76.76.21.21</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 pr-3">CNAME</td>
+                      <td className="py-3 pr-3">www</td>
+                      <td className="py-3">communicare.farm</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <ul className="text-[12px] text-soil/65 mt-4 space-y-1.5 leading-snug">
+                <li>
+                  <strong className="display not-italic">The A row</strong>{" "}
+                  sends {custom} (the bare domain) to our servers.
+                </li>
+                <li>
+                  <strong className="display not-italic">The CNAME row</strong>{" "}
+                  sends www.{custom} to the same place, so both versions work.
+                </li>
+                <li>
+                  Once it&apos;s in, propagation usually finishes in five
+                  minutes to an hour. We&apos;ll email{" "}
+                  <span className="font-mono">{custom}</span> as soon as
+                  it&apos;s live.
+                </li>
+                <li className="italic text-soil/55">
+                  Whatever was at {custom} before will stop working — your old
+                  site, if you had one, gets replaced. Keep a copy somewhere
+                  safe first.
+                </li>
+              </ul>
             </div>
           )}
         </section>
 
         <section className="paper p-7 bg-cream/40">
-          <div className="display text-lg mb-2">Need help?</div>
-          <p className="text-sm text-soil/65 italic">
-            Write{" "}
-            <a
-              href="mailto:domains@communicare.farm"
-              className="text-brick hover:underline not-italic"
-            >
-              domains@communicare.farm
-            </a>{" "}
-            and a real person will walk through it with you. Includes setting
-            up email forwarding (hello@yourfarm.com), if you want that too.
+          <div className="display text-lg mb-2">
+            We&apos;ll do the DNS setup with you on the phone
+          </div>
+          <p className="text-sm text-soil/65 italic mb-3">
+            If &ldquo;A record&rdquo; and &ldquo;CNAME&rdquo; mean nothing to
+            you, that&apos;s fine — they meant nothing to us once either.
+            Write us and a real person will share their screen with you and
+            walk you through it. Usually five minutes.
+          </p>
+          <a
+            href="mailto:domains@communicare.farm"
+            className="text-brick hover:underline display italic text-sm"
+          >
+            domains@communicare.farm
+          </a>
+          <p className="text-[11px] text-soil/55 italic mt-3">
+            We can also forward{" "}
+            <span className="font-mono not-italic">hello@yourfarm.com</span>{" "}
+            to your real inbox while we&apos;re in there, if you want that
+            too.
           </p>
         </section>
       </div>
@@ -861,7 +895,7 @@ function DomainTab() {
           </div>
           <div className="space-y-3">
             <div className="font-mono text-sm bg-cream rounded px-3 py-2">
-              https://{subdomain || "your-farm"}.communicare.farm
+              https://communicare.farm/{slug || "your-farm"}
             </div>
             {custom && (
               <div className="font-mono text-sm bg-cream rounded px-3 py-2">
@@ -956,7 +990,7 @@ function SeoTab() {
           </div>
           <div className="paper p-4">
             <div className="text-xs font-mono text-soil/55">
-              wren-hollow.communicare.farm
+              communicare.farm/wren-hollow
             </div>
             <div className="display text-base text-sky-700 hover:underline cursor-pointer leading-tight mt-1">
               {title.slice(0, 60)}
@@ -985,7 +1019,7 @@ function SeoTab() {
               {title.slice(0, 70)}
             </div>
             <div className="text-[10px] text-soil/55 mt-0.5">
-              wren-hollow.communicare.farm
+              communicare.farm/wren-hollow
             </div>
           </div>
         </div>

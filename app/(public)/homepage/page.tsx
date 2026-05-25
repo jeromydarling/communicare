@@ -490,7 +490,7 @@ function GeneratedPreview({
         <div className="text-xs text-soil/55 italic">
           {usage ? (
             <>
-              Drafted live with Claude Opus 4.7 · {usage.input.toLocaleString()}{" "}
+              Drafted live from your sentences · {usage.input.toLocaleString()}{" "}
               in / {usage.output.toLocaleString()} out tokens
               {usage.cache_read > 0 &&
                 ` · ${usage.cache_read.toLocaleString()} from cache`}

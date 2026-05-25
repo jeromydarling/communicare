@@ -103,10 +103,12 @@ export const SplitLayout: React.FC<{
               // lede slides in from the LEFT, like the eyebrow but slower
               transform: `translateX(${(1 - ledeIn) * -30}px)`,
               fontFamily: fonts.body,
-              fontSize: 26,
+              // Bumped 26→36 so the italic body text is legible when the
+              // 1920-wide video gets scaled to a 375-wide phone viewport.
+              fontSize: 36,
               fontStyle: "italic",
-              lineHeight: 1.42,
-              color: `${palette.soil}AA`,
+              lineHeight: 1.36,
+              color: `${palette.soil}BB`,
               margin: 0,
             }}
           >

@@ -11,6 +11,11 @@ import { ScreencastEmbed } from "@/components/screencast-embed";
 import { JsonLd } from "@/components/json-ld";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
+// Honors the deploy-time base path (e.g. "/communicare" on a GitHub Pages
+// project page). Raw <img>/CSS background-image URLs need it prepended;
+// Next.js doesn't auto-rewrite them the way it does for <Link>/<Image>.
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const HOME_JSON_LD = [
   {
     "@context": "https://schema.org",
@@ -60,7 +65,28 @@ export default function Home() {
       <JsonLd data={HOME_JSON_LD} />
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-grain opacity-40 pointer-events-none" />
+        {/* Watercolor scene behind everything — sunset over a CSA pickup.
+            Opacity tuned so text stays sharp; warm wash gradient layered on
+            top lifts the right side toward parchment so the headline never
+            sits over busy field detail. */}
+        <div
+          className="absolute inset-0 pointer-events-none bg-cover bg-no-repeat"
+          style={{
+            backgroundImage: `url(${BASE_PATH}/hero-watercolor.jpg)`,
+            backgroundPosition: "center 30%",
+            opacity: 0.28,
+          }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(105deg, var(--color-parchment, #FFF8F5) 0%, rgba(255,248,245,0.78) 38%, rgba(255,248,245,0.40) 68%, rgba(255,248,245,0.25) 100%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-grain opacity-30 pointer-events-none" />
         <div className="max-w-page mx-auto px-6 pt-16 md:pt-24 pb-20 md:pb-28 relative">
           <div className="grid md:grid-cols-12 gap-10 items-end">
             <div className="md:col-span-8">
@@ -100,12 +126,8 @@ export default function Home() {
               </div>
             </div>
             <div className="md:col-span-4 hidden md:flex justify-end">
-              <div className="relative">
-                <Sun className="w-44 h-44 text-wheat" />
-                <Wheat className="absolute -bottom-4 -left-10 w-24 h-32 text-mossDark" />
-                <Wheat className="absolute -bottom-6 left-2 w-20 h-28 text-mossDark opacity-70" />
-                <Leaf className="absolute top-6 -right-6 w-14 h-14 text-moss" />
-              </div>
+              {/* Right-column sun/wheat/leaf glyphs removed — the watercolor
+                  carries the visual on its own, no need for the SVG props. */}
             </div>
           </div>
         </div>

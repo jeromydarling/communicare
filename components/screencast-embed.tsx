@@ -18,8 +18,16 @@ import { useEffect, useRef, useState } from "react";
 // Next.js handles this automatically for <Link> and <Image>, but raw
 // <video src=…> needs the prefix prepended manually.
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const SRC = `${BASE}/video/screencast.mp4`;
-const POSTER = `${BASE}/video/screencast-poster.jpg`;
+
+// Cache-buster: the video and poster live at fixed paths, so the browser's
+// HTTP cache would happily serve a stale MP4 across deploys. The deploy
+// workflow bakes the current commit SHA into NEXT_PUBLIC_BUILD_SHA, and
+// we append it as a query string so every deploy produces fresh URLs
+// without renaming files. Local dev (where SHA is empty) gets ?v=dev
+// which is stable enough that hot-reload works.
+const VERSION = process.env.NEXT_PUBLIC_BUILD_SHA?.slice(0, 8) || "dev";
+const SRC = `${BASE}/video/screencast.mp4?v=${VERSION}`;
+const POSTER = `${BASE}/video/screencast-poster.jpg?v=${VERSION}`;
 
 type Status = "checking" | "present" | "missing";
 

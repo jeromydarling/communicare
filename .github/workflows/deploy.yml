@@ -56,6 +56,11 @@ jobs:
       - name: Build
         env:
           BASE_PATH: ${{ steps.basepath.outputs.base_path }}
+          # The deploy commit SHA gets baked into the build so cache-busted
+          # asset URLs (like the screencast video) can include it as a
+          # query string — without changing the file path, which would
+          # break HTML caching on the next push.
+          NEXT_PUBLIC_BUILD_SHA: ${{ github.sha }}
           # Optional secrets — the site builds and runs fine without them
           # ("Demo mode" notices appear on /join, /come-in, /find, and the
           # homepage generator when their respective backend isn't wired).

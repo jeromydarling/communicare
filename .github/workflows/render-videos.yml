@@ -198,23 +198,32 @@ jobs:
 
       - name: Commit rendered videos
         id: commit
-        if: steps.video-cache.outputs.cache-hit != 'true'
+        # Run on EVERY render-videos invocation — not gated on cache miss.
+        # The cache restores binaries to the workspace but does NOT commit
+        # them to git, so cache-hit runs that found rendered files would
+        # otherwise leave the repo without them forever. Use git
+        # status --porcelain so both modified AND untracked files trigger
+        # a commit.
         env:
-          # Pre-computed so the bash heredoc below doesn't have to
-          # interpolate GitHub Actions expressions inside a multi-line
-          # quoted string (which broke YAML indentation in the first cut).
           CACHE_KEY: ${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}
           TRIGGER: ${{ github.event_name }}
+          CACHE_HIT: ${{ steps.video-cache.outputs.cache-hit }}
         run: |
-          if git diff --quiet public/video/; then
-            echo "Nothing changed — skip commit"
+          if [ -z "$(git status --porcelain public/video/)" ]; then
+            echo "Nothing to commit — public/video/ matches HEAD."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "Found uncommitted files in public/video/:"
+          git status --porcelain public/video/
           git config user.name  "communicare-render-bot"
           git config user.email "render-bot@communicare.farm"
           git add public/video/
-          MSG="Rendered videos $(date -u +%Y-%m-%dT%H:%MZ) (trigger=${TRIGGER}, key=${CACHE_KEY})"
+          SOURCE="rendered"
+          if [ "$CACHE_HIT" = "true" ]; then
+            SOURCE="restored-from-cache"
+          fi
+          MSG="Rendered videos $(date -u +%Y-%m-%dT%H:%MZ) (trigger=${TRIGGER}, source=${SOURCE}, key=${CACHE_KEY})"
           git commit -m "${MSG}"
           # Push, but rebase on top of anything that landed while we
           # were rendering.

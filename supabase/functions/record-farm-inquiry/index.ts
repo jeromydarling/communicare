@@ -257,7 +257,7 @@ Deno.serve(async (req: Request) => {
     // First-time-only outreach (NOT a sales drip): one email, ever, that
     // says a neighbor found them through us.
     if (!f.first_inquiry_email_sent_at && !f.claimed_at) {
-      const claimUrl = `${siteBase}/claim/${f.slug ?? f.id}`;
+      const claimUrl = `${siteBase}/claim?slug=${encodeURIComponent(f.slug ?? f.id)}`;
       const outreach = await sendResendEmail({
         apiKey: resendKey,
         from: resendFrom,

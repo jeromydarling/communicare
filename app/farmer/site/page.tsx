@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/farmer/shell";
+import { ScrollFade } from "@/components/scroll-fade";
 import { sampleGenerated } from "@/lib/sample-homepages";
 import type { GeneratedHomepage } from "@/lib/homepage-schema";
 import { Mark, Sun, Wheat, Leaf } from "@/components/mark";
@@ -131,7 +132,8 @@ export default function FarmerSiteBuilder() {
 
       {/* Tabs */}
       <div className="border-b border-soil/15 bg-cream/40 sticky top-0 md:top-0 z-10 backdrop-blur">
-        <div className="px-4 md:px-10 flex gap-1 overflow-x-auto -mb-px">
+        <ScrollFade fadeColor="cream" className="px-4 md:px-10 -mb-px">
+          <div className="flex gap-1">
           {TABS.map((t) => {
             const active = tab === t.id;
             return (
@@ -152,7 +154,8 @@ export default function FarmerSiteBuilder() {
               </button>
             );
           })}
-        </div>
+          </div>
+        </ScrollFade>
       </div>
 
       <div className="px-4 md:px-10 py-8">

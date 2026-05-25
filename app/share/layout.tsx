@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AuthGate } from "@/components/farmer/auth-gate";
 import { DemoBanner } from "@/components/farmer/auth-gate";
 import { Mark } from "@/components/mark";
+import { ScrollFade } from "@/components/scroll-fade";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 const SHARE_NAV = [
@@ -67,24 +68,26 @@ export default function ShareLayout({
                 <span className="text-xs italic text-soil/55">Demo session</span>
               )}
             </div>
-            <nav className="max-w-4xl mx-auto px-6 flex gap-1 -mb-px overflow-x-auto">
-              {SHARE_NAV.map((item) => {
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`px-4 py-2 text-sm border-b-2 display whitespace-nowrap ${
-                      active
-                        ? "border-brick text-brick"
-                        : "border-transparent text-soil/65 hover:text-soil"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+            <ScrollFade fadeColor="cream" className="max-w-4xl mx-auto px-6">
+              <nav className="flex gap-1 -mb-px">
+                {SHARE_NAV.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`px-4 py-2 text-sm border-b-2 display whitespace-nowrap ${
+                        active
+                          ? "border-brick text-brick"
+                          : "border-transparent text-soil/65 hover:text-soil"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </ScrollFade>
           </header>
 
           <main className="flex-1">{children}</main>

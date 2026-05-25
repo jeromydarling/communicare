@@ -8,6 +8,7 @@ import {
   type StateCode,
 } from "@/lib/herd-share-templates";
 import { Jar, Mark } from "@/components/mark";
+import { ScrollFade } from "@/components/scroll-fade";
 import { formatCents } from "@/lib/farmer-demo";
 
 type Shareholder = {
@@ -142,7 +143,8 @@ export default function HerdSharePage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-outline px-4 md:px-10 flex gap-1 overflow-x-auto -mb-px">
+      <ScrollFade fadeColor="cream" className="border-b border-outline px-4 md:px-10 -mb-px">
+        <div className="flex gap-1">
         {(
           [
             { id: "shareholders", label: "Shareholders" },
@@ -163,7 +165,8 @@ export default function HerdSharePage() {
             {t.label}
           </button>
         ))}
-      </div>
+        </div>
+      </ScrollFade>
 
       <div className="px-6 md:px-10 py-8">
         {tab === "shareholders" && (
@@ -227,7 +230,8 @@ function ShareholdersTab({
           per month.
         </h3>
         <div className="paper overflow-hidden">
-          <table className="w-full text-sm">
+          <ScrollFade fadeColor="parchment">
+          <table className="w-full text-sm min-w-[520px]">
             <thead className="bg-cream border-b border-outline">
               <tr className="text-left small-caps text-xs text-soil/55">
                 <th className="px-5 py-3 font-medium">Shareholder</th>
@@ -264,6 +268,7 @@ function ShareholdersTab({
               ))}
             </tbody>
           </table>
+          </ScrollFade>
         </div>
       </section>
     </div>
@@ -294,7 +299,8 @@ function ContractsTab() {
       </div>
 
       <div className="paper overflow-hidden">
-        <table className="w-full text-sm">
+        <ScrollFade fadeColor="parchment">
+        <table className="w-full text-sm min-w-[520px]">
           <thead className="bg-cream border-b border-outline">
             <tr className="text-left small-caps text-xs text-soil/55">
               <th className="px-5 py-3 font-medium">Shareholder</th>
@@ -332,6 +338,7 @@ function ContractsTab() {
             ))}
           </tbody>
         </table>
+        </ScrollFade>
       </div>
       <p className="text-xs text-soil/55 italic">
         Signed contracts are kept for the full state-required retention period
@@ -367,7 +374,8 @@ function MilkTestsTab() {
       </div>
 
       <div className="paper overflow-hidden">
-        <table className="w-full text-sm">
+        <ScrollFade fadeColor="parchment">
+        <table className="w-full text-sm min-w-[600px]">
           <thead className="bg-cream border-b border-outline">
             <tr className="text-left small-caps text-xs text-soil/55">
               <th className="px-5 py-3 font-medium">Date</th>
@@ -408,6 +416,7 @@ function MilkTestsTab() {
             })}
           </tbody>
         </table>
+        </ScrollFade>
       </div>
 
       <div className="paper p-5 bg-cream/40 text-xs text-soil/65 italic max-w-2xl mx-auto text-center">

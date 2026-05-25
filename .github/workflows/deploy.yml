@@ -78,6 +78,27 @@ jobs:
           summarize VITE_MAPBOX_KEY "$VITE_MAPBOX_KEY"
           summarize MAPBOX_TOKEN "$MAPBOX_TOKEN"
 
+      - name: Resolve Mapbox token to NEXT_PUBLIC_MAPBOX_TOKEN
+        # Writes the resolved token into GITHUB_ENV so the Build step (and
+        # every step after) sees NEXT_PUBLIC_MAPBOX_TOKEN in process.env
+        # directly. This is more reliable than the alias in next.config.mjs,
+        # which can race with Next's NEXT_PUBLIC_* auto-inlining when the
+        # base name isn't set in the environment.
+        env:
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          TOKEN="${NEXT_PUBLIC_MAPBOX_TOKEN:-${VITE_MAPBOX_KEY:-${MAPBOX_TOKEN:-}}}"
+          if [ -z "$TOKEN" ]; then
+            echo "No Mapbox token in any secret — atlas fallback will deploy."
+          else
+            # Append to GITHUB_ENV so all subsequent steps see it. Don't
+            # echo the value itself — that would surface it in the log.
+            echo "NEXT_PUBLIC_MAPBOX_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+            echo "Resolved NEXT_PUBLIC_MAPBOX_TOKEN (len=${#TOKEN}, prefix=${TOKEN:0:3})"
+          fi
+
       - name: Build
         env:
           BASE_PATH: ${{ steps.basepath.outputs.base_path }}
@@ -91,12 +112,8 @@ jobs:
           # homepage generator when their respective backend isn't wired).
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          # Mapbox token — try all three common secret names. next.config.mjs
-          # falls back through them and normalizes whichever is set to
-          # NEXT_PUBLIC_MAPBOX_TOKEN inside the bundle.
-          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
-          VITE_MAPBOX_KEY: ${{ secrets.VITE_MAPBOX_KEY }}
-          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          # NEXT_PUBLIC_MAPBOX_TOKEN comes from the "Resolve" step above via
+          # GITHUB_ENV — no need to re-declare it here.
         run: npx next build
 
       - name: Regenerate /find map preview against the live Mapbox tiles

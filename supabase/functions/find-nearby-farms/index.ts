@@ -34,6 +34,17 @@ const RequestInput = z.object({
   force: z.boolean().default(false), // bypass cache
 });
 
+const DropSite = z.object({
+  name: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  zip: z.string().nullable().optional(),
+  lat: z.number().nullable().optional(),
+  lng: z.number().nullable().optional(),
+  day_time: z.string().nullable().optional(),
+});
+
 const PerplexityFarm = z.object({
   name: z.string(),
   kind: z.string().nullable().optional(),
@@ -49,6 +60,7 @@ const PerplexityFarm = z.object({
   phone: z.string().nullable().optional(),
   pickup_info: z.string().nullable().optional(),
   share_price: z.string().nullable().optional(),
+  drop_sites: z.array(DropSite).nullable().optional(),
 });
 
 const PerplexityResults = z.object({
@@ -173,26 +185,29 @@ function perplexityPrompt(
   radius: number,
 ): string {
   const location = [city, state].filter(Boolean).join(", ") || `ZIP ${zip}`;
-  return `Find real, currently-active small farms within about ${radius} miles of ${location} (ZIP ${zip}) that sell directly to consumers through one of:
-- a Vegetable CSA (community supported agriculture)
-- a Raw milk herd share or cow share
-- a Pastured meat share (beef, pork, chicken)
-- a Pastured egg share
-- a Mixed farm offering several of the above
+  return `Find real, currently-active small farms with at least one pickup or drop site within about ${radius} miles of ${location} (ZIP ${zip}). The farm itself may be much farther away — for example, a farm two hours from this ZIP that runs a weekly CSA drop in a coffee shop four miles from the searcher must be included. We're searching by pickup proximity, not farm-address proximity.
+
+Include any of:
+- Vegetable CSA (community supported agriculture)
+- Raw milk herd share or cow share
+- Pastured meat share (beef, pork, chicken)
+- Pastured egg share
+- Mixed farm offering several of the above
 
 For each farm return:
 - name
-- kind (use one of: "Vegetable CSA", "Raw milk herd share", "Pastured meat", "Pastured eggs", "Mixed farm")
+- kind (one of: "Vegetable CSA", "Raw milk herd share", "Pastured meat", "Pastured eggs", "Mixed farm")
 - a one-sentence description in plain editorial English (no marketing copy)
-- address, city, state, zip
+- address, city, state, zip — the FARM ITSELF
 - lat, lng (only if you are sure; otherwise null)
 - website (the canonical farm URL, not a directory listing)
 - email (if publicly listed)
 - phone (if publicly listed)
-- pickup_info (free-form: "Saturdays at the farm, 9am–noon")
+- pickup_info (free-form summary: "Saturdays at the farm, 9am–noon, plus Wednesday drops in Athens and Nelsonville")
 - share_price (free-form: "$620/season", "$115/month boarding")
+- drop_sites: an array of every public pickup location the farm uses besides the main farm address — CSA pickup points, farmers' markets they attend, drop sites for meat shares. For each: name, address, city, state, zip, lat, lng (if known), day_time ("Wednesday 4–6pm"). Use an empty array if there are no drop sites.
 
-Return up to 20 farms. Quality over quantity — do not pad the list.`;
+Return up to 20 farms. Quality over quantity — do not pad the list. Do not invent farms or drop sites that you can't verify.`;
 }
 
 type PerplexityResponse = {
@@ -240,6 +255,22 @@ async function callPerplexity(
                   phone: { type: ["string", "null"] },
                   pickup_info: { type: ["string", "null"] },
                   share_price: { type: ["string", "null"] },
+                  drop_sites: {
+                    type: ["array", "null"],
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: ["string", "null"] },
+                        address: { type: ["string", "null"] },
+                        city: { type: ["string", "null"] },
+                        state: { type: ["string", "null"] },
+                        zip: { type: ["string", "null"] },
+                        lat: { type: ["number", "null"] },
+                        lng: { type: ["number", "null"] },
+                        day_time: { type: ["string", "null"] },
+                      },
+                    },
+                  },
                 },
                 required: ["name"],
               },
@@ -370,13 +401,58 @@ Deno.serve(async (req: Request) => {
         .select("*")
         .eq("discovered_via_zip", zip)
         .is("opted_out_at", null);
+
+      // Cache rows don't carry nearest-pickup distance (it's relative to
+      // the searcher). Recompute it from the stored drop_sites + the
+      // cached center coords so the client gets the same shape on cache
+      // hits as on fresh searches.
+      const centerLL = { lat: recent.lat as number, lng: recent.lng as number };
+      const decorated = (cached ?? []).map((row: Record<string, unknown>) => {
+        const candidates: Array<{ label: string; miles: number }> = [];
+        const flat = row.lat as number | null;
+        const flng = row.lng as number | null;
+        if (flat != null && flng != null) {
+          candidates.push({
+            label: "farm",
+            miles: distanceMiles({ lat: flat, lng: flng }, centerLL),
+          });
+        }
+        const drops = (row.drop_sites as Array<{
+          name?: string | null;
+          city?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+        }> | null) ?? [];
+        for (const ds of drops) {
+          if (ds.lat != null && ds.lng != null) {
+            candidates.push({
+              label: `drop: ${ds.name ?? ds.city ?? "site"}`,
+              miles: distanceMiles({ lat: ds.lat, lng: ds.lng }, centerLL),
+            });
+          }
+        }
+        candidates.sort((a, b) => a.miles - b.miles);
+        const nearest = candidates[0];
+        return {
+          ...row,
+          nearest_pickup_miles: nearest?.miles ?? null,
+          nearest_pickup_label: nearest?.label ?? null,
+        };
+      });
+      decorated.sort((a, b) => {
+        const am = (a.nearest_pickup_miles as number | null) ?? 9999;
+        const bm = (b.nearest_pickup_miles as number | null) ?? 9999;
+        return am - bm;
+      });
+
       return json({
         zip,
-        center: { lat: recent.lat, lng: recent.lng },
+        center: centerLL,
         city: recent.city,
         state: recent.state,
         source: "cache",
-        farms: cached ?? [],
+        radius_miles: radiusMiles,
+        farms: decorated,
       });
     }
   }
@@ -416,28 +492,131 @@ Deno.serve(async (req: Request) => {
   }
 
   // ---------------------------------------------------------------------------
-  // 4. Geocode any farm missing lat/lng, then filter by radius
+  // 4. Geocode missing coords (farm + every drop site), then filter by the
+  //    closest pickup distance — primary location OR any drop site.
+  //    A farm two hours away with a drop site near the searcher should
+  //    surface; one with neither close shouldn't.
   // ---------------------------------------------------------------------------
-  const enriched: Array<
-    z.infer<typeof PerplexityFarm> & { lat: number; lng: number }
-  > = [];
+  type DropSiteResolved = {
+    name: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    lat: number | null;
+    lng: number | null;
+    day_time: string | null;
+    distance_miles: number | null;
+  };
+  type EnrichedFarm = z.infer<typeof PerplexityFarm> & {
+    lat: number;
+    lng: number;
+    drop_sites_resolved: DropSiteResolved[];
+    nearest_pickup_miles: number;
+    nearest_pickup_label: string; // "farm" | "drop: <name>"
+  };
+
+  const enriched: EnrichedFarm[] = [];
   for (const farm of pplx.farms) {
+    // Resolve the primary farm coords first
     let lat = farm.lat ?? null;
     let lng = farm.lng ?? null;
     if (lat == null || lng == null) {
       const query = [farm.address, farm.city, farm.state, farm.zip]
         .filter(Boolean)
         .join(", ");
-      if (query.length < 4) continue;
-      const g = await geocodeAddress(query, mapboxToken);
-      if (!g) continue;
-      lat = g.lat;
-      lng = g.lng;
+      if (query.length >= 4) {
+        const g = await geocodeAddress(query, mapboxToken);
+        if (g) {
+          lat = g.lat;
+          lng = g.lng;
+        }
+      }
     }
-    const d = distanceMiles({ lat, lng }, center);
-    if (d > radiusMiles + 5) continue; // small tolerance — Perplexity sometimes overshoots
-    enriched.push({ ...farm, lat, lng });
+
+    // Resolve every drop site's coords
+    const dropSites: DropSiteResolved[] = [];
+    for (const ds of farm.drop_sites ?? []) {
+      let dlat = ds.lat ?? null;
+      let dlng = ds.lng ?? null;
+      if (dlat == null || dlng == null) {
+        const dquery = [ds.address, ds.city, ds.state, ds.zip]
+          .filter(Boolean)
+          .join(", ");
+        if (dquery.length >= 4) {
+          const g = await geocodeAddress(dquery, mapboxToken);
+          if (g) {
+            dlat = g.lat;
+            dlng = g.lng;
+          }
+        }
+      }
+      const dmiles =
+        dlat != null && dlng != null
+          ? distanceMiles({ lat: dlat, lng: dlng }, center)
+          : null;
+      dropSites.push({
+        name: ds.name ?? null,
+        address: ds.address ?? null,
+        city: ds.city ?? null,
+        state: ds.state ?? null,
+        zip: ds.zip ?? null,
+        lat: dlat,
+        lng: dlng,
+        day_time: ds.day_time ?? null,
+        distance_miles: dmiles,
+      });
+    }
+
+    // Compute the nearest pickup distance
+    const candidates: Array<{ label: string; miles: number }> = [];
+    if (lat != null && lng != null) {
+      candidates.push({
+        label: "farm",
+        miles: distanceMiles({ lat, lng }, center),
+      });
+    }
+    for (const ds of dropSites) {
+      if (ds.distance_miles != null) {
+        candidates.push({
+          label: `drop: ${ds.name ?? ds.city ?? "site"}`,
+          miles: ds.distance_miles,
+        });
+      }
+    }
+    if (candidates.length === 0) continue; // nothing geocoded — skip
+
+    candidates.sort((a, b) => a.miles - b.miles);
+    const nearest = candidates[0];
+
+    // Within radius (with tolerance) on the CLOSEST pickup point.
+    if (nearest.miles > radiusMiles + 5) continue;
+
+    // If the primary farm itself didn't resolve, plant the pin on the
+    // nearest drop site so the map still has something to show.
+    if (lat == null || lng == null) {
+      const firstResolved = dropSites.find(
+        (ds) => ds.lat != null && ds.lng != null,
+      );
+      if (firstResolved) {
+        lat = firstResolved.lat;
+        lng = firstResolved.lng;
+      }
+    }
+    if (lat == null || lng == null) continue;
+
+    enriched.push({
+      ...farm,
+      lat,
+      lng,
+      drop_sites_resolved: dropSites,
+      nearest_pickup_miles: nearest.miles,
+      nearest_pickup_label: nearest.label,
+    });
   }
+
+  // Sort by nearest pickup distance so the side list reads sensibly.
+  enriched.sort((a, b) => a.nearest_pickup_miles - b.nearest_pickup_miles);
 
   // ---------------------------------------------------------------------------
   // 5. Upsert into discovered_farms
@@ -458,6 +637,7 @@ Deno.serve(async (req: Request) => {
     phone: string | null;
     pickup_info: string | null;
     share_price: string | null;
+    drop_sites: DropSiteResolved[];
     citations: string[];
     source: string;
     discovered_via_zip: string;
@@ -486,6 +666,7 @@ Deno.serve(async (req: Request) => {
       phone: f.phone ?? null,
       pickup_info: f.pickup_info ?? null,
       share_price: f.share_price ?? null,
+      drop_sites: f.drop_sites_resolved,
       citations: pplx.citations,
       source: "perplexity",
       discovered_via_zip: zip,
@@ -524,13 +705,34 @@ Deno.serve(async (req: Request) => {
     .eq("discovered_via_zip", zip)
     .is("opted_out_at", null);
 
+  // Decorate persisted rows with the nearest-pickup info we computed in
+  // step 4. The DB doesn't store it (it's relative to the searcher's
+  // ZIP); we merge it back in by slug for the response.
+  const decorated = (persisted ?? []).map((row: Record<string, unknown>) => {
+    const slug = row.slug as string | null;
+    const match = enriched.find((e) => slugify(e.name, zip) === slug);
+    return {
+      ...row,
+      nearest_pickup_miles: match?.nearest_pickup_miles ?? null,
+      nearest_pickup_label: match?.nearest_pickup_label ?? null,
+    };
+  });
+
+  // Sort by distance so the client doesn't have to.
+  decorated.sort((a, b) => {
+    const am = (a.nearest_pickup_miles as number | null) ?? 9999;
+    const bm = (b.nearest_pickup_miles as number | null) ?? 9999;
+    return am - bm;
+  });
+
   return json({
     zip,
     center: { lat: center.lat, lng: center.lng },
     city: center.city,
     state: center.state,
     source: "fresh",
-    farms: persisted ?? [],
+    radius_miles: radiusMiles,
+    farms: decorated,
     citations: pplx.citations,
   });
 });

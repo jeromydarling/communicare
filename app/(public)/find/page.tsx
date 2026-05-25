@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { sampleFarms, type SampleFarm } from "@/lib/sample-farms";
+import type { SampleFarm } from "@/lib/sample-farms";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Wheat, Jar, Leaf, Barn } from "@/components/mark";
 
@@ -15,6 +15,14 @@ const KINDS = [
   "Mixed farm",
 ] as const;
 type Filter = (typeof KINDS)[number];
+
+// Radius pills the user picks before searching. Default is 25 — a typical
+// CSA's drop-site network covers most members within this range. The 200
+// option is for sparse rural areas where the farm-to-table relationship
+// is a real drive but worth it.
+const RADIUS_OPTIONS = [5, 10, 25, 50, 100, 200] as const;
+type Radius = (typeof RADIUS_OPTIONS)[number];
+const DEFAULT_RADIUS: Radius = 25;
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -29,10 +37,22 @@ function project(lng: number, lat: number): { x: number; y: number } {
   return { x, y };
 }
 
-// Unified type — we render sample farms (curated) and discovered farms
-// (Perplexity-surfaced) through the same map + side list code.
+type DropSite = {
+  name: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  lat: number | null;
+  lng: number | null;
+  day_time: string | null;
+  distance_miles: number | null;
+};
+
+// Unified type — sample farms (curated) and discovered farms
+// (Perplexity-surfaced) render through the same map + side list code.
 type AnyFarm = {
-  id: string; // slug for sample, uuid for discovered
+  id: string;
   source: "sample" | "discovered";
   name: string;
   kind: string;
@@ -40,9 +60,7 @@ type AnyFarm = {
   lat: number;
   lng: number;
   slug?: string;
-  // Sample
   tagline?: string;
-  // Discovered
   description?: string;
   website?: string;
   email?: string;
@@ -51,6 +69,11 @@ type AnyFarm = {
   share_price?: string;
   inquiry_count?: number;
   citations?: string[];
+  drop_sites?: DropSite[];
+  // distance from the searcher to the nearest pickup point (farm OR drop site)
+  nearest_pickup_miles?: number;
+  // "farm" or "drop: <name>" — what the nearest pickup actually is
+  nearest_pickup_label?: string;
 };
 
 type DiscoveredFarmRow = {
@@ -71,6 +94,9 @@ type DiscoveredFarmRow = {
   share_price: string | null;
   inquiry_count: number;
   citations: string[] | null;
+  drop_sites: DropSite[] | null;
+  nearest_pickup_miles: number | null;
+  nearest_pickup_label: string | null;
 };
 
 function sampleToAny(f: SampleFarm): AnyFarm {
@@ -105,12 +131,21 @@ function discoveredToAny(d: DiscoveredFarmRow): AnyFarm {
     share_price: d.share_price ?? undefined,
     inquiry_count: d.inquiry_count,
     citations: d.citations ?? undefined,
+    drop_sites: d.drop_sites ?? undefined,
+    nearest_pickup_miles: d.nearest_pickup_miles ?? undefined,
+    nearest_pickup_label: d.nearest_pickup_label ?? undefined,
   };
 }
 
 function matchesFilter(f: AnyFarm, filter: Filter): boolean {
   if (filter === "All") return true;
   return f.kind.toLowerCase().includes(filter.toLowerCase());
+}
+
+function formatMiles(m: number): string {
+  if (m < 1) return "< 1 mi";
+  if (m < 10) return `${m.toFixed(1)} mi`;
+  return `${Math.round(m)} mi`;
 }
 
 function regionOf(f: AnyFarm): string {
@@ -123,11 +158,15 @@ export default function FindPage() {
   const [selected, setSelected] = useState<AnyFarm | null>(null);
   const [hovered, setHovered] = useState<AnyFarm | null>(null);
 
-  // ZIP-search state
+  // ZIP-search state. The map starts EMPTY — no sample farms preloaded.
+  // It populates only after the visitor types a ZIP and we get results
+  // back from Perplexity (or a previous cached search).
   const [zipInput, setZipInput] = useState("");
+  const [radius, setRadius] = useState<Radius>(DEFAULT_RADIUS);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchedZip, setSearchedZip] = useState<string | null>(null);
+  const [searchedRadius, setSearchedRadius] = useState<Radius | null>(null);
   const [searchCenter, setSearchCenter] = useState<{
     lat: number;
     lng: number;
@@ -135,14 +174,13 @@ export default function FindPage() {
   const [discovered, setDiscovered] = useState<AnyFarm[]>([]);
   const [inquiryFor, setInquiryFor] = useState<AnyFarm | null>(null);
 
-  const all = useMemo<AnyFarm[]>(
-    () => [...sampleFarms.map(sampleToAny), ...discovered],
-    [discovered],
-  );
   const visible = useMemo(
-    () => all.filter((f) => matchesFilter(f, filter)),
-    [all, filter],
+    () => discovered.filter((f) => matchesFilter(f, filter)),
+    [discovered, filter],
   );
+  // Counts for the kind-filter pills, computed off the discovered set.
+  const kindCount = (k: Filter) =>
+    discovered.filter((f) => matchesFilter(f, k)).length;
 
   const useMapbox = Boolean(MAPBOX_TOKEN);
 
@@ -168,7 +206,7 @@ export default function FindPage() {
     try {
       const { data, error } = await supabase.functions.invoke(
         "find-nearby-farms",
-        { body: { zip, radiusMiles: 20 } },
+        { body: { zip, radiusMiles: radius } },
       );
       if (error) {
         setSearchError(error.message ?? "Couldn't reach the discovery service.");
@@ -183,10 +221,13 @@ export default function FindPage() {
       const rows = (data.farms as DiscoveredFarmRow[]).map(discoveredToAny);
       setDiscovered(rows);
       setSearchedZip(zip);
+      setSearchedRadius(radius);
       setSearchCenter(data.center ?? null);
-      // Auto-select the first discovered result to nudge the eye
+      // Auto-select the closest farm (rows are pre-sorted by distance)
       if (rows.length > 0) {
         setSelected(rows[0]);
+      } else {
+        setSelected(null);
       }
     } catch (err) {
       setSearchError(
@@ -202,10 +243,14 @@ export default function FindPage() {
   function clearSearch() {
     setDiscovered([]);
     setSearchedZip(null);
+    setSearchedRadius(null);
     setSearchCenter(null);
     setZipInput("");
     setSearchError(null);
+    setSelected(null);
   }
+
+  const hasSearched = searchedZip !== null;
 
   return (
     <div className="relative">
@@ -218,90 +263,116 @@ export default function FindPage() {
             <h1 className="display text-4xl md:text-5xl font-medium leading-tight">
               Find a farm share near you.
             </h1>
-            <p className="text-soil/65 italic mt-3 max-w-md">
-              Real farms, with shares left for the season. Type a ZIP to find
-              farms within twenty miles — we list them whether they're on
-              Communicare or not.
+            <p className="text-soil/65 italic mt-3 max-w-xl">
+              Type a ZIP. We search by <em>pickup</em> distance, not farm
+              address — so a farm two hours away with a drop site four miles
+              from you still shows up.
             </p>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {KINDS.map((k) => (
-              <button
-                key={k}
-                onClick={() => setFilter(k)}
-                className={`px-3 py-1.5 rounded-full text-xs display transition-colors ${
-                  filter === k
-                    ? "bg-soil text-parchment"
-                    : "bg-cream text-soil/65 hover:bg-cream2 border border-soil/10"
-                }`}
-              >
-                {k}
-                {k !== "All" && (
-                  <span className="ml-1.5 text-[10px] opacity-65">
-                    · {all.filter((f) => matchesFilter(f, k)).length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          {/* Kind filter pills only appear after a search lands so they
+              never sit empty next to an empty map. */}
+          {hasSearched && (
+            <div className="flex flex-wrap gap-1.5">
+              {KINDS.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setFilter(k)}
+                  className={`px-3 py-1.5 rounded-full text-xs display transition-colors ${
+                    filter === k
+                      ? "bg-soil text-parchment"
+                      : "bg-cream text-soil/65 hover:bg-cream2 border border-soil/10"
+                  }`}
+                >
+                  {k}
+                  {k !== "All" && (
+                    <span className="ml-1.5 text-[10px] opacity-65">
+                      · {kindCount(k)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ZIP search row */}
-        <form
-          onSubmit={runZipSearch}
-          className="mt-6 flex flex-wrap items-end gap-3"
-        >
-          <div className="flex-1 min-w-[200px] max-w-xs">
-            <label
-              className="small-caps text-[10px] text-soil/55 mb-1 block"
-              htmlFor="zip"
-            >
-              Find within 20 miles of
-            </label>
-            <input
-              id="zip"
-              inputMode="numeric"
-              pattern="[0-9]{5}"
-              maxLength={10}
-              placeholder="ZIP — e.g. 24091"
-              className="field font-mono"
-              value={zipInput}
-              onChange={(e) => setZipInput(e.target.value)}
-              disabled={searching}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={searching || !zipInput.trim()}
-            className="btn btn-primary text-sm disabled:opacity-50"
-          >
-            {searching ? "Looking…" : "Find farms →"}
-          </button>
-          {searchedZip && (
+        <form onSubmit={runZipSearch} className="mt-6 space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[180px] max-w-xs">
+              <label
+                className="small-caps text-[10px] text-soil/55 mb-1 block"
+                htmlFor="zip"
+              >
+                Your ZIP code
+              </label>
+              <input
+                id="zip"
+                inputMode="numeric"
+                pattern="[0-9]{5}"
+                maxLength={10}
+                placeholder="e.g. 24091"
+                className="field font-mono"
+                value={zipInput}
+                onChange={(e) => setZipInput(e.target.value)}
+                disabled={searching}
+              />
+            </div>
+
+            <div>
+              <div className="small-caps text-[10px] text-soil/55 mb-1">
+                Within
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {RADIUS_OPTIONS.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRadius(r)}
+                    disabled={searching}
+                    className={`px-2.5 py-1.5 rounded-md text-xs display transition-colors border ${
+                      radius === r
+                        ? "bg-brick text-parchment border-brick"
+                        : "bg-parchment text-soil/65 hover:bg-cream2 border-soil/15"
+                    }`}
+                  >
+                    {r}mi
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
-              type="button"
-              onClick={clearSearch}
-              className="display italic text-soil/55 text-xs hover:text-soil"
+              type="submit"
+              disabled={searching || !zipInput.trim()}
+              className="btn btn-primary text-sm disabled:opacity-50"
             >
-              Clear search
+              {searching ? "Looking…" : "Find farms →"}
             </button>
-          )}
+            {hasSearched && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="display italic text-soil/55 text-xs hover:text-soil"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+
           {searchError && (
-            <div className="text-xs text-brick italic mt-1 w-full">
-              {searchError}
+            <div className="text-xs text-brick italic">{searchError}</div>
+          )}
+          {hasSearched && discovered.length > 0 && (
+            <div className="text-xs text-soil/65 italic">
+              {discovered.length} farm{discovered.length === 1 ? "" : "s"} with
+              a pickup within {searchedRadius} miles of {searchedZip}. We list
+              them whether they're on Communicare or not.
             </div>
           )}
-          {searchedZip && discovered.length > 0 && (
-            <div className="text-xs text-soil/65 italic w-full">
-              Discovered {discovered.length} farm
-              {discovered.length === 1 ? "" : "s"} within 20 miles of {searchedZip}.
-              We list them whether they're on Communicare or not.
-            </div>
-          )}
-          {searchedZip && discovered.length === 0 && !searching && (
-            <div className="text-xs text-soil/65 italic w-full">
-              No farms surfaced within 20 miles of {searchedZip}. Try a wider
-              search, or{" "}
+          {hasSearched && discovered.length === 0 && !searching && (
+            <div className="text-xs text-soil/65 italic">
+              No farms surfaced within {searchedRadius} miles of {searchedZip}.
+              Try a wider radius, or{" "}
               <Link href="/join" className="text-brick hover:underline">
                 tell us about a farm we missed
               </Link>
@@ -314,9 +385,6 @@ export default function FindPage() {
       <div className="grid lg:grid-cols-[1fr_360px] gap-0 border-t border-soil/15">
         <div
           className="relative bg-cream"
-          // 75dvh gives the mobile dynamic-viewport-height proper treatment
-          // (browser chrome doesn't eat it like static vh does); minHeight
-          // is the floor so it stays usable on very short windows.
           style={{ height: "75dvh", minHeight: 540 }}
         >
           {useMapbox ? (
@@ -326,6 +394,7 @@ export default function FindPage() {
               onSelect={setSelected}
               onHover={setHovered}
               flyToCenter={searchCenter}
+              fitRadiusMiles={searchedRadius}
             />
           ) : (
             <AtlasFallback
@@ -337,25 +406,46 @@ export default function FindPage() {
             />
           )}
 
-          {/* Region quick-jump pills */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 max-w-[92%] overflow-x-auto">
-            <div className="flex gap-1.5 px-1.5 py-1.5 rounded-full bg-parchment/85 backdrop-blur-sm border border-soil/15 shadow-md">
-              {visible.slice(0, 10).map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setSelected(f)}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] display transition-colors ${
-                    selected?.id === f.id
-                      ? "bg-brick text-parchment"
-                      : "text-soil/70 hover:bg-cream2/80"
-                  }`}
-                >
-                  {regionOf(f)}
-                </button>
-              ))}
+          {/* Pre-search overlay: a soft empty-state with a nudge. Fades
+              out once the map has results. */}
+          {!hasSearched && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+              <div className="paper px-6 py-5 max-w-md text-center bg-parchment/95 backdrop-blur-sm">
+                <div className="small-caps text-[10px] text-brick mb-2">
+                  An empty map, waiting
+                </div>
+                <p className="display text-lg font-medium text-soil leading-snug">
+                  Type a ZIP above to fill it.
+                </p>
+                <p className="text-xs text-soil/60 italic mt-2 leading-snug">
+                  Every CSA, herd share, and meat share we can find. By
+                  pickup distance, not farm address.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Region quick-jump pills — only after a search lands */}
+          {visible.length > 0 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 max-w-[92%] overflow-x-auto">
+              <div className="flex gap-1.5 px-1.5 py-1.5 rounded-full bg-parchment/85 backdrop-blur-sm border border-soil/15 shadow-md">
+                {visible.slice(0, 10).map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setSelected(f)}
+                    className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] display transition-colors ${
+                      selected?.id === f.id
+                        ? "bg-brick text-parchment"
+                        : "text-soil/70 hover:bg-cream2/80"
+                    }`}
+                  >
+                    {regionOf(f)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {hovered && !useMapbox && <FloatingTooltip farm={hovered} />}
         </div>
@@ -372,59 +462,74 @@ export default function FindPage() {
             />
           )}
 
-          <div className="p-4">
-            <div className="small-caps text-[10px] text-soil/55 mb-2 px-2">
-              {visible.length} farm{visible.length === 1 ? "" : "s"}
-              {discovered.length > 0 && (
-                <span className="ml-1 text-brick">
-                  · {discovered.length} discovered
-                </span>
-              )}
+          {!hasSearched ? (
+            <div className="p-6 text-sm text-soil/65 italic leading-relaxed">
+              <p>
+                Type a ZIP above to fill this list. Sorted by the distance
+                from your front door to the nearest pickup point — a farm
+                up the road or a drop site downtown, whichever is closer.
+              </p>
             </div>
-            <ul className="space-y-2">
-              {visible.map((farm) => (
-                <li key={farm.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelected(farm)}
-                    onMouseEnter={() => setHovered(farm)}
-                    onMouseLeave={() => setHovered(null)}
-                    className={`w-full text-left p-3 rounded-md transition-colors ${
-                      selected?.id === farm.id
-                        ? "bg-wheat/20"
-                        : "hover:bg-parchment"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-brick">{kindIcon(farm.kind)}</span>
-                      <span className="display text-base">{farm.name}</span>
-                      {farm.source === "discovered" && (
-                        <span className="small-caps text-[9px] text-brick bg-brick/10 px-1.5 py-0.5 rounded-full">
-                          new
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-soil/55 italic">
-                      {farm.location}
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          ) : (
+            <>
+              <div className="p-4">
+                <div className="small-caps text-[10px] text-soil/55 mb-2 px-2">
+                  {visible.length} farm{visible.length === 1 ? "" : "s"} ·
+                  sorted by pickup distance
+                </div>
+                <ul className="space-y-2">
+                  {visible.map((farm) => (
+                    <li key={farm.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(farm)}
+                        onMouseEnter={() => setHovered(farm)}
+                        onMouseLeave={() => setHovered(null)}
+                        className={`w-full text-left p-3 rounded-md transition-colors ${
+                          selected?.id === farm.id
+                            ? "bg-wheat/20"
+                            : "hover:bg-parchment"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-brick shrink-0">
+                              {kindIcon(farm.kind)}
+                            </span>
+                            <span className="display text-base truncate">
+                              {farm.name}
+                            </span>
+                          </div>
+                          {typeof farm.nearest_pickup_miles === "number" && (
+                            <span className="text-[10px] text-soil/55 font-mono shrink-0">
+                              {formatMiles(farm.nearest_pickup_miles)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-soil/55 italic">
+                          {farm.location}
+                        </div>
+                        {farm.nearest_pickup_label?.startsWith("drop:") && (
+                          <div className="text-[10px] text-mossDark italic mt-1">
+                            via {farm.nearest_pickup_label.replace("drop: ", "")}
+                          </div>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-          <div className="p-6 border-t border-soil/10 text-xs text-soil/55 italic">
-            <p>
-              As real farms join Communicare, the map fills out — and it
-              becomes the best way to find a farm share in your county.
-            </p>
-            <Link
-              href="/join"
-              className="display italic text-brick hover:underline not-italic mt-3 block"
-            >
-              Are you a farm? Join the early circle →
-            </Link>
-          </div>
+              <div className="p-6 border-t border-soil/10 text-xs text-soil/55 italic">
+                <Link
+                  href="/farmer/sign-up"
+                  className="display italic text-brick hover:underline not-italic block"
+                >
+                  Are you a farm? Start your farm desk →
+                </Link>
+              </div>
+            </>
+          )}
         </aside>
       </div>
 
@@ -466,6 +571,63 @@ function FarmCard({
         {farm.name}
       </h3>
       <div className="text-xs text-soil/55 italic mb-3">{farm.location}</div>
+
+      {/* Nearest pickup callout — only when we actually searched and have
+          the distance number. A drop-site match gets a specific line so
+          the user knows the farm is far but their pickup is close. */}
+      {typeof farm.nearest_pickup_miles === "number" && (
+        <div className="mb-4 p-3 rounded-md bg-wheat/15 border border-wheat/40">
+          <div className="small-caps text-[10px] text-brick mb-1">
+            Nearest pickup
+          </div>
+          <div className="display text-base font-medium text-soil">
+            {formatMiles(farm.nearest_pickup_miles)} from you
+          </div>
+          {farm.nearest_pickup_label?.startsWith("drop:") && (
+            <div className="text-[11px] text-soil/70 italic mt-1">
+              via {farm.nearest_pickup_label.replace("drop: ", "")} — the
+              farm itself is farther, but they drive a drop site close
+              to you.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Detailed drop sites list, when known */}
+      {farm.drop_sites && farm.drop_sites.length > 0 && (
+        <div className="mb-4 border-t border-soil/10 pt-3">
+          <div className="small-caps text-[10px] text-soil/55 mb-2">
+            All pickup points
+          </div>
+          <ul className="space-y-2">
+            {farm.drop_sites.map((ds, i) => (
+              <li
+                key={i}
+                className="flex items-start justify-between gap-2 text-xs leading-snug"
+              >
+                <div className="min-w-0">
+                  <div className="display text-soil truncate">
+                    {ds.name ?? ds.city ?? "Drop site"}
+                  </div>
+                  {ds.day_time && (
+                    <div className="text-soil/55 italic">{ds.day_time}</div>
+                  )}
+                  {ds.address && (
+                    <div className="text-soil/45 text-[10px] truncate">
+                      {ds.address}
+                    </div>
+                  )}
+                </div>
+                {typeof ds.distance_miles === "number" && (
+                  <span className="font-mono text-[10px] text-soil/55 shrink-0">
+                    {formatMiles(ds.distance_miles)}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {farm.tagline && (
         <p className="text-sm text-soil/80 leading-relaxed mb-4">
@@ -851,8 +1013,10 @@ function MapboxLive({
   onSelect,
   onHover,
   flyToCenter,
+  fitRadiusMiles,
 }: ViewProps & {
   flyToCenter: { lat: number; lng: number } | null;
+  fitRadiusMiles: number | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<unknown>(null);
@@ -999,24 +1163,29 @@ function MapboxLive({
     });
   }, [selected, ready]);
 
-  // When a new ZIP search lands, fly to the search center first (gentler
-  // overview) so the user sees the area, not just one farm.
+  // When a new search lands: fit the map to the bounding box that contains
+  // the search center + a radius circle, so the user sees every result on
+  // one screen. Roughly 1° latitude ≈ 69 miles; lng spacing varies with
+  // latitude (cos correction).
   useEffect(() => {
-    if (!ready || !flyToCenter) return;
+    if (!ready || !flyToCenter || fitRadiusMiles == null) return;
     const map = mapRef.current as
-      | { flyTo: (opts: Record<string, unknown>) => void }
+      | { fitBounds: (b: number[][], o: Record<string, unknown>) => void }
       | null;
     if (!map) return;
-    map.flyTo({
-      center: [flyToCenter.lng, flyToCenter.lat],
-      zoom: 9,
-      pitch: 30,
+    const latDelta = fitRadiusMiles / 69;
+    const lngDelta =
+      fitRadiusMiles / (69 * Math.cos((flyToCenter.lat * Math.PI) / 180));
+    const sw = [flyToCenter.lng - lngDelta, flyToCenter.lat - latDelta];
+    const ne = [flyToCenter.lng + lngDelta, flyToCenter.lat + latDelta];
+    map.fitBounds([sw, ne], {
+      padding: { top: 80, bottom: 100, left: 60, right: 60 },
+      pitch: 25,
       bearing: 0,
-      speed: 0.8,
-      curve: 1.4,
+      duration: 1400,
       essential: true,
     });
-  }, [flyToCenter, ready]);
+  }, [flyToCenter, fitRadiusMiles, ready]);
 
   // Explicit width/height instead of `absolute inset-0`. Mapbox-GL reads
   // dimensions from the container at init time; `inset-0` on an absolutely

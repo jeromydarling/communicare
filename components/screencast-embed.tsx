@@ -76,11 +76,11 @@ export function ScreencastEmbed() {
     <section className="relative max-w-page mx-auto px-6 py-16 md:py-24">
       <div className="text-center mb-10 md:mb-14">
         <div className="small-caps text-xs text-brick mb-4">
-          Ninety seconds, from her phone at the market to a new member by morning
+          Mary's Tuesday · Three Forks Dairy · ninety seconds
         </div>
         <h2 className="display text-4xl md:text-5xl font-medium leading-tight">
-          A day with Communicare,
-          <br className="hidden md:inline" /> in moving pictures.
+          How the desk
+          <br className="hidden md:inline" /> actually moves.
         </h2>
       </div>
 

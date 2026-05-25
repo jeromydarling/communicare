@@ -224,15 +224,11 @@ export default function Home() {
         <div className="max-w-page mx-auto px-6 py-24">
           <div className="text-center mb-16">
             <div className="small-caps text-xs text-brick mb-3">
-              The work, on a screen
+              What you'll actually use
             </div>
             <h2 className="display text-4xl md:text-5xl font-medium leading-tight">
-              What it actually looks like.
+              The screens you'll live in.
             </h2>
-            <p className="text-soil/65 italic mt-4 max-w-xl mx-auto">
-              These are the real screens, rendered in your browser as you
-              read.
-            </p>
           </div>
 
           {/* Stripe 1 — SMS swap */}
@@ -431,48 +427,89 @@ export default function Home() {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
             <div>
               <div className="small-caps text-xs text-brick mb-3">
-                What the homepage looks like, once written
+                The directory
               </div>
               <h2 className="display text-4xl md:text-5xl font-medium leading-tight">
-                A few farms,
+                Find them
                 <br />
-                drawn from life.
+                on the map.
               </h2>
             </div>
-            <p className="md:max-w-md text-soil/70 italic">
-              A national farm-share map will come — last, only when there are
-              enough of you to make a map worth opening. For now, these are
-              sketches.
+            <p className="md:max-w-md text-soil/75 text-lg leading-snug">
+              Type a ZIP. Twenty miles. Communicare lists every CSA, herd
+              share, and meat share we can find — yours or not. Members find
+              you whether you're paying us anything or not.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {sampleFarms.slice(0, 3).map((farm) => (
-              <Link
-                key={farm.slug}
-                href={`/farm/${farm.slug}`}
-                className="paper p-7 hover:-translate-y-1 transition-transform group block"
-              >
-                <div className="flex items-center justify-between mb-5">
-                  <FarmIcon kind={farm.kind} />
-                  <span className="small-caps text-[10px] text-soil/50">
-                    {farm.kind}
-                  </span>
+          {/* Live preview of /find — actual rendered screenshot, sits on top
+              of a paper card with a faint hover lift. Clicking it opens the
+              real map. */}
+          <Link
+            href="/find"
+            className="paper overflow-hidden block group hover:-translate-y-1 transition-transform relative"
+          >
+            <div className="bg-cream2 border-b border-soil/15 px-4 py-2.5 flex items-center gap-3">
+              <div className="flex gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-brick/40" />
+                <span className="w-2.5 h-2.5 rounded-full bg-wheat/50" />
+                <span className="w-2.5 h-2.5 rounded-full bg-moss/40" />
+              </div>
+              <div className="text-xs text-soil/55 font-mono ml-2 truncate">
+                communicare.farm/find
+              </div>
+            </div>
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`${BASE_PATH}/find-map-preview.jpg`}
+                alt="A preview of the Communicare farm-share discovery map — pins dropped on a watercolor-style atlas of the lower 48, with four sample farms listed in the side panel."
+                className="block w-full"
+                draggable={false}
+              />
+              {/* CTA pill floats over the map */}
+              <div className="absolute inset-0 flex items-end justify-center pb-10 md:pb-16 pointer-events-none">
+                <div className="btn btn-primary text-base group-hover:translate-y-[-2px] transition-transform shadow-lg">
+                  Open the farm map →
                 </div>
-                <h3 className="display text-2xl font-medium mb-1 group-hover:text-brick transition-colors">
-                  {farm.name}
-                </h3>
-                <div className="text-sm text-soil/60 mb-4">
-                  {farm.location}
-                </div>
-                <p className="text-soil/80 leading-relaxed mb-5">
-                  {farm.tagline}
-                </p>
-                <div className="text-sm display italic text-brick">
-                  See the homepage →
-                </div>
-              </Link>
-            ))}
+              </div>
+            </div>
+          </Link>
+
+          {/* Three sample farms below — kept, but reframed as "browse a
+              few" rather than "we don't have a real map yet." */}
+          <div className="mt-16">
+            <div className="small-caps text-[11px] text-soil/55 mb-5 text-center">
+              A few you'll find on the map
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {sampleFarms.slice(0, 3).map((farm) => (
+                <Link
+                  key={farm.slug}
+                  href={`/farm/${farm.slug}`}
+                  className="paper p-7 hover:-translate-y-1 transition-transform group block"
+                >
+                  <div className="flex items-center justify-between mb-5">
+                    <FarmIcon kind={farm.kind} />
+                    <span className="small-caps text-[10px] text-soil/50">
+                      {farm.kind}
+                    </span>
+                  </div>
+                  <h3 className="display text-2xl font-medium mb-1 group-hover:text-brick transition-colors">
+                    {farm.name}
+                  </h3>
+                  <div className="text-sm text-soil/60 mb-4">
+                    {farm.location}
+                  </div>
+                  <p className="text-soil/80 leading-relaxed mb-5">
+                    {farm.tagline}
+                  </p>
+                  <div className="text-sm display italic text-brick">
+                    See the homepage →
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -481,7 +518,8 @@ export default function Home() {
       <section className="max-w-page mx-auto px-6 py-28 text-center">
         <Sun className="w-16 h-16 text-wheat mx-auto mb-8" />
         <h2 className="display text-4xl md:text-5xl font-medium max-w-3xl mx-auto leading-tight">
-          If you keep a farm, we would like to make this for you.
+          If you keep a farm,{" "}
+          <em className="italic text-brick">this is yours.</em>
         </h2>
         <p className="mt-6 max-w-xl mx-auto text-lg text-soil/75 italic">
           Open the live demo to see what a Tuesday looks like inside

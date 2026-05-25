@@ -23,18 +23,23 @@ export function Footer() {
             </div>
             <ul className="space-y-2">
               <li>
+                <Link href="/farmer/sign-up" className="hover:text-brick">
+                  Start your farm
+                </Link>
+              </li>
+              <li>
+                <Link href="/demo" className="hover:text-brick">
+                  Open the demo
+                </Link>
+              </li>
+              <li>
                 <Link href="/homepage" className="hover:text-brick">
-                  Generate your homepage
+                  Draft a homepage
                 </Link>
               </li>
               <li>
                 <Link href="/manifesto" className="hover:text-brick">
-                  Read why we built this
-                </Link>
-              </li>
-              <li>
-                <Link href="/join" className="hover:text-brick">
-                  Join the early circle
+                  Read the manifesto
                 </Link>
               </li>
             </ul>
@@ -45,14 +50,19 @@ export function Footer() {
             </div>
             <ul className="space-y-2">
               <li>
-                <Link href="/farm/elmwood" className="hover:text-brick">
-                  See a sample farm
+                <Link href="/find" className="hover:text-brick">
+                  Find a farm near you
                 </Link>
               </li>
               <li>
-                <span className="text-soil/55">
-                  Discovery map — coming, last
-                </span>
+                <Link href="/farm/elmwood" className="hover:text-brick">
+                  Read a farm's page
+                </Link>
+              </li>
+              <li>
+                <Link href="/come-in" className="hover:text-brick">
+                  Sign in to your share
+                </Link>
               </li>
             </ul>
           </div>

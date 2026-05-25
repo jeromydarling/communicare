@@ -74,7 +74,7 @@ jobs:
           # When regenerate_audio=true on a manual run, we also bust by
           # including the run id, so the audio gets freshly produced and
           # the videos get freshly rendered over it.
-          key: rendered-videos-v4-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}-${{ github.event.inputs.regenerate_audio == 'true' && github.run_id || 'cached' }}
+          key: rendered-videos-v5-${{ hashFiles('remotion/src/**', 'remotion/scripts/**', 'remotion/package.json', 'remotion/public/audio/**') }}-${{ github.event.inputs.regenerate_audio == 'true' && github.run_id || 'cached' }}
 
       - name: Report cache state
         run: |

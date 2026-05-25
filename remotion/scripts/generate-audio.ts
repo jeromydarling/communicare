@@ -26,10 +26,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(__dirname, "..", "public", "audio");
 
 const SHORT_PROMPT =
-  "Soft fingerpicked acoustic guitar in C major. Slow tempo around 70 BPM. Sparse, contemplative, hopeful. The feeling of a farm field at dawn in early summer. Solo guitar, no drums, no synths, no vocals. Warm and patient. About thirty-three seconds long, with a gentle resolution at the end.";
+  "Upbeat acoustic folk-pop in C major. Tempo 118 BPM. Fingerpicked acoustic guitar, hand percussion (shaker, tambourine), a happy banjo line that comes in around the eight-second mark. Warm, hopeful, the feeling of a farmers' market on a sunny Saturday — strangers smiling, kids running between stalls. Joyful but not saccharine. No vocals. About thirty-three seconds long, ending on a bright resolved chord.";
 
 const SCREENCAST_PROMPT =
-  "Warm fingerpicked acoustic guitar in C major. Slow tempo around 72 BPM. A subtle bowed cello drone enters around the thirty-second mark and stays under the guitar to the end. Sparse, contemplative, gently uplifting. Editorial, like the background to a New York Times short documentary about a small farm. No drums, no electronic sounds, no vocals. Ninety seconds long, with a quiet resolution.";
+  "Bright, fast, joyful acoustic folk-pop in C major. Tempo 125 BPM. Fingerpicked acoustic guitar driving the rhythm, a happy banjo melody on top, hand percussion (tambourine, shaker, light kick), a warm upright bass line. The feeling of a farmers' market on a sunny Saturday — neighbors greeting each other, baskets full of vegetables, kids running. Joyful, slightly zany, hopeful. Builds energy across ninety seconds, with a small mandolin or whistle solo around the forty-five-second mark, and a clean uplifting resolution at the end. No vocals.";
 
 const API_BASE = "https://api.elevenlabs.io/v1";
 

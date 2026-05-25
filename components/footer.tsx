@@ -77,6 +77,26 @@ export function Footer() {
             No tracking. No ads. No data sold. Ever.
           </div>
         </div>
+
+        {/* CROS™ family attribution — small line, last thing on the page */}
+        <div className="mt-8 pt-6 border-t border-soil/10 text-xs text-soil/55 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
+          <div>
+            A member of the{" "}
+            <span className="display not-italic">
+              CROS<sup className="text-[8px] -top-1.5">™</sup>
+            </span>{" "}
+            family of apps — small, slow-built tools for the work that
+            holds us together.
+          </div>
+          <a
+            href="https://thecros.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="display italic text-brick hover:underline whitespace-nowrap"
+          >
+            thecros.app →
+          </a>
+        </div>
       </div>
     </footer>
   );

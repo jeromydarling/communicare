@@ -17,12 +17,13 @@ STACK       Next.js 15 static export · Supabase Postgres + Edge Functions
 YOUR JOB — five steps, in order
 
 1. DATABASE
-   Connect a fresh Supabase project. Run the four migrations in
+   Connect a fresh Supabase project. Run the five migrations in
    supabase/migrations/ in timestamp order. They're idempotent and tested:
      20260524180000_initial_schema.sql    multi-tenant skeleton, 30+ tables
      20260525120000_limited_quantity.sql  limited-drop product columns
      20260525130000_farm_discovery.sql    public farm directory + RLS
      20260525200000_drop_sites.sql        pickup-distance search
+     20260525210000_import_runs.sql       CSV-import audit trail + RLS
 
 2. SECRETS  (Supabase → Project Settings → Edge Functions → Secrets)
      ANTHROPIC_API_KEY      required · homepage drafter
@@ -36,12 +37,15 @@ YOUR JOB — five steps, in order
                                        Claude Chrome end-to-end click test
 
 3. EDGE FUNCTIONS
-   Deploy all five with --no-verify-jwt:
+   Deploy all eight with --no-verify-jwt:
      supabase functions deploy generate-homepage   --no-verify-jwt
      supabase functions deploy find-nearby-farms   --no-verify-jwt
      supabase functions deploy record-farm-inquiry --no-verify-jwt
      supabase functions deploy twilio-webhook      --no-verify-jwt
      supabase functions deploy stripe-connect      --no-verify-jwt
+     supabase functions deploy ai-parse-csv        --no-verify-jwt
+     supabase functions deploy import-members      --no-verify-jwt
+     supabase functions deploy invite-members      --no-verify-jwt
 
 4. AUTH
    Flip Google OAuth on in your auth panel — that's all the operator

@@ -32,7 +32,7 @@ The link command writes `.supabase/config` and you're ready.
 
 ## 1. Run the migrations
 
-Four migration files live in `supabase/migrations/`. They run in
+Five migration files live in `supabase/migrations/`. They run in
 timestamp order. Run them all at once:
 
 ```bash
@@ -48,6 +48,7 @@ order is:
 | 2 | `20260525120000_limited_quantity.sql`         | Two columns on `products` — `is_limited` and `available_through` — plus two indexes for the live-drops query and the SMS keyword lookup.          |
 | 3 | `20260525130000_farm_discovery.sql`           | `discovered_farms`, `farm_inquiries`, `discovery_searches`, the `bump_discovered_farm_inquiry_count` trigger, RLS policies for the public directory + the claim-page reads. |
 | 4 | `20260525200000_drop_sites.sql`               | Adds `drop_sites` jsonb column to `discovered_farms` so the `/find` ZIP search can match by *pickup distance* (closest of: farm address, any drop site) rather than just the farm's primary location. A farm two hours away with a CSA drop four miles from you now surfaces in the search. |
+| 5 | `20260525210000_import_runs.sql`              | `import_runs` audit table + RLS policies. Records every CSV-import attempt at `/farmer/import` — source (Barn2Door / Local Line / Harvie / spreadsheet / etc), the AI-assisted column-and-share mapping the operator confirmed, per-row results, counts. Powers the import wizard's success screen and the "why is Linda missing?" diagnostic three weeks later. |
 
 **Verify** with one query in the SQL Editor:
 
@@ -97,7 +98,7 @@ inside every Edge Function — you don't set them.
 
 ## 3. Deploy the Edge Functions
 
-Five functions live in `supabase/functions/`. The ones with public webhooks
+Eight functions live in `supabase/functions/`. The ones with public webhooks
 or anonymous callers deploy with `--no-verify-jwt`; the ones gated to
 logged-in users would deploy without that flag.
 
@@ -107,9 +108,20 @@ supabase functions deploy find-nearby-farms --no-verify-jwt
 supabase functions deploy record-farm-inquiry --no-verify-jwt
 supabase functions deploy twilio-webhook --no-verify-jwt
 supabase functions deploy stripe-connect --no-verify-jwt
+supabase functions deploy ai-parse-csv --no-verify-jwt
+supabase functions deploy import-members --no-verify-jwt
+supabase functions deploy invite-members --no-verify-jwt
 ```
 
-**Verify** in the Supabase dashboard under Edge Functions — all five
+The three new ones power the `/farmer/import` wizard:
+
+| Function          | What it does                                                                                                                                                                              |
+|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ai-parse-csv`    | Receives the CSV headers + first 30 rows + the operator's defined shares + pickup sites. Asks Claude to figure out column mapping and share/pickup label matching in one shot. No write — pure mapping.    |
+| `import-members`  | Receives the cleaned row payload + confirmed mapping. Per row: creates an auth user (`auth.admin.createUser`), binds to the farm, opens a subscription, optionally seeds a credit ledger entry, optionally emails a magic-link invite. Writes an `import_runs` audit row with per-row results. |
+| `invite-members`  | Re-usable invite endpoint. Takes a list of emails + farm_id, verifies each email belongs to a profile bound to that farm, sends each a magic-link via `auth.admin.inviteUserByEmail`. Called from the import wizard's invite step *and* from `/farmer/members` for re-sends.                  |
+
+**Verify** in the Supabase dashboard under Edge Functions — all eight
 should show "Active" with green dots. Try one:
 
 ```bash
@@ -233,7 +245,7 @@ Run through these once after setup:
 
 - [ ] `select count(*) from public.farms` returns 0 (clean install)
 - [ ] `select count(*) from public.discovered_farms` returns 0
-- [ ] All five Edge Functions show Active in the dashboard
+- [ ] All eight Edge Functions show Active in the dashboard
 - [ ] Visiting `/come-in` lets you send yourself a magic link
 - [ ] Magic-link email arrives, clicking it lands on `/auth/callback/`
   and forwards into the app
@@ -255,6 +267,17 @@ Run through these once after setup:
 - [ ] Clicking "Send them a note" on a discovered farm logs a row in
   `farm_inquiries` and bumps `inquiry_count` on `discovered_farms`
 - [ ] Visiting `/claim?slug=<one-of-the-slugs>` shows the listing
+- [ ] Sign in as a farm operator, define one share + one pickup site at
+  `/farmer/settings`, then visit `/farmer/import`. Drop in any CSV with
+  rough headers — the AI maps columns + matches share/pickup labels on
+  the third step ("Reading your CSV…" → "From the AI: Mapped 6 of 7
+  columns…"), and the preview shows N rows will import.
+- [ ] After clicking "Import N members" the success screen lands and
+  offers "Send N members a sign-in link?" — clicking it invokes
+  `invite-members` and each email gets a one-click magic link.
+- [ ] The `import_runs` table shows the row with `status=committed`,
+  per-row results in the `results` jsonb, and the AI mapping in
+  `mapping.column_map / share_map / pickup_map`.
 
 ---
 

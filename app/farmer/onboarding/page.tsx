@@ -234,38 +234,37 @@ function Inner() {
     setSaving(true);
     setError(null);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) throw new Error("Sign in again.");
-
       const slug = slugify(farmName.trim());
 
-      const { data: farm, error: farmErr } = await supabase
-        .from("farms")
-        .insert({
-          slug,
-          name: farmName.trim(),
-          kind: farmKind,
-          location: farmLocation.trim(),
-        } as never)
-        .select("id")
-        .single();
-      if (farmErr || !farm) {
+      // Use the create_farm_for_self RPC — it does both inserts (farms +
+      // farm_members(owner)) in a single transaction with security definer,
+      // which is needed because the schema's RLS doesn't allow authenticated
+      // users to INSERT into public.farms directly. See migration
+      // 20260525230000_farm_self_create.sql.
+      // The generated Database type has Functions: {} so rpc() isn't aware
+      // of create_farm_for_self yet. Cast through `unknown` to call it.
+      // When the CLI-generated types catch up, this cast can come out.
+      const { data: newFarmIdRaw, error: rpcErr } = await (
+        supabase.rpc as unknown as (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: string | null; error: { message: string } | null }>
+      )("create_farm_for_self", {
+        p_name: farmName.trim(),
+        p_slug: slug,
+        p_kind: farmKind,
+        p_location: farmLocation.trim(),
+      });
+      if (rpcErr) {
+        const msg = rpcErr.message ?? "";
         throw new Error(
-          farmErr?.message?.includes("unique")
+          msg.toLowerCase().includes("unique") || msg.toLowerCase().includes("duplicate")
             ? "That farm name's taken — try adding your town or initials."
-            : (farmErr?.message ?? "Couldn't create the farm."),
+            : msg || "Couldn't create the farm.",
         );
       }
-      const newFarmId = (farm as { id: string }).id;
-
-      const { error: fmErr } = await supabase
-        .from("farm_members")
-        .insert({
-          farm_id: newFarmId,
-          user_id: userData.user.id,
-          role: "owner",
-        } as never);
-      if (fmErr) throw new Error(fmErr.message);
+      const newFarmId = newFarmIdRaw as unknown as string;
+      if (!newFarmId) throw new Error("The farm wasn't created.");
 
       setFarmId(newFarmId);
       setStep(1);

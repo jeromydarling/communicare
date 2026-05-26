@@ -17,14 +17,15 @@ STACK       Next.js 15 static export · Supabase Postgres + Edge Functions
 YOUR JOB — five steps, in order
 
 1. DATABASE
-   Connect a fresh Supabase project. Run the six migrations in
+   Connect a fresh Supabase project. Run the seven migrations in
    supabase/migrations/ in timestamp order. They're idempotent and tested:
-     20260524180000_initial_schema.sql    multi-tenant skeleton, 30+ tables
-     20260525120000_limited_quantity.sql  limited-drop product columns
-     20260525130000_farm_discovery.sql    public farm directory + RLS
-     20260525200000_drop_sites.sql        pickup-distance search
-     20260525210000_import_runs.sql       CSV-import audit trail + RLS
-     20260525220000_onboarding.sql        farms.onboarded_at + index
+     20260524180000_initial_schema.sql        multi-tenant skeleton, 30+ tables
+     20260525120000_limited_quantity.sql      limited-drop product columns
+     20260525130000_farm_discovery.sql        public farm directory + RLS
+     20260525200000_drop_sites.sql            pickup-distance search
+     20260525210000_import_runs.sql           CSV-import audit trail + RLS
+     20260525220000_onboarding.sql            farms.onboarded_at + index
+     20260525230000_onboarding_rls_fixes.sql  create_farm_for_self RPC + enum
 
 2. SECRETS  (Supabase → Project Settings → Edge Functions → Secrets)
      ANTHROPIC_API_KEY      required · homepage drafter

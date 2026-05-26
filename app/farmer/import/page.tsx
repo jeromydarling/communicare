@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/farmer/shell";
 import { Wheat, Barn, Sun } from "@/components/mark";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
@@ -85,6 +86,16 @@ type ResultPayload = {
 };
 
 export default function ImportPage() {
+  return (
+    <Suspense fallback={null}>
+      <ImportInner />
+    </Suspense>
+  );
+}
+
+function ImportInner() {
+  const params = useSearchParams();
+  const fromOnboarding = params.get("from") === "onboarding";
   const [step, setStep] = useState(0);
   const [source, setSource] = useState<Source | "">("");
   const [filename, setFilename] = useState<string | null>(null);
@@ -873,15 +884,30 @@ export default function ImportPage() {
             )}
             {step === 3 && (
               <a
-                href="/farmer/"
+                href={
+                  fromOnboarding
+                    ? "/farmer/onboarding/?step=4"
+                    : "/farmer/"
+                }
                 className="display italic text-sm text-soil/65 hover:text-brick"
               >
-                Skip — open my farm →
+                {fromOnboarding
+                  ? "Skip — back to setup →"
+                  : "Skip — open my farm →"}
               </a>
             )}
             {step === 4 && (
-              <a href="/farmer/" className="btn btn-primary">
-                Open my farm →
+              <a
+                href={
+                  fromOnboarding
+                    ? "/farmer/onboarding/?step=4"
+                    : "/farmer/"
+                }
+                className="btn btn-primary"
+              >
+                {fromOnboarding
+                  ? "Finish setup →"
+                  : "Open my farm →"}
               </a>
             )}
           </div>

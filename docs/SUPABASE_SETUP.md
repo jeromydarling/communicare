@@ -32,7 +32,7 @@ The link command writes `.supabase/config` and you're ready.
 
 ## 1. Run the migrations
 
-Five migration files live in `supabase/migrations/`. They run in
+Six migration files live in `supabase/migrations/`. They run in
 timestamp order. Run them all at once:
 
 ```bash
@@ -49,6 +49,7 @@ order is:
 | 3 | `20260525130000_farm_discovery.sql`           | `discovered_farms`, `farm_inquiries`, `discovery_searches`, the `bump_discovered_farm_inquiry_count` trigger, RLS policies for the public directory + the claim-page reads. |
 | 4 | `20260525200000_drop_sites.sql`               | Adds `drop_sites` jsonb column to `discovered_farms` so the `/find` ZIP search can match by *pickup distance* (closest of: farm address, any drop site) rather than just the farm's primary location. A farm two hours away with a CSA drop four miles from you now surfaces in the search. |
 | 5 | `20260525210000_import_runs.sql`              | `import_runs` audit table + RLS policies. Records every CSV-import attempt at `/farmer/import` — source (Barn2Door / Local Line / Harvie / spreadsheet / etc), the AI-assisted column-and-share mapping the operator confirmed, per-row results, counts. Powers the import wizard's success screen and the "why is Linda missing?" diagnostic three weeks later. |
+| 6 | `20260525220000_onboarding.sql`               | Adds `onboarded_at timestamptz` to `farms`. Set when an operator finishes (or explicitly skips) the `/farmer/onboarding` five-minute wizard. The dashboard auto-redirects back into the wizard when this is null, so new farms can't end up looking at an empty desk on first sign-in. |
 
 **Verify** with one query in the SQL Editor:
 
@@ -267,11 +268,23 @@ Run through these once after setup:
 - [ ] Clicking "Send them a note" on a discovered farm logs a row in
   `farm_inquiries` and bumps `inquiry_count` on `discovered_farms`
 - [ ] Visiting `/claim?slug=<one-of-the-slugs>` shows the listing
-- [ ] Sign in as a farm operator, define one share + one pickup site at
-  `/farmer/settings`, then visit `/farmer/import`. Drop in any CSV with
-  rough headers — the AI maps columns + matches share/pickup labels on
-  the third step ("Reading your CSV…" → "From the AI: Mapped 6 of 7
-  columns…"), and the preview shows N rows will import.
+- [ ] **Onboarding auto-launch.** Sign up as a new operator (email +
+  password OR Google). After confirming, the redirect lands on
+  `/farmer/onboarding/` — NOT `/farmer/`. The wizard walks farm-info →
+  first share → first pickup → import-or-skip → done. Closing the tab
+  and coming back resumes at the right step (state derived from the
+  database).
+- [ ] Reach `/farmer/` directly without finishing onboarding — you're
+  redirected back into the wizard. Once `farms.onboarded_at` is set,
+  the dashboard renders normally.
+- [ ] On the import step of onboarding, "Bring my customer list →" opens
+  `/farmer/import/?from=onboarding`. After import the wizard's "Finish
+  setup" button routes back to `/farmer/onboarding/?step=4` instead of
+  the dashboard, so onboarding completes cleanly.
+- [ ] Drop in any CSV with rough headers — the AI maps columns + matches
+  share/pickup labels on the third import step ("Reading your CSV…" →
+  "From the AI: Mapped 6 of 7 columns…"), and the preview shows N rows
+  will import.
 - [ ] After clicking "Import N members" the success screen lands and
   offers "Send N members a sign-in link?" — clicking it invokes
   `invite-members` and each email gets a one-click magic link.

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/farmer/shell";
 import {
@@ -10,8 +12,49 @@ import {
   formatCents,
 } from "@/lib/farmer-demo";
 import { Sun, Wheat, Leaf } from "@/components/mark";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 export default function FarmerHomePage() {
+  // First-five-minutes guard: if the operator is signed in but hasn't
+  // finished onboarding, send them back into the wizard before they see
+  // an empty dashboard. The AuthGate has already verified there's a real
+  // session by the time this runs.
+  const router = useRouter();
+  useEffect(() => {
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return; // demo mode — show the demo dashboard
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (cancelled || !userData?.user) return;
+      const { data: fm } = await supabase
+        .from("farm_members")
+        .select("farm_id, role")
+        .eq("user_id", userData.user.id)
+        .in("role", ["owner", "staff"])
+        .maybeSingle();
+      const fmRow = fm as { farm_id: string; role: string } | null;
+      if (cancelled) return;
+      if (!fmRow) {
+        router.replace("/farmer/onboarding/");
+        return;
+      }
+      const { data: farm } = await supabase
+        .from("farms")
+        .select("onboarded_at")
+        .eq("id", fmRow.farm_id)
+        .single();
+      if (cancelled) return;
+      const f = farm as { onboarded_at: string | null } | null;
+      if (f && !f.onboarded_at) {
+        router.replace("/farmer/onboarding/");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
   const today = demoOrders.filter((o) => o.pickup_date === "today");
   const confirmed = today.filter((o) => o.status === "confirmed").length;
   const packed = today.filter((o) => o.status === "packed").length;

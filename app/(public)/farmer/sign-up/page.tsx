@@ -43,9 +43,15 @@ export default function FarmerSignUpPage() {
     }
     setError(null);
     setBusy(true);
+    // Append ?next=/farmer/onboarding/ so the auth callback routes new
+    // operators into the five-minute setup wizard after Google sign-in.
+    const base = callbackUrl();
+    const redirectTo = base
+      ? `${base}?next=${encodeURIComponent("/farmer/onboarding/")}`
+      : undefined;
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callbackUrl() },
+      options: { redirectTo },
     });
     if (authError) {
       setBusy(false);
@@ -84,7 +90,10 @@ export default function FarmerSignUpPage() {
     // Supabase returns a session immediately if email confirmation is off,
     // or a null session if it's on (the more common production setup).
     if (data.session) {
-      router.replace("/farmer/");
+      // First-time signup → straight into the five-minute onboarding wizard.
+      // The wizard handles creating the farm row, defining shares, adding a
+      // pickup, and importing members so the dashboard isn't empty.
+      router.replace("/farmer/onboarding/");
       return;
     }
     setConfirmationSent(true);

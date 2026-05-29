@@ -81,6 +81,46 @@ const RequestInput = z.object({
 });
 
 // -----------------------------------------------------------------------------
+// Auth-admin retry helper
+// -----------------------------------------------------------------------------
+// auth.admin.createUser and auth.admin.inviteUserByEmail are the two calls
+// in import-members with meaningful upstream rate limits — Supabase applies
+// per-project burst limits to the GoTrue admin endpoints. Running 10 rows
+// in parallel can punch through those limits in a chunk that otherwise
+// would have succeeded.
+//
+// The helper retries on 429 / explicit rate-limit messages, with
+// exponential backoff capped at 3 attempts (≤ 7s of total sleep). Other
+// errors fall straight through so the existing per-row catch can mark
+// them warned.
+// -----------------------------------------------------------------------------
+
+type AdminResult<T> = {
+  data: T;
+  error: { status?: number; message?: string; name?: string } | null;
+};
+
+function isRateLimit(err: AdminResult<unknown>["error"]): boolean {
+  if (!err) return false;
+  if (err.status === 429) return true;
+  const msg = (err.message ?? "").toLowerCase();
+  return msg.includes("rate limit") || msg.includes("too many requests");
+}
+
+async function withAuthBackoff<T>(
+  fn: () => Promise<AdminResult<T>>,
+): Promise<AdminResult<T>> {
+  const DELAYS_MS = [1000, 2000, 4000];
+  let last = await fn();
+  for (const wait of DELAYS_MS) {
+    if (!isRateLimit(last.error)) return last;
+    await new Promise((r) => setTimeout(r, wait));
+    last = await fn();
+  }
+  return last;
+}
+
+// -----------------------------------------------------------------------------
 // Handler
 // -----------------------------------------------------------------------------
 
@@ -268,13 +308,15 @@ Deno.serve(async (req: Request) => {
             "no email — needs a unique email to invite this member",
           );
         }
-        const { data: created, error: createErr } =
-          await admin.auth.admin.createUser({
-            email: emailLower,
-            phone: row.phone ?? undefined,
-            email_confirm: true,
-            user_metadata: { display_name: row.name },
-          });
+        const { data: created, error: createErr } = await withAuthBackoff(
+          () =>
+            admin.auth.admin.createUser({
+              email: emailLower,
+              phone: row.phone ?? undefined,
+              email_confirm: true,
+              user_metadata: { display_name: row.name },
+            }),
+        );
         if (createErr || !created?.user) {
           throw new Error(`create user: ${createErr?.message ?? "unknown"}`);
         }
@@ -333,8 +375,9 @@ Deno.serve(async (req: Request) => {
       //     member is still imported and can be re-invited later.
       let didInvite = false;
       if (input.send_invites && emailLower) {
-        const { error: inviteErr } =
-          await admin.auth.admin.inviteUserByEmail(emailLower);
+        const { error: inviteErr } = await withAuthBackoff(() =>
+          admin.auth.admin.inviteUserByEmail(emailLower),
+        );
         if (!inviteErr) didInvite = true;
       }
 
@@ -368,11 +411,20 @@ Deno.serve(async (req: Request) => {
   // refinement is per-chunk backoff or moving the workload to a
   // background job table.
   const CHUNK_SIZE = 10;
+  // A small pause between chunks. With 10 concurrent rows hitting the
+  // GoTrue admin endpoint inside each chunk, a 200ms gap brings the
+  // average rate to ~50 admin calls/sec — comfortably under the burst
+  // ceiling Supabase enforces on paid projects, gentle enough that the
+  // per-call backoff (above) only has to handle outliers.
+  const INTER_CHUNK_MS = 200;
   const results: RowResult[] = [];
   for (let i = 0; i < input.rows.length; i += CHUNK_SIZE) {
     const chunk = input.rows.slice(i, i + CHUNK_SIZE);
     const chunkResults = await Promise.all(chunk.map(processRow));
     results.push(...chunkResults);
+    if (i + CHUNK_SIZE < input.rows.length) {
+      await new Promise((r) => setTimeout(r, INTER_CHUNK_MS));
+    }
   }
 
   let imported = 0;

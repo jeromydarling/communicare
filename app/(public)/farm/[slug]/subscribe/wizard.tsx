@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SampleFarm } from "@/lib/sample-farms";
 import { Sun, Wheat, Leaf, Mark } from "@/components/mark";
+import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 const STEPS = ["Your details", "Pickup", "Add-ons", "Confirm"] as const;
 
@@ -63,7 +64,7 @@ export function SubscribeWizard({ farm }: { farm: SampleFarm }) {
           manage your share. We&apos;ll text you on Monday with what&apos;s in
           your first box.
         </p>
-        <p className="display italic text-brick mt-8 text-xl">Pax tibi.</p>
+        <p className="display italic text-brick mt-8 text-xl">{CLOSING_BLESSING}</p>
         <div className="rule my-12" />
         <div className="flex flex-wrap justify-center gap-3">
           <Link href={`/farm/${farm.slug}/`} className="btn btn-ghost">

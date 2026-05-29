@@ -10,6 +10,7 @@ import {
 } from "@/components/auth/farmer-auth-shell";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -68,7 +69,7 @@ export default function ForgotPasswordPage() {
           </p>
         }
       >
-        <p className="display italic text-brick text-xl mb-6">Pax tibi.</p>
+        <p className="display italic text-brick text-xl mb-6">{CLOSING_BLESSING}</p>
         <Link
           href="/farmer/come-in/"
           className="text-sm display italic text-soil/65 hover:text-brick"

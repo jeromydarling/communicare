@@ -15,6 +15,7 @@ import {
 } from "@/components/auth/farmer-auth-shell";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 export default function FarmerSignInPage() {
   return (
@@ -117,7 +118,7 @@ function Inner() {
           </>
         }
       >
-        <p className="display italic text-brick text-xl mb-6">Pax tibi.</p>
+        <p className="display italic text-brick text-xl mb-6">{CLOSING_BLESSING}</p>
         <button
           type="button"
           onClick={() => setMagicSent(false)}

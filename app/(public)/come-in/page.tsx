@@ -6,6 +6,7 @@ import { WatercolorScene } from "@/components/watercolor-scene";
 import { Mark } from "@/components/mark";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 export default function ComeInPage() {
   const [email, setEmail] = useState("");
@@ -90,7 +91,7 @@ export default function ComeInPage() {
                   link is good for an hour.
                 </p>
                 <p className="display italic text-brick text-xl mb-8">
-                  Pax tibi.
+                  {CLOSING_BLESSING}
                 </p>
                 <button
                   type="button"

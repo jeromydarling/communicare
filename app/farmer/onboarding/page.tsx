@@ -8,6 +8,8 @@ import { Sun, Wheat, Barn, Leaf } from "@/components/mark";
 import { StepBar } from "@/components/step-bar";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { getOperatorFarm } from "@/lib/supabase/queries";
+import { slugify } from "@/lib/slugify";
+import { CLOSING_BLESSING, SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/brand-strings";
 
 const ONBOARDING_STEPS = ["Farm", "Share", "Pickup", "Members", "Done"] as const;
 
@@ -508,10 +510,10 @@ function Inner() {
         <p className="text-center text-xs text-soil/55 italic mt-8">
           Need help? Write{" "}
           <a
-            href="mailto:hello@communicare.farm"
+            href={SUPPORT_MAILTO}
             className="text-brick hover:underline not-italic"
           >
-            hello@communicare.farm
+            {SUPPORT_EMAIL}
           </a>{" "}
           — a real person, usually back within the day.
         </p>
@@ -890,7 +892,7 @@ function Step4() {
         and any members you imported on the dashboard. Add more, edit
         anything, and send your first message when you&apos;re ready.
       </p>
-      <div className="display italic text-brick mt-6">Pax tibi.</div>
+      <div className="display italic text-brick mt-6">{CLOSING_BLESSING}</div>
     </div>
   );
 }
@@ -915,13 +917,4 @@ function Bullet({
       <div className="text-xs text-soil/65 italic leading-snug">{body}</div>
     </div>
   );
-}
-
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
 }

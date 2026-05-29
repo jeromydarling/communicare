@@ -6,6 +6,7 @@ import { Sun, Wheat } from "@/components/mark";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { Database, FarmKind } from "@/lib/supabase/types";
+import { CLOSING_BLESSING, SUPPORT_EMAIL } from "@/lib/brand-strings";
 
 type WaitlistInsert = Database["public"]["Tables"]["waitlist"]["Insert"];
 
@@ -113,7 +114,7 @@ export default function JoinPage() {
         .insert([payload] as never);
       if (dbError && !dbError.message.toLowerCase().includes("duplicate")) {
         setError(
-          `We couldn't save you to the list (${dbError.message}). Try again, or write us at hello@communicare.farm.`,
+          `We couldn't save you to the list (${dbError.message}). Try again, or write us at ${SUPPORT_EMAIL}.`,
         );
         setBusy(false);
         return;
@@ -139,7 +140,7 @@ export default function JoinPage() {
           farm — with a magic link, no password to invent. In the meantime,
           the land needs you more than we do.
         </p>
-        <p className="display italic text-brick mt-8 text-xl">Pax tibi.</p>
+        <p className="display italic text-brick mt-8 text-xl">{CLOSING_BLESSING}</p>
 
         <div className="rule my-12" />
 

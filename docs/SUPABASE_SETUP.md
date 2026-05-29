@@ -371,3 +371,33 @@ to make sending automatic.
 **"Migrations error: function is_farm_member already exists"**
 You ran the initial schema twice. To start over:
 `supabase db reset` (wipes everything and replays migrations).
+
+---
+
+## Open architectural items (audit follow-ups)
+
+These are known and tracked, not bugs in the current build. Each will need
+a design call when launch traffic surfaces the need.
+
+**Static-export staleness for `/farm/[slug]/`**
+The `generateStaticParams` at `app/(public)/farm/[slug]/page.tsx` runs at
+build time against `lib/sample-farms.ts` only. A farm that completes
+`/farmer/onboarding/` today writes to `public.farms` but won't have a
+statically-baked public page until the next deploy. Two pieces are needed
+to close this:
+
+  1. A renderer in `app/(public)/farm/[slug]/page.tsx` that pulls content
+     from `farm_homepages` (or a richer shape we add) for non-sample
+     slugs. Today's renderer expects the full `SampleFarm` type — share
+     name, founder bio, includes list — which a freshly-onboarded farm
+     doesn't have yet.
+  2. A deploy hook so new publishings surface without manually triggering
+     a build. Either a Supabase webhook on `farms.is_published = true`
+     that pings the GitHub Actions deploy workflow, or a nightly
+     scheduled deploy. The webhook path is more responsive (~5 min);
+     the cron is simpler infra.
+
+Until both land, farms onboarded through the wizard are reachable via the
+dashboard but not via a public `/farm/<slug>/` URL. The directory at
+`/find` and inquiry flow at `/claim` already work for them — they're not
+"invisible," just not part of the static site map yet.

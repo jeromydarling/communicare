@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mark } from "./mark";
+import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 export function Footer() {
   return (
@@ -70,7 +71,7 @@ export function Footer() {
         <div className="rule my-10" />
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-sm text-soil/60">
           <div>
-            <span className="display italic">Pax tibi.</span> Built by hand, in
+            <span className="display italic">{CLOSING_BLESSING}</span> Built by hand, in
             the United States, for the farms that hold the country together.
           </div>
           <div className="small-caps text-xs">

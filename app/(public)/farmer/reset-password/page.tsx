@@ -15,6 +15,7 @@ import {
 } from "@/components/auth/farmer-auth-shell";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 // =============================================================================
 // /farmer/reset-password — landing page from the password-reset email
@@ -129,7 +130,7 @@ function Inner() {
         title={<>Password set.</>}
         subtitle={<>Walking you to the desk…</>}
       >
-        <p className="display italic text-brick text-xl">Pax tibi.</p>
+        <p className="display italic text-brick text-xl">{CLOSING_BLESSING}</p>
       </FarmerAuthShell>
     );
   }

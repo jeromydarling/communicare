@@ -5,6 +5,19 @@ import { Wheat, Sun, Jar, Leaf, Barn } from "@/components/mark";
 import { JsonLd } from "@/components/json-ld";
 import { SITE_URL } from "@/lib/site";
 
+// KNOWN: static-export staleness for onboarded farms
+// ---------------------------------------------------
+// generateStaticParams runs at `next build` time, against sampleFarms only.
+// A farm that completes /farmer/onboarding/ today writes to public.farms but
+// has no statically-baked /farm/<slug>/ page until the next deploy. Two
+// follow-ups are needed to close this — they're noted in
+// docs/SUPABASE_SETUP.md under "Open architectural items":
+//   1. A DB-driven renderer here that pulls content from farm_homepages
+//      (or a similar shape) for non-sample slugs.
+//   2. A deploy hook (Supabase webhook on farms.is_published or a nightly
+//      GitHub Action) so newly-published farms surface within hours.
+// Leaving the static-params bake on sample data only — that path is correct;
+// it's the missing renderer that blocks adding real farms here.
 export function generateStaticParams() {
   return sampleFarms.map((f) => ({ slug: f.slug }));
 }

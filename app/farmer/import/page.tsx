@@ -7,6 +7,8 @@ import { Wheat, Barn, Sun } from "@/components/mark";
 import { StepBar } from "@/components/step-bar";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { getOperatorFarm } from "@/lib/supabase/queries";
+import { parseCsv } from "@/lib/csv-utils";
+import { CLOSING_BLESSING, MIGRATE_EMAIL, MIGRATE_MAILTO } from "@/lib/brand-strings";
 
 const IMPORT_STEPS = [
   "Source",
@@ -841,7 +843,7 @@ function ImportInner() {
                   ? "We'll let you know who clicks. You can resend any invite from the Members page."
                   : "Your members are in the roster. You can invite them any time from the Members page."}
               </p>
-              <div className="display italic text-brick mt-6">Pax tibi.</div>
+              <div className="display italic text-brick mt-6">{CLOSING_BLESSING}</div>
             </div>
           )}
 
@@ -920,10 +922,10 @@ function ImportInner() {
         <p className="text-center text-xs text-soil/55 italic mt-8">
           Stuck? Write{" "}
           <a
-            href="mailto:migrate@communicare.farm"
+            href={MIGRATE_MAILTO}
             className="text-brick hover:underline not-italic"
           >
-            migrate@communicare.farm
+            {MIGRATE_EMAIL}
           </a>{" "}
           and a real person will walk through it with you. Free, always.
         </p>
@@ -996,69 +998,13 @@ function ConciergePanel() {
       <p className="text-sm text-soil/65 italic max-w-md mx-auto">
         Take a photo of the binder pages and email them to{" "}
         <a
-          href="mailto:migrate@communicare.farm"
+          href={MIGRATE_MAILTO}
           className="text-brick hover:underline not-italic"
         >
-          migrate@communicare.farm
+          {MIGRATE_EMAIL}
         </a>
         . We&apos;ll do the data entry for you. Usually under 48 hours.
       </p>
     </div>
   );
-}
-
-// =============================================================================
-// CSV parser — tiny but correct for the standard case (quoted fields,
-// escaped quotes, commas inside quotes, CRLF or LF line endings)
-// =============================================================================
-
-function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-  const lines = splitCsvLines(text);
-  if (lines.length === 0) return { headers: [], rows: [] };
-  const headers = parseCsvLine(lines[0]);
-  const rows = lines.slice(1).map(parseCsvLine).filter((r) => r.some((c) => c));
-  return { headers, rows };
-}
-
-function splitCsvLines(text: string): string[] {
-  const out: string[] = [];
-  let buf = "";
-  let inQuote = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === '"' && text[i - 1] !== "\\") inQuote = !inQuote;
-    if ((c === "\n" || c === "\r") && !inQuote) {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      if (buf.length > 0) out.push(buf);
-      buf = "";
-    } else {
-      buf += c;
-    }
-  }
-  if (buf.length > 0) out.push(buf);
-  return out;
-}
-
-function parseCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let buf = "";
-  let inQuote = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') {
-      if (inQuote && line[i + 1] === '"') {
-        buf += '"';
-        i++;
-      } else {
-        inQuote = !inQuote;
-      }
-    } else if (c === "," && !inQuote) {
-      out.push(buf);
-      buf = "";
-    } else {
-      buf += c;
-    }
-  }
-  out.push(buf);
-  return out.map((s) => s.trim());
 }

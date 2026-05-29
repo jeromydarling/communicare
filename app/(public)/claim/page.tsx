@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Wheat, Barn } from "@/components/mark";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/brand-strings";
 
 // =============================================================================
 // /claim?slug=... — the page a discovered-farm operator lands on
@@ -162,10 +163,10 @@ export default function ClaimPage() {
           })}
           . If that wasn't you and something looks off, write to{" "}
           <a
-            href="mailto:hello@communicare.farm"
+            href={SUPPORT_MAILTO}
             className="text-brick hover:underline"
           >
-            hello@communicare.farm
+            {SUPPORT_EMAIL}
           </a>
           .
         </p>
@@ -350,7 +351,7 @@ export default function ClaimPage() {
             This is my farm →
           </Link>
           <a
-            href={`mailto:hello@communicare.farm?subject=${encodeURIComponent("Edit my listing — " + farm.name)}&body=${encodeURIComponent("I'd like to update the listing for " + farm.name + " (" + (farm.location ?? "") + "). Here's what's right or wrong:\n\n")}`}
+            href={`${SUPPORT_MAILTO}?subject=${encodeURIComponent("Edit my listing — " + farm.name)}&body=${encodeURIComponent("I'd like to update the listing for " + farm.name + " (" + (farm.location ?? "") + "). Here's what's right or wrong:\n\n")}`}
             className="btn btn-ghost text-sm"
           >
             Just fix something for me
@@ -363,7 +364,7 @@ export default function ClaimPage() {
         <p className="mb-2">
           Don't want to be listed at all?{" "}
           <a
-            href={`mailto:hello@communicare.farm?subject=${encodeURIComponent("Remove " + farm.name + " from Communicare directory")}&body=${encodeURIComponent("Please remove " + farm.name + " (listing id " + farm.id + ") from the Communicare directory permanently. Thank you.")}`}
+            href={`${SUPPORT_MAILTO}?subject=${encodeURIComponent("Remove " + farm.name + " from Communicare directory")}&body=${encodeURIComponent("Please remove " + farm.name + " (listing id " + farm.id + ") from the Communicare directory permanently. Thank you.")}`}
             className="text-brick not-italic hover:underline"
           >
             Write us and we'll honor it forever.

@@ -26,6 +26,9 @@
 
 import { createClient } from "npm:@supabase/supabase-js@^2.50.0";
 import { z } from "npm:zod@^3.24.0";
+import { preflightResponse } from "../_lib/cors.ts";
+import { json } from "../_lib/response.ts";
+import { verifyStaff } from "../_lib/verify-staff.ts";
 
 // -----------------------------------------------------------------------------
 // Input schema
@@ -78,31 +81,12 @@ const RequestInput = z.object({
 });
 
 // -----------------------------------------------------------------------------
-// CORS
-// -----------------------------------------------------------------------------
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Max-Age": "86400",
-};
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  });
-}
-
-// -----------------------------------------------------------------------------
 // Handler
 // -----------------------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return preflightResponse();
   }
   if (req.method !== "POST") {
     return json({ error: "Method not allowed. Use POST." }, 405);
@@ -139,28 +123,9 @@ Deno.serve(async (req: Request) => {
   // ---------------------------------------------------------------------------
   // 1. Authenticate the operator + verify they own this farm.
   // ---------------------------------------------------------------------------
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "Missing Authorization bearer." }, 401);
-  }
-  const token = authHeader.slice(7);
-  const { data: userData, error: userErr } = await admin.auth.getUser(token);
-  if (userErr || !userData?.user) {
-    return json({ error: "Invalid session." }, 401);
-  }
-  const userId = userData.user.id;
-
-  const { data: membership } = await admin
-    .from("farm_members")
-    .select("role")
-    .eq("farm_id", input.farm_id)
-    .eq("user_id", userId)
-    .maybeSingle();
-  type Membership = { role: "owner" | "staff" | "member" } | null;
-  const m = membership as Membership;
-  if (!m || (m.role !== "owner" && m.role !== "staff")) {
-    return json({ error: "You're not on staff at this farm." }, 403);
-  }
+  const verification = await verifyStaff(req, admin, input.farm_id);
+  if (!verification.ok) return verification.response;
+  const userId = verification.userId;
 
   // ---------------------------------------------------------------------------
   // 2. Confirm the share_definition_ids + pickup_site_ids actually belong to

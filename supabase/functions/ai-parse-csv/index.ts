@@ -24,6 +24,8 @@
 
 import Anthropic from "npm:@anthropic-ai/sdk@^0.88.0";
 import { z } from "npm:zod@^3.24.0";
+import { preflightResponse } from "../_lib/cors.ts";
+import { json } from "../_lib/response.ts";
 
 // -----------------------------------------------------------------------------
 // Input
@@ -97,25 +99,6 @@ const AiOutput = z.object({
 });
 
 // -----------------------------------------------------------------------------
-// CORS
-// -----------------------------------------------------------------------------
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Max-Age": "86400",
-};
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  });
-}
-
-// -----------------------------------------------------------------------------
 // Tiny CSV parser — same logic as the client, mirrored here so callers can
 // hand us either the raw text or the parsed preview.
 // -----------------------------------------------------------------------------
@@ -177,7 +160,7 @@ function parseCsvLine(line: string): string[] {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return preflightResponse();
   }
   if (req.method !== "POST") {
     return json({ error: "Method not allowed. Use POST." }, 405);

@@ -5,7 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/farmer/shell";
 import { Sun, Wheat, Barn, Leaf } from "@/components/mark";
+import { StepBar } from "@/components/step-bar";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { getOperatorFarm } from "@/lib/supabase/queries";
+
+const ONBOARDING_STEPS = ["Farm", "Share", "Pickup", "Members", "Done"] as const;
 
 // =============================================================================
 // /farmer/onboarding — first-five-minutes wizard.
@@ -145,13 +149,7 @@ function Inner() {
       if (typeof meta.farm_name === "string") setFarmName(meta.farm_name);
 
       // Does the user already own a farm?
-      const { data: fm } = await supabase
-        .from("farm_members")
-        .select("farm_id, role")
-        .eq("user_id", userData.user.id)
-        .in("role", ["owner", "staff"])
-        .maybeSingle();
-      const fmRow = fm as { farm_id: string; role: string } | null;
+      const fmRow = await getOperatorFarm(supabase, userData.user.id);
       if (cancelled) return;
 
       if (!fmRow) {
@@ -389,7 +387,7 @@ function Inner() {
       />
 
       <div className="px-6 md:px-10 py-8 max-w-3xl">
-        <StepBar current={step} />
+        <StepBar steps={ONBOARDING_STEPS} current={step} />
 
         <div className="paper p-8 md:p-10 mt-8">
           {step === 0 && (
@@ -919,41 +917,6 @@ function Bullet({
   );
 }
 
-function StepBar({ current }: { current: number }) {
-  const STEPS = ["Farm", "Share", "Pickup", "Members", "Done"];
-  return (
-    <ol className="flex items-center gap-2 flex-wrap">
-      {STEPS.map((label, i) => {
-        const state = i < current ? "done" : i === current ? "active" : "todo";
-        return (
-          <li key={label} className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-7 h-7 rounded-full grid place-items-center text-xs display border ${
-                  state === "active"
-                    ? "bg-brick text-parchment border-brick"
-                    : state === "done"
-                      ? "bg-mossDark text-parchment border-mossDark"
-                      : "bg-parchment text-soil/45 border-soil/20"
-                }`}
-              >
-                {state === "done" ? "✓" : i + 1}
-              </div>
-              <span
-                className={`text-xs display ${state === "active" ? "text-soil" : "text-soil/45"}`}
-              >
-                {label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && (
-              <span className="text-soil/20 mx-1 hidden sm:inline">·····</span>
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 function slugify(name: string): string {
   return name

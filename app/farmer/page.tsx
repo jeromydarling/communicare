@@ -13,6 +13,7 @@ import {
 } from "@/lib/farmer-demo";
 import { Sun, Wheat, Leaf } from "@/components/mark";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { getOperatorFarm } from "@/lib/supabase/queries";
 
 export default function FarmerHomePage() {
   // First-five-minutes guard: if the operator is signed in but hasn't
@@ -27,13 +28,7 @@ export default function FarmerHomePage() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (cancelled || !userData?.user) return;
-      const { data: fm } = await supabase
-        .from("farm_members")
-        .select("farm_id, role")
-        .eq("user_id", userData.user.id)
-        .in("role", ["owner", "staff"])
-        .maybeSingle();
-      const fmRow = fm as { farm_id: string; role: string } | null;
+      const fmRow = await getOperatorFarm(supabase, userData.user.id);
       if (cancelled) return;
       if (!fmRow) {
         router.replace("/farmer/onboarding/");

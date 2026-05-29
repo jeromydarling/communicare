@@ -18,6 +18,8 @@
 import Anthropic from "npm:@anthropic-ai/sdk@^0.88.0";
 import { zodOutputFormat } from "npm:@anthropic-ai/sdk@^0.88.0/helpers/zod";
 import { z } from "npm:zod@^3.24.0";
+import { preflightResponse } from "../_lib/cors.ts";
+import { json } from "../_lib/response.ts";
 
 // -----------------------------------------------------------------------------
 // Schema — inlined so the Edge Function is self-contained. Kept in lockstep
@@ -140,31 +142,12 @@ For FAQ, write questions a real prospective subscriber would ask this specific f
 Output the JSON per the provided schema. No prose outside the JSON.`;
 
 // -----------------------------------------------------------------------------
-// CORS
-// -----------------------------------------------------------------------------
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Max-Age": "86400",
-};
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  });
-}
-
-// -----------------------------------------------------------------------------
 // Handler
 // -----------------------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return preflightResponse();
   }
 
   if (req.method !== "POST") {

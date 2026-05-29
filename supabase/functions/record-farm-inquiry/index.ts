@@ -20,6 +20,8 @@
 
 import { createClient } from "npm:@supabase/supabase-js@^2.50.0";
 import { z } from "npm:zod@^3.24.0";
+import { preflightResponse } from "../_lib/cors.ts";
+import { json } from "../_lib/response.ts";
 
 // -----------------------------------------------------------------------------
 // Input
@@ -33,25 +35,6 @@ const RequestInput = z.object({
   subject: z.string().trim().min(1).max(200).optional(),
   body: z.string().trim().min(10).max(4000),
 });
-
-// -----------------------------------------------------------------------------
-// CORS
-// -----------------------------------------------------------------------------
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Max-Age": "86400",
-};
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  });
-}
 
 // -----------------------------------------------------------------------------
 // The one-time outreach email. Sent exactly once per discovered farm — on
@@ -121,7 +104,7 @@ async function sendResendEmail(opts: {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return preflightResponse();
   }
   if (req.method !== "POST") {
     return json({ error: "Method not allowed. Use POST." }, 405);

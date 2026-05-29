@@ -32,7 +32,7 @@ The link command writes `.supabase/config` and you're ready.
 
 ## 1. Run the migrations
 
-Seven migration files live in `supabase/migrations/`. They run in
+Eight migration files live in `supabase/migrations/`. They run in
 timestamp order. Run them all at once:
 
 ```bash
@@ -51,6 +51,7 @@ order is:
 | 5 | `20260525210000_import_runs.sql`              | `import_runs` audit table + RLS policies. Records every CSV-import attempt at `/farmer/import` — source (Barn2Door / Local Line / Harvie / spreadsheet / etc), the AI-assisted column-and-share mapping the operator confirmed, per-row results, counts. Powers the import wizard's success screen and the "why is Linda missing?" diagnostic three weeks later. |
 | 6 | `20260525220000_onboarding.sql`               | Adds `onboarded_at timestamptz` to `farms`. Set when an operator finishes (or explicitly skips) the `/farmer/onboarding` five-minute wizard. The dashboard auto-redirects back into the wizard when this is null, so new farms can't end up looking at an empty desk on first sign-in. |
 | 7 | `20260525230000_onboarding_rls_fixes.sql`     | Two surfaces the initial schema didn't anticipate. (a) The `create_farm_for_self(name, slug, kind, location)` RPC — a narrow security-definer function that lets a signed-in user create exactly one farm and bind themselves as owner in a single transaction. Closes the chicken-and-egg gap where `farms` INSERT was blocked from authenticated users and the first `farm_members(owner)` row couldn't satisfy `is_farm_staff`. (b) Adds `'import_opening_balance'` to the `credit_reason` enum so import-members can write opening balances with a distinct reason instead of `admin_adjustment`. |
+| 8 | `20260525240000_perf_indexes.sql`             | Partial index on `profiles.phone` (`where phone is not null`). Supports the import-members fallback lookup — when a CSV row's email is empty or unmatched, the function looks the profile up by phone. Without this index every fallback row did a full table scan; on a 5k-profile farm running a 2k-row import, that's the dominant cost of the whole flow. |
 
 **Verify** with one query in the SQL Editor:
 

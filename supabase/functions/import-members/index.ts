@@ -231,22 +231,20 @@ Deno.serve(async (req: Request) => {
     subscription_id?: string;
     invited?: boolean;
   };
-  const results: RowResult[] = [];
-  let imported = 0;
-  let skipped = 0;
-  let warned = 0;
-  let invited = 0;
-
-  for (const row of input.rows) {
+  // Process one CSV row → auth user, profile, membership, subscription,
+  // credit ledger, optional invite. Returns a RowResult either way; never
+  // throws, so a single bad row can't poison the chunk.
+  async function processRow(
+    row: typeof input.rows[number],
+  ): Promise<RowResult> {
     try {
       // 4a. Find-or-create the auth user. We use admin.createUser with
       //     email_confirm=true so the row exists without sending an email
-      //     yet — the invite step (4f) is opt-in via send_invites.
+      //     yet — the invite step (4e) is opt-in via send_invites.
       let profileId: string | null = null;
       const emailLower = row.email ? row.email.toLowerCase() : null;
 
       if (emailLower) {
-        // Look in profiles first (cheap)
         const { data: existing } = await admin
           .from("profiles")
           .select("id")
@@ -266,8 +264,6 @@ Deno.serve(async (req: Request) => {
       }
       if (!profileId) {
         if (!emailLower) {
-          // No email and no matched phone — we can't create an auth user
-          // without an email. Record as warned and move on.
           throw new Error(
             "no email — needs a unique email to invite this member",
           );
@@ -283,8 +279,6 @@ Deno.serve(async (req: Request) => {
           throw new Error(`create user: ${createErr?.message ?? "unknown"}`);
         }
         profileId = created.user.id;
-        // The handle_new_user trigger inserts public.profiles for us.
-        // Update phone separately if provided (the trigger doesn't set it).
         if (row.phone) {
           await admin
             .from("profiles")
@@ -335,22 +329,16 @@ Deno.serve(async (req: Request) => {
         } as never);
       }
 
-      // 4e. Optional invite — generate a magic link and email it via
-      //     Supabase's built-in delivery. The operator must have set
-      //     up an SMTP provider or be using Supabase's default one.
+      // 4e. Optional invite. We don't fail the row if invite fails — the
+      //     member is still imported and can be re-invited later.
       let didInvite = false;
       if (input.send_invites && emailLower) {
         const { error: inviteErr } =
           await admin.auth.admin.inviteUserByEmail(emailLower);
-        if (!inviteErr) {
-          didInvite = true;
-          invited++;
-        }
-        // We do NOT fail the row if invite fails — the member is still
-        // imported. The operator can re-send invites from /farmer/members.
+        if (!inviteErr) didInvite = true;
       }
 
-      results.push({
+      return {
         row_number: row.row_number,
         name: row.name,
         email: emailLower,
@@ -358,19 +346,44 @@ Deno.serve(async (req: Request) => {
         profile_id: profileId,
         subscription_id: subId,
         invited: didInvite,
-      });
-      imported++;
+      };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      results.push({
+      return {
         row_number: row.row_number,
         name: row.name,
         email: row.email ?? null,
         status: "warned",
         message: msg,
-      });
-      warned++;
+      };
     }
+  }
+
+  // Run rows in parallel chunks. Within a chunk the rows are concurrent;
+  // chunks run sequentially so we cap in-flight work at CHUNK_SIZE. That
+  // keeps us well under the auth-admin burst rate and bounded against
+  // PgBouncer connection pool exhaustion, while still cutting wall time
+  // from sequential's ~400s down to ~40s on a 2000-row import (the
+  // documented max). If real-world auth rate limits surface, the next
+  // refinement is per-chunk backoff or moving the workload to a
+  // background job table.
+  const CHUNK_SIZE = 10;
+  const results: RowResult[] = [];
+  for (let i = 0; i < input.rows.length; i += CHUNK_SIZE) {
+    const chunk = input.rows.slice(i, i + CHUNK_SIZE);
+    const chunkResults = await Promise.all(chunk.map(processRow));
+    results.push(...chunkResults);
+  }
+
+  let imported = 0;
+  let skipped = 0;
+  let warned = 0;
+  let invited = 0;
+  for (const r of results) {
+    if (r.status === "imported") imported++;
+    else if (r.status === "skipped") skipped++;
+    else warned++;
+    if (r.invited) invited++;
   }
 
   // ---------------------------------------------------------------------------

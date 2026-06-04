@@ -9,14 +9,14 @@
 import { preflight, json } from "../../_lib/cors";
 import { newToken, sha256Hex } from "../../_lib/crypto";
 import { rateLimit, ipBucket } from "../../_lib/ratelimit";
-import { magicLinkEmail, sendEmail } from "../../_lib/email";
+import { magicLinkEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
 import { one, run } from "../../_lib/db";
 
 type Env = {
   DB?: D1Database;
   RATELIMIT?: KVNamespace;
-  RESEND_API_KEY?: string;
-  RESEND_FROM?: string;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
   SITE_URL?: string;
 };
 
@@ -80,8 +80,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
   const sent = await sendEmail(
-    ctx.env.RESEND_API_KEY,
-    ctx.env.RESEND_FROM,
+    ctx.env.EMAIL,
+    ctx.env.SEND_FROM,
     magicLinkEmail({ to: email, link, purpose: "signin" }),
   );
   if (!sent.ok) {

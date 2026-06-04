@@ -1,26 +1,44 @@
 // =============================================================================
-// email — Resend REST wrapper + templates
+// email — Cloudflare Email Service via the EMAIL binding
 // =============================================================================
-// All outbound transactional mail flows through here. Single provider
-// (Resend) because Workers AI hasn't shipped an email peer and the
-// MailChannels integration sunset in 2024. Domain verification + DKIM
-// records live in the Cloudflare DNS for mycommuni.care.
+// As of April 2026, Cloudflare Email Sending is in public beta on the
+// Workers paid plan, with arbitrary-recipient transactional delivery.
+// We use the Workers binding (`send_email` in wrangler.jsonc → env.EMAIL)
+// for everything: magic links, password resets, invites, inquiry
+// outreach. Inbound at hello@ / migrate@ still uses Email Routing.
 //
 // Templates are plain-text only on purpose: the brand voice is
 // editorial, not HTML-y, and plain text dodges every "your email looks
-// like spam" classifier issue. If a farm starts asking for an HTML
-// invoice or marketing template, that's the right time to add a multipart
-// helper here — not before.
+// like spam" classifier. If a farm starts asking for an HTML invoice or
+// marketing template, that's the right time to add an HTML field below.
+//
+// Domain onboarding (one-time): Cloudflare dashboard → Compute & AI →
+// Email Service → Onboard Domain. Adds SPF + DKIM to your zone.
 // =============================================================================
 
 import { CLOSING_BLESSING, SUPPORT_EMAIL } from "../../lib/brand-strings";
+
+// The shape of the CF EMAIL binding. We don't import the wrangler types
+// here so this file can be type-checked under either the Pages or the
+// Worker tsconfig.
+export type EmailSendBinding = {
+  send: (msg: {
+    from: string;
+    to: string | string[];
+    subject: string;
+    text: string;
+    html?: string;
+    replyTo?: string;
+    headers?: Record<string, string>;
+  }) => Promise<{ messageId?: string } | undefined>;
+};
 
 export type SendArgs = {
   to: string;
   subject: string;
   text: string;
   replyTo?: string;
-  // Optional From override. Defaults to the verified hello@ address.
+  /** Optional From override. Defaults to the SEND_FROM env var, then hello@mycommuni.care. */
   from?: string;
 };
 
@@ -29,40 +47,32 @@ export type SendResult =
   | { ok: false; status: number; error: string };
 
 export async function sendEmail(
-  apiKey: string | undefined,
+  binding: EmailSendBinding | undefined,
   fromDefault: string | undefined,
   args: SendArgs,
 ): Promise<SendResult> {
-  if (!apiKey) {
+  if (!binding) {
     return {
       ok: false,
       status: 500,
-      error: "RESEND_API_KEY missing on this deploy.",
+      error: "EMAIL binding missing — onboard the domain to Cloudflare Email Service.",
     };
   }
   const from = args.from ?? fromDefault ?? "Communicare <hello@mycommuni.care>";
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  try {
+    const resp = await binding.send({
       from,
       to: args.to,
       subject: args.subject,
       text: args.text,
-      reply_to: args.replyTo,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    return { ok: false, status: res.status, error: text.slice(0, 400) };
+      replyTo: args.replyTo,
+    });
+    return { ok: true, id: resp?.messageId ?? "" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, status: 502, error: msg.slice(0, 400) };
   }
-  const data = (await res.json()) as { id?: string };
-  return { ok: true, id: data.id ?? "" };
 }
 
 // -----------------------------------------------------------------------------
@@ -115,7 +125,6 @@ ${CLOSING_BLESSING}
 `,
     };
   }
-  // confirm
   return {
     to: opts.to,
     subject: "Confirm your Communicare email",

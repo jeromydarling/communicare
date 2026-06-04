@@ -10,6 +10,7 @@
 // =============================================================================
 
 import { json, preflight } from "../_lib/cors";
+import type { EmailSendBinding } from "../_lib/email";
 
 type Env = {
   DB?: D1Database;
@@ -21,6 +22,7 @@ type Env = {
   IMPORTS?: R2Bucket;
   AI?: Ai;
   EMBEDDINGS?: VectorizeIndex;
+  EMAIL?: EmailSendBinding;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
   SITE_URL?: string;
@@ -47,6 +49,7 @@ export const onRequestGet: PagesFunction<Env> = (ctx) => {
       },
       ai: Boolean(e.AI),
       vectorize: Boolean(e.EMBEDDINGS),
+      email: Boolean(e.EMAIL),
       supabase_passthrough: Boolean(e.SUPABASE_URL && e.SUPABASE_ANON_KEY),
     },
     timestamp: new Date().toISOString(),

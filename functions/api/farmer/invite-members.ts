@@ -13,13 +13,13 @@
 import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
 import { newToken, sha256Hex } from "../../_lib/crypto";
-import { magicLinkEmail, sendEmail } from "../../_lib/email";
+import { magicLinkEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
 import { one, run } from "../../_lib/db";
 
 type Env = {
   DB?: D1Database;
-  RESEND_API_KEY?: string;
-  RESEND_FROM?: string;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
   SITE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -114,8 +114,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       );
       const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
       const sent = await sendEmail(
-        ctx.env.RESEND_API_KEY,
-        ctx.env.RESEND_FROM,
+        ctx.env.EMAIL,
+        ctx.env.SEND_FROM,
         magicLinkEmail({ to: email, link, purpose: "invite" }),
       );
       if (sent.ok) {

@@ -5,8 +5,8 @@ on Cloudflare. It supersedes `docs/SUPABASE_SETUP.md`, which described the
 older Supabase-backed deploy. See `docs/CLOUDFLARE_MIGRATION.md` for the
 phased history of how we got here.
 
-Total time: ~30 minutes if you already have a Cloudflare account and a
-Resend account, ~1 hour if you're setting them up from scratch.
+Total time: ~30 minutes if you already have a Cloudflare account with
+all your secrets in hand, ~1 hour from scratch.
 
 ## Architecture (one paragraph)
 
@@ -17,7 +17,7 @@ the Worker attaches as the `ASSETS` binding. Requests to `/api/*` and
 through to `env.ASSETS.fetch(req)` so the right HTML or JS chunk comes
 from the edge. Data lives in **D1** (SQLite). Sessions, cache, and rate
 limits live in **KV**. Photos and import CSVs live in **R2**. Embeddings
-live in **Vectorize**. Outbound mail goes through **Resend**; inbound at
+live in **Vectorize**. Outbound mail goes through the **Cloudflare Email Service `send_email` binding**; inbound at
 `hello@`, `migrate@` goes through **Cloudflare Email Routing**. The
 homepage drafter and the CSV column mapper call **Anthropic Claude**;
 low-stakes AI (alt-text, embeddings) uses **Workers AI**.
@@ -29,7 +29,7 @@ low-stakes AI (alt-text, embeddings) uses **Workers AI**.
   prolonged AI usage.
 - A registered domain on Cloudflare DNS (this repo expects `mycommuni.care`
   but any domain works — see "Customizing the domain" at the bottom).
-- A Resend account ([resend.com](https://resend.com)) for outbound mail.
+- (No Resend account needed — outbound uses Cloudflare Email Service direct.)
 - An Anthropic API key for the homepage drafter and CSV mapper.
 - A Mapbox token for the `/find` geocoder.
 - A Perplexity API key for the discovery search.
@@ -88,16 +88,20 @@ encrypted.
 | `ANTHROPIC_API_KEY` | yes | Homepage drafter, CSV column mapper |
 | `PERPLEXITY_API_KEY` | yes | `/find` ZIP search |
 | `MAPBOX_TOKEN` | yes | Geocoding inside `find-nearby-farms` (server-side; the public token still goes in vars) |
-| `RESEND_API_KEY` | yes | Outbound mail (magic links, password resets, invites, inquiry outreach) |
-| `RESEND_FROM` | yes | The "From:" address, e.g. `Communicare <hello@mycommuni.care>` |
 | `TURNSTILE_SECRET` | recommended | Anti-spam on `/api/waitlist`; pass-through if unset (dev-friendly) |
 | `TWILIO_AUTH_TOKEN` | when SMS lands | Twilio webhook verification |
 | `STRIPE_SECRET_KEY` | when billing lands | Stripe Connect |
 | `STRIPE_WEBHOOK_SECRET` | when billing lands | Stripe webhook |
 
+Outbound email uses the **Cloudflare Email Service `send_email` binding**
+declared in `wrangler.jsonc` — no API key required, the binding talks
+directly to CF's send API. Domain onboarding is a one-time dashboard
+step (next section).
+
 Public env vars (safe in `wrangler.jsonc`'s `vars` block):
 
 - `SITE_URL=https://mycommuni.care`
+- `SEND_FROM=Communicare <hello@mycommuni.care>` (the From: address every Worker uses)
 - `ENVIRONMENT=production`
 
 Browser-side env vars baked at build time:
@@ -109,17 +113,24 @@ Browser-side env vars baked at build time:
 Set these in the Cloudflare dashboard at:
 **Workers & Pages → communicare → Settings → Variables and Secrets → Build environment**
 
-## 4. Verify Resend's sending domain
+## 4. Onboard the domain to Cloudflare Email Service
 
-In Resend's dashboard, add `mycommuni.care` as a sending domain. Resend
-prints four DNS records to add to Cloudflare DNS:
+Cloudflare Email Sending (public beta, April 2026) handles outbound
+transactional mail directly through the `send_email` Workers binding —
+no third-party provider needed. One-time setup:
 
-- 2 × CNAME (`resend._domainkey.mycommuni.care`, `resend2._domainkey.…`) — DKIM
-- 1 × TXT (`mycommuni.care`) — SPF (`v=spf1 include:_spf.resend.com ~all`)
-- 1 × TXT (`_dmarc.mycommuni.care`) — DMARC
+1. CF dashboard → **Compute & AI → Email Service**
+2. Click **Onboard Domain**, pick `mycommuni.care`
+3. CF adds SPF + DKIM records to your zone automatically (since DNS is
+   already on Cloudflare)
 
-Add them via the Cloudflare dashboard (DNS tab). Resend re-checks every
-few seconds; verification typically takes < 5 minutes.
+DNS changes typically propagate in 5–15 minutes; the dashboard reports
+green when the domain is verified for sending. Until verification
+completes, `EMAIL.send()` calls will fail and the Worker logs will
+show "domain not verified" errors.
+
+Sending is available on the **Workers Paid plan** ($5/mo). The first
+~100k messages/month are included.
 
 ## 5. Inbound email routing
 
@@ -206,7 +217,7 @@ sign-in; from there they can set a new password if they want one.
 | 1. Provision | `npm run cf:provision` + run printed patches |
 | 2. Migrations | `npm run d1:migrate` |
 | 3. Secrets | CF dashboard, `wrangler secret put`, or `npx wrangler secret put` |
-| 4. Resend DNS | Resend dashboard prints records → CF DNS tab |
+| 4.  CF Email DNS| Resend dashboard prints records → CF DNS tab |
 | 5. Email Routing | CF dashboard → Email tab |
 | 6. Deploy | `git push origin main` |
 | 7. Data migration | `npm run pg-to-d1` then `wrangler d1 execute … --file` |
@@ -240,7 +251,7 @@ right database. Or check `wrangler.jsonc`'s `d1_databases` block has
 the correct `database_id`.
 
 **Magic-link emails aren't arriving**
-Check Resend's dashboard for delivery status. If they're sent but bouncing,
+Check the Worker logs for `EMAIL.send` errors. The most common cause
 verify your DKIM/SPF/DMARC records in step 4. If `sendEmail` is returning
 `{ ok: false, status: 401 }`, `RESEND_API_KEY` is wrong or unset.
 

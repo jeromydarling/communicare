@@ -17,13 +17,13 @@
 import { preflight, json } from "../../_lib/cors";
 import { hashPassword, isPasswordStrongEnough, newToken, sha256Hex } from "../../_lib/crypto";
 import { createSession, sessionCookie } from "../../_lib/sessions";
-import { magicLinkEmail, sendEmail } from "../../_lib/email";
+import { magicLinkEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
 import { one, run, uuid, nowIso } from "../../_lib/db";
 
 type Env = {
   DB?: D1Database;
-  RESEND_API_KEY?: string;
-  RESEND_FROM?: string;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
   SITE_URL?: string;
 };
 
@@ -137,7 +137,7 @@ async function sendConfirmationEmail(
   userId: string,
   email: string,
 ): Promise<void> {
-  if (!env.RESEND_API_KEY) return; // Resend not wired, skip silently
+  if (!env.EMAIL) return; // Resend not wired, skip silently
   const token = newToken();
   const tokenHash = await sha256Hex(token);
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -149,7 +149,7 @@ async function sendConfirmationEmail(
   );
   const siteUrl = env.SITE_URL ?? "https://mycommuni.care";
   const link = `${siteUrl.replace(/\/+$/, "")}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
-  await sendEmail(env.RESEND_API_KEY, env.RESEND_FROM, magicLinkEmail({
+  await sendEmail(env.EMAIL, env.SEND_FROM, magicLinkEmail({
     to: email,
     link,
     purpose: "confirm",

@@ -19,7 +19,7 @@ A small, slow-built tool for farm shares and the neighbors they feed.
 | Background work | Cloudflare Workers (cron when needed) |
 | Auth | Custom on Workers — PBKDF2 + cookies in D1, magic links, password reset, OAuth (Phase 3.1) |
 | Inbound email | Cloudflare Email Routing (free, forwards to a real inbox) |
-| Outbound email | Resend (DKIM-signed from mycommuni.care) |
+| Outbound email | Cloudflare Email Service (`send_email` binding, public-beta)  |
 | Discovery search | Perplexity Sonar |
 | Geocoding + maps | Mapbox |
 | AI generation (homepage drafter, CSV mapper) | Anthropic Claude |

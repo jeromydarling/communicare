@@ -9,14 +9,14 @@
 import { preflight, json } from "../../_lib/cors";
 import { newToken, sha256Hex } from "../../_lib/crypto";
 import { rateLimit, ipBucket } from "../../_lib/ratelimit";
-import { passwordResetEmail, sendEmail } from "../../_lib/email";
+import { passwordResetEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
 import { one, run } from "../../_lib/db";
 
 type Env = {
   DB?: D1Database;
   RATELIMIT?: KVNamespace;
-  RESEND_API_KEY?: string;
-  RESEND_FROM?: string;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
   SITE_URL?: string;
 };
 
@@ -67,8 +67,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
   const link = `${siteUrl}/farmer/reset-password/?token=${encodeURIComponent(token)}`;
   const sent = await sendEmail(
-    ctx.env.RESEND_API_KEY,
-    ctx.env.RESEND_FROM,
+    ctx.env.EMAIL,
+    ctx.env.SEND_FROM,
     passwordResetEmail({ to: email, link }),
   );
   if (!sent.ok) console.error("reset send failed:", sent.error);

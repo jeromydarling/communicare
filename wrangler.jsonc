@@ -1,16 +1,13 @@
 // =============================================================================
-// Wrangler config — single Worker serves both API and static site
+// Wrangler config — Communicare on Cloudflare
 // =============================================================================
-// We're using the modern Workers Assets pattern (CF's unified successor to
-// Pages). The Worker entry at src/worker.ts handles /api/* and /i/* by
-// routing to the handlers in functions/ (kept there so the API surface
-// stays grouped). Everything else falls through to the ASSETS binding,
-// which serves the Next.js static export from ./out at the edge.
+// One Worker (src/worker.ts) handles both API and static. /api/* and /i/*
+// route to handlers in functions/; everything else falls through to
+// env.ASSETS.fetch(req) which serves the Next.js static export from ./out.
 //
-// Bindings (D1, KV, R2, Vectorize) are added AFTER `npm run cf:provision`
-// has run. Until then the Worker still deploys — every handler checks
-// `if (!env.DB)` etc. and returns a clean 500 with "binding missing on
-// this deploy" so /api/_health surfaces what's wired and what isn't.
+// Resource IDs below are real, provisioned values. The full migration
+// + setup history lives in docs/CLOUDFLARE_MIGRATION.md and the day-to-day
+// deploy guide in docs/CLOUDFLARE_SETUP.md.
 // =============================================================================
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -20,19 +17,54 @@
 
   "main": "src/worker.ts",
 
-  // Static assets: the Next.js `output: "export"` build output.
-  // not_found_handling: "404-page" makes the Worker serve out/404.html
-  // when a path doesn't match any built page — Next emits this for us.
   "assets": {
     "directory": "./out",
     "binding": "ASSETS",
     "not_found_handling": "404-page"
   },
 
+  // D1 — primary database
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "communicare-db",
+      "database_id": "e6ec9e5c-563b-4d19-9ed6-da319c6f39c4",
+      "migrations_dir": "cloudflare/d1/migrations"
+    }
+  ],
+
+  // KV — caching + sessions + rate-limit buckets
+  "kv_namespaces": [
+    { "binding": "CACHE",     "id": "9af31b0a4860428c88d7ce792e5978e0" },
+    { "binding": "SESSIONS",  "id": "686f9832f09640d0af41e0f6e315ff56" },
+    { "binding": "RATELIMIT", "id": "16d7967fcda14facb8c0a5b6703cd1ce" }
+  ],
+
+  // Cloudflare Email Sending — public-beta transactional outbound mail.
+  // `remote: true` lets `wrangler dev` call the real Email Service API
+  // during local development instead of stubbing.
+  // Domain onboarding (one-time) is at
+  //   dash.cloudflare.com → Compute & AI → Email Service → Onboard Domain
+  // which adds SPF + DKIM records to your zone.
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "remote": true
+    }
+  ],
+
+  // Workers AI — alt-text generation. High-stakes generation (homepage
+  // drafter, CSV column mapping) stays on Anthropic Claude; see
+  // docs/CLOUDFLARE_MIGRATION.md Phase 7.
+  "ai": {
+    "binding": "AI"
+  },
+
   // Vars baked at deploy time. Secrets (API keys) go via
   // `wrangler secret put` and never live in this file.
   "vars": {
     "SITE_URL": "https://mycommuni.care",
+    "SEND_FROM": "Communicare <hello@mycommuni.care>",
     "ENVIRONMENT": "production"
   },
 
@@ -41,37 +73,30 @@
     "head_sampling_rate": 1.0
   }
 
-  // -----------------------------------------------------------------------
-  // Bindings — paste THIS block in after `npm run cf:provision` runs,
-  // with the real IDs substituted. Keeping them commented out so deploy
-  // works immediately on a fresh project without provisioning first.
+  // -------------------------------------------------------------------
+  // TODO: add these AFTER provisioning R2 + Vectorize (the autonomous
+  // run couldn't — the bound MCP token lacks R2 + Vectorize write
+  // permissions). Run from your machine:
   //
-  // "d1_databases": [
-  //   {
-  //     "binding": "DB",
-  //     "database_name": "communicare-db",
-  //     "database_id": "<paste from wrangler d1 create>",
-  //     "migrations_dir": "cloudflare/d1/migrations"
-  //   }
-  // ],
-  // "kv_namespaces": [
-  //   { "binding": "CACHE",     "id": "<paste>" },
-  //   { "binding": "SESSIONS",  "id": "<paste>" },
-  //   { "binding": "RATELIMIT", "id": "<paste>" }
-  // ],
+  //   npx wrangler r2 bucket create communicare-farm-photos
+  //   npx wrangler r2 bucket create communicare-product-photos
+  //   npx wrangler r2 bucket create communicare-imports
+  //   npx wrangler vectorize create communicare-embeddings \
+  //     --dimensions=384 --metric=cosine
+  //
+  // Then uncomment:
+  //
   // "r2_buckets": [
   //   { "binding": "FARM_PHOTOS",    "bucket_name": "communicare-farm-photos" },
   //   { "binding": "PRODUCT_PHOTOS", "bucket_name": "communicare-product-photos" },
   //   { "binding": "IMPORTS",        "bucket_name": "communicare-imports" }
   // ],
-  // "ai": { "binding": "AI" },
   // "vectorize": [
   //   { "binding": "EMBEDDINGS", "index_name": "communicare-embeddings" }
   // ]
   //
-  // Cron triggers (added per-Worker when standalone background Workers
-  // are introduced — Workers Assets can't host cron handlers directly):
-  //   cache-refresher: "0 */6 * * *"
-  //   hortus-sync:     "0 4 * * *"
-  // -----------------------------------------------------------------------
+  // /api/uploads/*, /i/<bucket>/<key>, and /api/ai/embed will return
+  // 500 with "binding missing" until those land. Nothing else is
+  // affected.
+  // -------------------------------------------------------------------
 }

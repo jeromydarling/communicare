@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p functions/tsconfig.json --noEmit",
+    "cf:provision": "bash scripts/cf-provision.sh",
+    "cf:status": "curl -fsS https://mycommuni.care/api/_health | jq .",
     "d1:migrate": "wrangler d1 migrations apply communicare-db --remote",
     "d1:migrate:local": "wrangler d1 migrations apply communicare-db --local",
     "pg-to-d1": "node --experimental-strip-types scripts/migrate-pg-to-d1.ts"

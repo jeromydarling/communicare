@@ -28,6 +28,24 @@ site keeps working throughout.
 
 ## Phases
 
+## One-shot provisioning
+
+`npm run cf:provision` walks every `wrangler X create` we need (D1, three
+KV namespaces, three R2 buckets, Vectorize index), captures the resource
+IDs they emit, and prints the exact `sed` / `node` patches to apply them
+to `wrangler.jsonc`. Idempotent — re-running just shows what already
+exists.
+
+Prereq: `npx wrangler login` once. After the script finishes:
+
+```bash
+git diff wrangler.jsonc   # review the IDs that got patched in
+npm run d1:migrate        # apply the four D1 migrations
+npm run cf:status         # curl /api/_health, confirm every binding is true
+```
+
+## Phases
+
 ### Phase 0 — Hosting move (in progress, this PR)
 
 - [x] Drop `output: "export"` `BASE_PATH` plumbing — root domain

@@ -3,12 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Sun, Wheat } from "@/components/mark";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
-import type { Database, FarmKind } from "@/lib/supabase/types";
+import type { FarmKind } from "@/lib/supabase/types";
 import { CLOSING_BLESSING, SUPPORT_EMAIL } from "@/lib/brand-strings";
-
-type WaitlistInsert = Database["public"]["Tables"]["waitlist"]["Insert"];
 
 type FormData = {
   farm_name: string;
@@ -97,9 +93,14 @@ export default function JoinPage() {
     }
     setBusy(true);
 
-    const supabase = getSupabaseBrowser();
-    if (supabase) {
-      const payload: WaitlistInsert = {
+    // POST to /api/waitlist (Turnstile-gated + rate-limited).
+    // turnstileToken is rendered as null until the widget lands; the
+    // Worker passes through when TURNSTILE_SECRET isn't set so dev
+    // and pre-Turnstile deploys keep working.
+    const res = await fetch("/api/waitlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         email: data.email,
         name: data.name,
         farm_name: data.farm_name,
@@ -108,21 +109,18 @@ export default function JoinPage() {
         current_tool: data.current_tool || null,
         note: data.pain || null,
         source: "landing",
-      };
-      const { error: dbError } = await supabase
-        .from("waitlist")
-        .insert([payload] as never);
-      if (dbError && !dbError.message.toLowerCase().includes("duplicate")) {
-        setError(
-          `We couldn't save you to the list (${dbError.message}). Try again, or write us at ${SUPPORT_EMAIL}.`,
-        );
-        setBusy(false);
-        return;
-      }
-    }
-
-    setSubmitted(true);
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
     setBusy(false);
+
+    if (!res.ok && !(body?.error ?? "").toLowerCase().includes("duplicate")) {
+      setError(
+        `We couldn't save you to the list (${body?.error ?? `HTTP ${res.status}`}). Try again, or write us at ${SUPPORT_EMAIL}.`,
+      );
+      return;
+    }
+    setSubmitted(true);
   }
 
   if (submitted) {
@@ -173,16 +171,6 @@ export default function JoinPage() {
       </div>
 
       <StepIndicator current={step} />
-
-      {!isSupabaseConfigured && (
-        <div className="border border-wheat/40 bg-wheat/5 px-4 py-3 mb-6 text-sm text-soil/75 italic rounded mt-6">
-          <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-            Demo mode
-          </span>
-          Supabase isn&apos;t configured on this deploy — your submission
-          won&apos;t be stored, but the form walks through.
-        </div>
-      )}
 
       <div className="paper p-8 md:p-10 mt-6">
         {step === 0 && <StepFarm data={data} update={update} />}

@@ -22,7 +22,7 @@ A small, slow-built tool for farm shares and the neighbors they feed.
 | Outbound email | Cloudflare Email Service (`send_email` binding, public-beta)  |
 | Discovery search | Perplexity Sonar |
 | Geocoding + maps | Mapbox |
-| AI generation (homepage drafter, CSV mapper) | Anthropic Claude |
+| AI generation (homepage drafter, CSV mapper) | Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, JSON schema mode) |
 | AI generation (alt-text, embeddings) | Workers AI |
 
 ## Deploy

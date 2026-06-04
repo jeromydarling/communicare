@@ -2,8 +2,22 @@
 
 The whole stack is moving to Cloudflare. Supabase Postgres, Supabase Auth,
 Supabase Storage, Supabase Edge Functions, and GitHub Pages all get
-replaced. Resend stays for outbound email (we send from Workers via
-Resend's REST API; Cloudflare doesn't have a peer service).
+replaced.
+
+> **Final-state addendum (post-migration):** Two paragraphs of this plan
+> reflected the world before two Cloudflare products went GA-beta:
+>
+> - **Outbound email** was planned to stay on Resend because CF had no
+>   peer. Cloudflare Email Sending shipped (public beta, April 2026)
+>   with arbitrary-recipient transactional delivery — Resend is gone.
+> - **AI** for the homepage drafter and CSV mapper was planned to stay
+>   on Anthropic Claude because Workers AI's open-source models trailed
+>   on structured output. Workers AI added JSON-schema-mode in February
+>   2025 and Llama 3.3 70B handles both tasks — Anthropic is gone.
+>
+> The phased plan below is preserved for posterity. The live stack is
+> fully Cloudflare. `docs/CLOUDFLARE_SETUP.md` is the canonical
+> deploy-from-clone guide.
 
 This is a real migration — 4–8 weeks of work, not a weekend swap. The
 phases below are ordered so each one ships independently and the live

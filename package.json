@@ -17,7 +17,6 @@
     "pg-to-d1": "node --experimental-strip-types scripts/migrate-pg-to-d1.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.88.0",
     "@sentry/nextjs": "^8.0.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.106.1",

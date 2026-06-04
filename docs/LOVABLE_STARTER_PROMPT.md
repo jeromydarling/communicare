@@ -15,9 +15,9 @@ rewrites — just the wiring described in the project's existing docs.
 REPO        https://github.com/jeromydarling/communicare  (branch: main)
 STACK       Next.js 15 static export · Cloudflare Workers Assets
             · Cloudflare D1 + KV + R2 + Vectorize + Workers AI
-            · Custom auth on Workers · Resend (outbound mail)
-            · CF Email Routing (inbound) · Anthropic Claude · Mapbox
-            · Perplexity Sonar · ElevenLabs
+            · Custom auth on Workers · CF Email Sending (outbound)
+            · CF Email Routing (inbound) · Workers AI (Llama 3.3 70B)
+            · Mapbox · Perplexity Sonar · ElevenLabs
 
 YOUR JOB — five steps, in order
 
@@ -45,14 +45,15 @@ YOUR JOB — five steps, in order
    --command "select name from sqlite_master where type='table'"
 
 4. SECRETS  (npx wrangler secret put <NAME>)
-     ANTHROPIC_API_KEY      required · homepage drafter + CSV mapper
      PERPLEXITY_API_KEY     required · /find ZIP search
      MAPBOX_TOKEN           required · server-side geocoding
-     RESEND_API_KEY         required · outbound mail
-     RESEND_FROM            required · "Communicare <hello@mycommuni.care>"
      TURNSTILE_SECRET       recommended · /api/waitlist anti-spam
      STRIPE_SECRET_KEY      defer · billing comes later
      TWILIO_AUTH_TOKEN      defer · SMS swap loop comes later
+   (No outbound-mail API key needed — CF Email Service binding handles
+   it. Onboard the domain at dash → Compute & AI → Email Service.)
+   (No Anthropic key needed — Workers AI Llama 3.3 70B handles the
+   homepage drafter and CSV column mapper in JSON-schema mode.)
 
 5. BUILD-TIME ENV VARS (CF dashboard → Worker → Settings → Variables)
      NEXT_PUBLIC_MAPBOX_TOKEN          public Mapbox token for the map widget
@@ -119,7 +120,8 @@ Claude Chrome click test confirms the core flow works.
 - `npm run cf:provision` and paste the IDs (the script tells you the
   exact commands)
 - Add secrets via `wrangler secret put`
-- Add Resend's DNS records (DKIM, SPF, DMARC) to Cloudflare DNS
+- CF dashboard → Compute & AI → Email Service → Onboard the
+  `mycommuni.care` domain (CF adds SPF + DKIM automatically)
 - Set up Cloudflare Email Routing for hello@, migrate@
 - (Optional) `npm run pg-to-d1` if you're migrating from a previous
   Supabase deploy

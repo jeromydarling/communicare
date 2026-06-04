@@ -23,7 +23,7 @@ YOUR JOB — five steps, in order
      20260525120000_limited_quantity.sql      limited-drop product columns
      20260525130000_farm_discovery.sql        public farm directory + RLS
      20260525200000_drop_sites.sql            pickup-distance search
-     20260525210000_import_runs.sql           CSV-import audit trail + RLS
+     20260525215000_import_runs.sql           CSV-import audit trail + RLS
      20260525220000_onboarding.sql            farms.onboarded_at + index
      20260525230000_onboarding_rls_fixes.sql  create_farm_for_self RPC + enum
      20260525240000_perf_indexes.sql          profiles.phone partial index

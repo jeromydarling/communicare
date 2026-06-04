@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { SampleFarm } from "@/lib/sample-farms";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Wheat, Jar, Leaf, Barn } from "@/components/mark";
 
 const KINDS = [
@@ -193,15 +192,6 @@ export default function FindPage() {
     }
     setSearchError(null);
     setSearching(true);
-
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setSearchError(
-        "The discovery service is offline in this preview. Set the Supabase env vars to enable it.",
-      );
-      setSearching(false);
-      return;
-    }
 
     try {
       // Goes to the Pages Function at /api/find-nearby-farms, which
@@ -782,33 +772,16 @@ Thank you,
   async function send() {
     setSending(true);
     setResult(null);
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setResult({
-        ok: false,
-        error:
-          "The send service is offline in this preview. Try again after the env vars are set.",
-      });
-      setSending(false);
-      return;
-    }
 
     try {
-      // Goes to the Pages Function at /api/record-farm-inquiry, which
-      // applies per-IP + per-(IP,farm) rate limits in KV before
-      // forwarding to the Supabase upstream. If we have a session, pass
-      // the token through so the upstream tags member_user_id.
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData?.session?.access_token) {
-        headers.Authorization = `Bearer ${sessionData.session.access_token}`;
-      }
-
+      // /api/record-farm-inquiry rate-limits (per-IP + per-(IP, farm))
+      // before forwarding upstream. credentials: include sends the
+      // session cookie when present so member_user_id can tag on the
+      // inquiry row.
       const res = await fetch("/api/record-farm-inquiry", {
         method: "POST",
-        headers,
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           discoveredFarmId: farm.id,
           senderName: name.trim(),

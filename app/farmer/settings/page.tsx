@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { getOperatorFarm } from "@/lib/supabase/queries";
+import { getMeWithFarm } from "@/lib/farmer/api";
 import { PageHeader } from "@/components/farmer/shell";
 import {
   demoFarm,
@@ -19,14 +18,11 @@ export default function FarmerSettingsPage() {
   const [farmId, setFarmId] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) return;
     let cancelled = false;
     (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (cancelled || !userData?.user) return;
-      const fm = await getOperatorFarm(supabase, userData.user.id);
-      if (!cancelled && fm) setFarmId(fm.farm_id);
+      const me = await getMeWithFarm();
+      if (cancelled) return;
+      if ("ok" in me && me.ok && me.farm) setFarmId(me.farm.id);
     })();
     return () => {
       cancelled = true;

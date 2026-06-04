@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   PasswordInput,
@@ -11,13 +10,10 @@ import {
   FarmerAuthShell,
   FarmerAuthFooterLinks,
   FormError,
-  FormNotice,
   GoogleButton,
   OrDivider,
-  callbackUrl,
 } from "@/components/auth/farmer-auth-shell";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { signUp } from "@/lib/auth/client";
 
 export default function FarmerSignUpPage() {
   const router = useRouter();
@@ -27,7 +23,6 @@ export default function FarmerSignUpPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmationSent, setConfirmationSent] = useState(false);
 
   const canSubmit =
     name.trim().length > 1 &&
@@ -36,93 +31,33 @@ export default function FarmerSignUpPage() {
     isPasswordStrongEnough(password);
 
   async function signUpWithGoogle() {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      return;
-    }
-    setError(null);
-    setBusy(true);
-    // Append ?next=/farmer/onboarding/ so the auth callback routes new
-    // operators into the five-minute setup wizard after Google sign-in.
-    const base = callbackUrl();
-    const redirectTo = base
-      ? `${base}?next=${encodeURIComponent("/farmer/onboarding/")}`
-      : undefined;
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-    if (authError) {
-      setBusy(false);
-      setError(authError.message);
-    }
+    // Google OAuth lands in Phase 3.1 — see docs/CLOUDFLARE_MIGRATION.md
+    // (custom Workers auth supports it; the Worker route hasn't been
+    // wired yet because email + password covers the launch path).
+    setError(
+      "Google sign-up is back online soon. For now, sign up with email below.",
+    );
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!canSubmit) return;
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      return;
-    }
     setBusy(true);
-    const { error: authError, data } = await supabase.auth.signUp({
+    const result = await signUp({
       email: email.trim(),
       password,
-      options: {
-        emailRedirectTo: callbackUrl(),
-        data: {
-          // Stored in user_metadata. The post-signup onboarding step reads
-          // these to create the public.farms row.
-          full_name: name.trim(),
-          farm_name: farmName.trim(),
-        },
-      },
+      display_name: name.trim(),
+      farm_name: farmName.trim(),
     });
     setBusy(false);
-    if (authError) {
-      setError(humanize(authError.message));
+    if (!("ok" in result) || !result.ok) {
+      setError(humanize(result.error));
       return;
     }
-    // Supabase returns a session immediately if email confirmation is off,
-    // or a null session if it's on (the more common production setup).
-    if (data.session) {
-      // First-time signup → straight into the five-minute onboarding wizard.
-      // The wizard handles creating the farm row, defining shares, adding a
-      // pickup, and importing members so the dashboard isn't empty.
-      router.replace("/farmer/onboarding/");
-      return;
-    }
-    setConfirmationSent(true);
-  }
-
-  if (confirmationSent) {
-    return (
-      <FarmerAuthShell
-        eyebrow="One last thing"
-        title={<>Confirm your email.</>}
-        subtitle={
-          <>
-            We sent a verification link to{" "}
-            <span className="display">{email}</span>. Tap it and we&apos;ll
-            walk you to your farm desk.
-          </>
-        }
-      >
-        <p className="display italic text-brick text-xl mb-6">
-          Welcome aboard.
-        </p>
-        <Link
-          href="/farmer/come-in/"
-          className="text-sm display italic text-soil/65 hover:text-brick"
-        >
-          Back to sign in →
-        </Link>
-      </FarmerAuthShell>
-    );
+    // Session cookie is already set by the server. Straight into the
+    // five-minute onboarding wizard.
+    router.replace("/farmer/onboarding/");
   }
 
   return (
@@ -137,15 +72,6 @@ export default function FarmerSignUpPage() {
       subtitle="Set up your account in two minutes. After that, the homepage, the SMS swap loop, the pickup roster — all of it works the same evening."
       footer={<FarmerAuthFooterLinks current="sign-up" />}
     >
-      {!isSupabaseConfigured && (
-        <FormNotice>
-          <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-            Demo mode
-          </span>
-          The form works; account creation needs a Supabase project.
-        </FormNotice>
-      )}
-
       <div className="mt-5">
         <GoogleButton
           onClick={signUpWithGoogle}
@@ -222,7 +148,7 @@ export default function FarmerSignUpPage() {
         <div className="flex items-center justify-between gap-3 pt-1">
           <button
             type="submit"
-            disabled={busy || !canSubmit || !isSupabaseConfigured}
+            disabled={busy || !canSubmit}
             className="btn btn-primary disabled:opacity-50"
           >
             {busy ? "One moment…" : "Start your farm →"}

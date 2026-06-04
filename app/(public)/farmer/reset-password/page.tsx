@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   PasswordInput,
   isPasswordStrongEnough,
@@ -11,18 +11,17 @@ import {
   FarmerAuthShell,
   FarmerAuthFooterLinks,
   FormError,
-  FormNotice,
 } from "@/components/auth/farmer-auth-shell";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { applyPasswordReset } from "@/lib/auth/client";
 import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 // =============================================================================
 // /farmer/reset-password — landing page from the password-reset email
 // =============================================================================
-// Supabase's reset email contains a `code` (or legacy access_token) in the
-// URL. We exchange it for a temporary session, let the operator set a new
-// password via updateUser({ password }), then send them on to the desk.
+// The reset link points here with ?token=<one-shot>. We POST the token
+// + new password to /api/auth/reset, which validates the token, applies
+// the new hash, invalidates every other session, and mints a fresh one.
+// On success we walk the operator straight to the desk.
 // =============================================================================
 
 export default function ResetPasswordPage() {
@@ -35,58 +34,26 @@ export default function ResetPasswordPage() {
 
 function Inner() {
   const router = useRouter();
-  const [stage, setStage] = useState<"exchanging" | "ready" | "saving" | "done">(
-    "exchanging",
-  );
+  const params = useSearchParams();
+  const token = params.get("token") ?? "";
+
+  const [stage, setStage] = useState<"ready" | "saving" | "done">("ready");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1 — exchange the URL code for a session as soon as the page loads.
   useEffect(() => {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      setStage("ready");
-      return;
+    if (!token) {
+      setError(
+        "This reset link is missing its token. Request a new one from the forgot-password page.",
+      );
     }
-
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get("code");
-
-    // Newer Supabase reset emails send `code`; older ones land with a
-    // hash fragment containing access_token + refresh_token + type=recovery.
-    // supabase-js handles the hash form for us as long as
-    // detectSessionInUrl is on (it is by default). For the code form we
-    // exchange explicitly.
-    (async () => {
-      if (code) {
-        const { error: ex } = await supabase.auth.exchangeCodeForSession(code);
-        if (ex) {
-          setError(
-            "This reset link can't be used — it may have expired or already been used. Request a new one.",
-          );
-          setStage("ready");
-          return;
-        }
-        // Clean the code out of the URL so a refresh doesn't try again.
-        url.searchParams.delete("code");
-        window.history.replaceState({}, "", url.toString());
-      }
-      // At this point a recovery session should be live. Confirm it.
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
-        setError(
-          "This reset link can't be used — it may have expired or already been used. Request a new one.",
-        );
-      }
-      setStage("ready");
-    })();
-  }, []);
+  }, [token]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!token) return;
     if (!isPasswordStrongEnough(password)) {
       setError(
         "Pick a stronger password — twelve characters or more, mixed case, with a number.",
@@ -97,30 +64,15 @@ function Inner() {
       setError("The two passwords don't match yet.");
       return;
     }
-    const supabase = getSupabaseBrowser();
-    if (!supabase) return;
     setStage("saving");
-    const { error: upErr } = await supabase.auth.updateUser({ password });
-    if (upErr) {
-      setError(upErr.message);
+    const result = await applyPasswordReset({ token, password });
+    if (!("ok" in result) || !result.ok) {
+      setError(result.error);
       setStage("ready");
       return;
     }
     setStage("done");
     setTimeout(() => router.replace("/farmer/"), 1800);
-  }
-
-  if (stage === "exchanging") {
-    return (
-      <FarmerAuthShell
-        eyebrow="One moment"
-        title={<>Reading your reset link…</>}
-      >
-        <p className="text-soil/55 italic text-sm">
-          We&apos;re checking the link from your email.
-        </p>
-      </FarmerAuthShell>
-    );
   }
 
   if (stage === "done") {
@@ -147,15 +99,6 @@ function Inner() {
       subtitle="Pick something you'll remember. We don't see passwords, so we can't help you recover one we never had."
       footer={<FarmerAuthFooterLinks current="reset" />}
     >
-      {!isSupabaseConfigured && (
-        <FormNotice>
-          <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-            Demo mode
-          </span>
-          Password reset needs a Supabase project.
-        </FormNotice>
-      )}
-
       <form onSubmit={onSubmit} className="space-y-4 mt-5">
         <PasswordInput
           value={password}
@@ -180,7 +123,7 @@ function Inner() {
         <div className="flex items-center justify-between gap-3 pt-1">
           <button
             type="submit"
-            disabled={stage === "saving"}
+            disabled={stage === "saving" || !token}
             className="btn btn-primary disabled:opacity-50"
           >
             {stage === "saving" ? "Saving…" : "Set new password →"}

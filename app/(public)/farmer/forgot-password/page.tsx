@@ -6,10 +6,8 @@ import {
   FarmerAuthShell,
   FarmerAuthFooterLinks,
   FormError,
-  FormNotice,
 } from "@/components/auth/farmer-auth-shell";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { requestPasswordReset } from "@/lib/auth/client";
 import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 export default function ForgotPasswordPage() {
@@ -21,23 +19,11 @@ export default function ForgotPasswordPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      return;
-    }
     setBusy(true);
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/farmer/reset-password/`
-        : undefined;
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(
-      email.trim(),
-      { redirectTo },
-    );
+    const result = await requestPasswordReset(email.trim());
     setBusy(false);
-    if (authError) {
-      setError(authError.message);
+    if (!("ok" in result) || !result.ok) {
+      setError(result.error);
       return;
     }
     setSent(true);
@@ -50,9 +36,9 @@ export default function ForgotPasswordPage() {
         title={<>Check your inbox.</>}
         subtitle={
           <>
-            We sent a reset link to <span className="display">{email}</span>.
-            Tap it and you&apos;ll be able to set a new password. The link is
-            good for one hour.
+            If <span className="display">{email}</span> has an account
+            with us, a reset link is on its way. Tap it and set a new
+            password. Good for one hour.
           </>
         }
         footer={
@@ -92,15 +78,6 @@ export default function ForgotPasswordPage() {
       subtitle="Type the email you signed up with. We'll send a link that lets you set a new password. The old one stops working as soon as you do."
       footer={<FarmerAuthFooterLinks current="forgot" />}
     >
-      {!isSupabaseConfigured && (
-        <FormNotice>
-          <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-            Demo mode
-          </span>
-          The form works; sending the reset email needs a Supabase project.
-        </FormNotice>
-      )}
-
       <form onSubmit={onSubmit} className="space-y-4 mt-5">
         <div>
           <label className="label" htmlFor="email">
@@ -124,7 +101,7 @@ export default function ForgotPasswordPage() {
         <div className="flex items-center justify-between gap-3 pt-1">
           <button
             type="submit"
-            disabled={busy || !isSupabaseConfigured}
+            disabled={busy}
             className="btn btn-primary disabled:opacity-50"
           >
             {busy ? "Sending…" : "Send the reset link →"}

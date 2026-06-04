@@ -8,13 +8,13 @@ import {
   FarmerAuthShell,
   FarmerAuthFooterLinks,
   FormError,
-  FormNotice,
   GoogleButton,
   OrDivider,
-  callbackUrl,
 } from "@/components/auth/farmer-auth-shell";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  signInWithPassword as authSignIn,
+  sendMagicLink as authMagic,
+} from "@/lib/auth/client";
 import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 export default function FarmerSignInPage() {
@@ -39,68 +39,37 @@ function Inner() {
   async function signInWithPassword(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      return;
-    }
     setBusy(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    const result = await authSignIn({ email: email.trim(), password });
     setBusy(false);
-    if (authError) {
-      setError(humanize(authError.message));
+    if (!("ok" in result) || !result.ok) {
+      setError(humanize(result.error));
       return;
     }
     router.replace(nextPath);
   }
 
   async function signInWithGoogle() {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      return;
-    }
-    setError(null);
-    setBusy(true);
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callbackUrl(),
-        queryParams: { prompt: "select_account" },
-      },
-    });
-    if (authError) {
-      setBusy(false);
-      setError(humanize(authError.message));
-    }
-    // Otherwise the browser is being redirected to Google; nothing else to do.
+    // Google OAuth is Phase 3.1 follow-up — see docs/CLOUDFLARE_MIGRATION.md.
+    setError(
+      "Google sign-in is back online soon. Use your password or a magic link.",
+    );
   }
 
-  async function sendMagicLink() {
+  async function sendMagicLinkClick() {
     setError(null);
     if (!email.trim()) {
       setError("Type your email first, then tap the magic-link option.");
       return;
     }
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      return;
-    }
     setBusy(true);
-    const { error: authError } = await supabase.auth.signInWithOtp({
+    const result = await authMagic({
       email: email.trim(),
-      options: {
-        emailRedirectTo: callbackUrl(),
-        shouldCreateUser: false,
-      },
+      redirect_to: nextPath,
     });
     setBusy(false);
-    if (authError) {
-      setError(humanize(authError.message));
+    if (!("ok" in result) || !result.ok) {
+      setError(humanize(result.error));
       return;
     }
     setMagicSent(true);
@@ -142,22 +111,6 @@ function Inner() {
       subtitle="Sign in to your farm. Members of your share have their own door at /come-in — this one is just for operators."
       footer={<FarmerAuthFooterLinks current="sign-in" />}
     >
-      {!isSupabaseConfigured && (
-        <FormNotice>
-          <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-            Demo mode
-          </span>
-          The form works; sign-in needs a Supabase project. Try the{" "}
-          <Link
-            href="/demo/"
-            className="not-italic underline hover:text-brick"
-          >
-            form-gated demo
-          </Link>{" "}
-          for now.
-        </FormNotice>
-      )}
-
       <div className="mt-5">
         <GoogleButton onClick={signInWithGoogle} disabled={busy} />
       </div>
@@ -195,7 +148,7 @@ function Inner() {
         <div className="flex items-center justify-between gap-3 pt-1">
           <button
             type="submit"
-            disabled={busy || !isSupabaseConfigured}
+            disabled={busy}
             className="btn btn-primary disabled:opacity-50"
           >
             {busy ? "One moment…" : "Sign in →"}
@@ -213,7 +166,7 @@ function Inner() {
 
       <button
         type="button"
-        onClick={sendMagicLink}
+        onClick={sendMagicLinkClick}
         disabled={busy}
         className="w-full px-4 py-3 rounded-md border border-soil/20 hover:border-brick hover:text-brick transition-colors text-sm display italic text-soil/70 disabled:opacity-50"
       >

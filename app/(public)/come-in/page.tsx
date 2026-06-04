@@ -4,8 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { WatercolorScene } from "@/components/watercolor-scene";
 import { Mark } from "@/components/mark";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { sendMagicLink } from "@/lib/auth/client";
 import { CLOSING_BLESSING } from "@/lib/brand-strings";
 
 export default function ComeInPage() {
@@ -17,32 +16,16 @@ export default function ComeInPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError(
-        "Supabase isn't configured on this deploy. Magic-link sign-in needs a wired backend.",
-      );
-      return;
-    }
-
     setBusy(true);
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}${window.location.pathname.replace(/come-in\/?$/, "")}auth/callback/`
-        : undefined;
 
-    const { error: authError } = await supabase.auth.signInWithOtp({
+    const result = await sendMagicLink({
       email: email.trim(),
-      options: {
-        emailRedirectTo: redirectTo,
-        shouldCreateUser: true,
-      },
+      redirect_to: "/share/",
     });
 
     setBusy(false);
-    if (authError) {
-      setError(authError.message);
+    if (!("ok" in result) || !result.ok) {
+      setError(result.error);
       return;
     }
     setSent(true);
@@ -121,20 +104,6 @@ export default function ComeInPage() {
                   believe in quiet entries.
                 </p>
 
-                {!isSupabaseConfigured && (
-                  <div className="border border-wheat/40 bg-wheat/5 px-4 py-3 mb-5 text-sm text-soil/75 italic rounded">
-                    <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-                      Demo mode
-                    </span>
-                    The form works; magic-link delivery needs a Supabase
-                    project. Try the{" "}
-                    <Link href="/demo" className="not-italic underline hover:text-brick">
-                      form-gated demo
-                    </Link>{" "}
-                    instead.
-                  </div>
-                )}
-
                 <form onSubmit={onSubmit} className="space-y-5">
                   <div>
                     <label className="label" htmlFor="email">
@@ -161,7 +130,7 @@ export default function ComeInPage() {
                   <div className="flex items-center justify-between gap-3 pt-2">
                     <button
                       type="submit"
-                      disabled={busy || !isSupabaseConfigured}
+                      disabled={busy}
                       className="btn btn-primary disabled:opacity-50"
                     >
                       {busy ? "Sending the link…" : "Send the magic link →"}

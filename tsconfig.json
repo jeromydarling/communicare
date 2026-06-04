@@ -26,6 +26,7 @@
     "supabase/functions/**",
     "remotion/**",
     "functions/**",
-    "scripts/**"
+    "scripts/**",
+    "src/**"
   ]
 }

@@ -1,25 +1,16 @@
 // =============================================================================
-// Wrangler config — the spine of the Cloudflare migration
+// Wrangler config — single Worker serves both API and static site
 // =============================================================================
-// This file declares every Cloudflare binding the project will use across
-// D1, R2, KV, Workers AI, and Pages Functions. Resources don't exist yet
-// at the time this lands — IDs are filled in by `wrangler` commands or
-// the CF dashboard. Placeholder `<TODO>` values get replaced as each
-// resource is provisioned.
+// We're using the modern Workers Assets pattern (CF's unified successor to
+// Pages). The Worker entry at src/worker.ts handles /api/* and /i/* by
+// routing to the handlers in functions/ (kept there so the API surface
+// stays grouped). Everything else falls through to the ASSETS binding,
+// which serves the Next.js static export from ./out at the edge.
 //
-// The full migration plan is in docs/CLOUDFLARE_MIGRATION.md. This file is
-// the shape it lands in — every binding the app eventually depends on is
-// declared up front so PRs that wire each piece can drop in without a
-// config change.
-//
-// Layout:
-//   - Static site lives in `out/` (Next.js `output: "export"`).
-//   - Pages Functions live in `functions/` (auto-detected, auto-deployed
-//     by CF Pages on push).
-//   - Standalone Workers (for jobs that don't belong on the Pages path)
-//     will live in `cloudflare/workers/<name>/` with their own
-//     wrangler config inheriting from this one.
-//   - D1 schema migrations live in `cloudflare/d1/migrations/`.
+// Bindings (D1, KV, R2, Vectorize) are added AFTER `npm run cf:provision`
+// has run. Until then the Worker still deploys — every handler checks
+// `if (!env.DB)` etc. and returns a clean 500 with "binding missing on
+// this deploy" so /api/_health surfaces what's wired and what isn't.
 // =============================================================================
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -27,78 +18,60 @@
   "compatibility_date": "2026-06-01",
   "compatibility_flags": ["nodejs_compat"],
 
-  // Pages: the build output Cloudflare Pages serves directly.
-  "pages_build_output_dir": "out",
+  "main": "src/worker.ts",
 
-  // D1 — the primary database. Replaces Supabase Postgres.
-  // Run `wrangler d1 create communicare-db`, then paste the database_id.
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "communicare-db",
-      "database_id": "<TODO: wrangler d1 create>",
-      "migrations_dir": "cloudflare/d1/migrations"
-    }
-  ],
-
-  // KV — caching + sessions + rate-limit buckets.
-  // Run `wrangler kv:namespace create CACHE`, etc., for each, then paste IDs.
-  "kv_namespaces": [
-    { "binding": "CACHE", "id": "<TODO>" },
-    { "binding": "SESSIONS", "id": "<TODO>" },
-    { "binding": "RATELIMIT", "id": "<TODO>" }
-  ],
-
-  // R2 — farm photos, product photos, and audit CSVs from the import flow.
-  "r2_buckets": [
-    { "binding": "FARM_PHOTOS", "bucket_name": "communicare-farm-photos" },
-    { "binding": "PRODUCT_PHOTOS", "bucket_name": "communicare-product-photos" },
-    { "binding": "IMPORTS", "bucket_name": "communicare-imports" }
-  ],
-
-  // Workers AI — alt-text generation, embeddings, low-stakes drafts.
-  // High-stakes generation (homepage drafter, CSV column mapping) stays
-  // on Anthropic Claude; see docs/CLOUDFLARE_MIGRATION.md Phase 7.
-  "ai": {
-    "binding": "AI"
+  // Static assets: the Next.js `output: "export"` build output.
+  // not_found_handling: "404-page" makes the Worker serve out/404.html
+  // when a path doesn't match any built page — Next emits this for us.
+  "assets": {
+    "directory": "./out",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
   },
 
-  // Vectorize — vector store for the embeddings the AI binding generates.
-  // Used for semantic search across farm descriptions, share notes, etc.
-  // Create with:
-  //   wrangler vectorize create communicare-embeddings \
-  //     --dimensions=384 --metric=cosine
-  // Then paste the index_name in here if you customized it.
-  "vectorize": [
-    {
-      "binding": "EMBEDDINGS",
-      "index_name": "communicare-embeddings"
-    }
-  ],
-
-  // Vars baked into Workers at deploy time. Secrets (API keys, etc.)
-  // are set via `wrangler secret put ...` and never live in this file.
+  // Vars baked at deploy time. Secrets (API keys) go via
+  // `wrangler secret put` and never live in this file.
   "vars": {
     "SITE_URL": "https://mycommuni.care",
     "ENVIRONMENT": "production"
   },
 
-  // Observability — turn on Workers logs.
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1.0
-  },
-
-  // Cron triggers — scheduled Workers (configured per-Worker in their
-  // own wrangler files; this entry is informational, since Pages projects
-  // don't run cron handlers themselves). When we add a standalone
-  // background Worker (e.g. cloudflare/workers/cache-refresher/), its
-  // wrangler.toml carries the actual `triggers` block. Recorded here so
-  // there's one place to see what schedules exist:
-  //   - cache-refresher: "0 */6 * * *"  (refresh top-N ZIPs every 6 hours)
-  //   - hortus-sync:      "0 4 * * *"   (4am UTC daily, idempotent)
-  "_planned_triggers": {
-    "cache-refresher": "0 */6 * * *",
-    "hortus-sync": "0 4 * * *"
   }
+
+  // -----------------------------------------------------------------------
+  // Bindings — paste THIS block in after `npm run cf:provision` runs,
+  // with the real IDs substituted. Keeping them commented out so deploy
+  // works immediately on a fresh project without provisioning first.
+  //
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "communicare-db",
+  //     "database_id": "<paste from wrangler d1 create>",
+  //     "migrations_dir": "cloudflare/d1/migrations"
+  //   }
+  // ],
+  // "kv_namespaces": [
+  //   { "binding": "CACHE",     "id": "<paste>" },
+  //   { "binding": "SESSIONS",  "id": "<paste>" },
+  //   { "binding": "RATELIMIT", "id": "<paste>" }
+  // ],
+  // "r2_buckets": [
+  //   { "binding": "FARM_PHOTOS",    "bucket_name": "communicare-farm-photos" },
+  //   { "binding": "PRODUCT_PHOTOS", "bucket_name": "communicare-product-photos" },
+  //   { "binding": "IMPORTS",        "bucket_name": "communicare-imports" }
+  // ],
+  // "ai": { "binding": "AI" },
+  // "vectorize": [
+  //   { "binding": "EMBEDDINGS", "index_name": "communicare-embeddings" }
+  // ]
+  //
+  // Cron triggers (added per-Worker when standalone background Workers
+  // are introduced — Workers Assets can't host cron handlers directly):
+  //   cache-refresher: "0 */6 * * *"
+  //   hortus-sync:     "0 4 * * *"
+  // -----------------------------------------------------------------------
 }

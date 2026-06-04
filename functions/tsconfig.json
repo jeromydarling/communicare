@@ -11,6 +11,6 @@
     "skipLibCheck": true,
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "../src/**/*.ts"],
   "exclude": ["node_modules"]
 }

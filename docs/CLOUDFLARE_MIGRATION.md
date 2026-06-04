@@ -9,11 +9,25 @@ This is a real migration — 4–8 weeks of work, not a weekend swap. The
 phases below are ordered so each one ships independently and the live
 site keeps working throughout.
 
+## Architecture
+
+Single **Cloudflare Worker** (`src/worker.ts`) serves both the static
+site and the API. CF's Workers Assets pattern attaches the Next.js
+static export (`./out`) to an `ASSETS` binding. The Worker's `fetch`
+handler routes `/api/*` and `/i/*` to handlers in `functions/`; every
+other path falls through to `env.ASSETS.fetch(req)` so the right HTML
+or JS chunk is served from the edge.
+
+`functions/` keeps the API surface organised by route. `src/router.ts`
+maps URLPatterns to those handlers via the `adapt()` shim in
+`src/adapter.ts` — no rewrites needed when adding routes; just write
+the handler, import it, add the pattern.
+
 ## Target stack
 
 | Layer | From | To |
 |---|---|---|
-| Hosting | GitHub Pages | Cloudflare Pages |
+| Hosting | GitHub Pages | Cloudflare Workers Assets (one Worker, `./out` as assets) |
 | Server logic | Supabase Edge Functions (Deno) | Cloudflare Workers |
 | Database | Supabase Postgres | Cloudflare D1 (SQLite) |
 | Auth | Supabase Auth | TBD — custom on Workers OR Clerk |
@@ -46,17 +60,25 @@ npm run cf:status         # curl /api/_health, confirm every binding is true
 
 ## Phases
 
-### Phase 0 — Hosting move (in progress, this PR)
+### Phase 0 — Hosting move (shipped)
 
-- [x] Drop `output: "export"` `BASE_PATH` plumbing — root domain
+- [x] Drop `BASE_PATH` plumbing — root domain
 - [x] `SITE_URL` → `https://mycommuni.care`
-- [x] Delete `.github/workflows/deploy.yml` (Cloudflare Pages auto-builds on push to main; the dashboard project handles deploys directly)
-- [x] Build verified at root
+- [x] Delete `.github/workflows/deploy.yml` (CF builds on push)
+- [x] `wrangler.jsonc` rewritten for **Workers Assets** (the initial
+  Pages-style config didn't work — `wrangler deploy` on a Workers
+  project needs `main` + `assets.directory`, not `pages_build_output_dir`)
+- [x] `src/worker.ts`, `src/router.ts`, `src/adapter.ts` — Worker entry
+  + URLPattern routing + Pages-Function shim so handler bodies in
+  `functions/` work unchanged
 
 What you click in the CF dashboard:
-- Confirm the Pages project is set to "Next.js (Static HTML Export)" preset
+- Worker project Build command: `npm run build`
+- Worker project Deploy command: `npx wrangler deploy` (default)
+- Add build env vars: `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`,
+  `NEXT_PUBLIC_SITE_URL=https://mycommuni.care`
 - Confirm `mycommuni.care` is the production custom domain
-- Add build env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`, `NEXT_PUBLIC_SITE_URL=https://mycommuni.care`
 
 ### Phase 1 — Email + DNS hygiene
 

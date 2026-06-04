@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p functions/tsconfig.json --noEmit",
+    "deploy": "next build && wrangler deploy",
+    "deploy:dry": "next build && wrangler deploy --dry-run",
     "cf:provision": "bash scripts/cf-provision.sh",
     "cf:status": "curl -fsS https://mycommuni.care/api/_health | jq .",
     "d1:migrate": "wrangler d1 migrations apply communicare-db --remote",

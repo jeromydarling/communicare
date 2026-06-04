@@ -138,8 +138,17 @@ talk to D1 instead of Supabase Postgres.
   Auth-gated; takes either a URL or a (bucket, key) and returns a
   12-25 word description with the editorial voice constraints baked
   into the prompt.
-- [ ] Embedding generation for farm descriptions, stored in D1 (powers
-  semantic search later via Vectorize)
+- [x] Embedding generation
+  (`functions/api/ai/embed.ts`, `@cf/baai/bge-small-en-v1.5`). 384-dim
+  vectors, optionally upserts into the Vectorize index when an `id`
+  is supplied. `namespace` partitions the index so queries can scope
+  to "farm descriptions" or "share notes" independently.
+- [x] Vectorize binding declared (`EMBEDDINGS`,
+  `communicare-embeddings` index, 384 dim, cosine). You still need
+  to run `wrangler vectorize create communicare-embeddings
+  --dimensions=384 --metric=cosine`.
+- [x] `/api/_health` smoke endpoint reports which bindings are live;
+  curl this from monitoring to assert the deploy is fully wired.
 - [ ] **Stays on Anthropic**: homepage drafter, ai-parse-csv. Structured-
   output quality + system-prompt steering matter more than CF margin.
 

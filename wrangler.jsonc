@@ -63,6 +63,19 @@
     "binding": "AI"
   },
 
+  // Vectorize — vector store for the embeddings the AI binding generates.
+  // Used for semantic search across farm descriptions, share notes, etc.
+  // Create with:
+  //   wrangler vectorize create communicare-embeddings \
+  //     --dimensions=384 --metric=cosine
+  // Then paste the index_name in here if you customized it.
+  "vectorize": [
+    {
+      "binding": "EMBEDDINGS",
+      "index_name": "communicare-embeddings"
+    }
+  ],
+
   // Vars baked into Workers at deploy time. Secrets (API keys, etc.)
   // are set via `wrangler secret put ...` and never live in this file.
   "vars": {

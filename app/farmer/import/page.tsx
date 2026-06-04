@@ -5,8 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/farmer/shell";
 import { Wheat, Barn, Sun } from "@/components/mark";
 import { StepBar } from "@/components/step-bar";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { getOperatorFarm } from "@/lib/supabase/queries";
+import {
+  getMeWithFarm,
+  listShares,
+  listPickupSites,
+  type ShareDef as ApiShareDef,
+  type PickupSite as ApiPickupSite,
+} from "@/lib/farmer/api";
 import { parseCsv } from "@/lib/csv-utils";
 import { CLOSING_BLESSING, MIGRATE_EMAIL, MIGRATE_MAILTO } from "@/lib/brand-strings";
 
@@ -133,41 +138,39 @@ function ImportInner() {
   // Without these the mapping step is unusable.
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) return;
     let cancelled = false;
     (async () => {
-      const { data: userData } = await supabase.auth.getUser();
+      const me = await getMeWithFarm();
       if (cancelled) return;
-      if (!userData?.user) {
+      if (!("ok" in me) || !me.ok) {
         setFarmLoadError("Sign in before importing.");
         return;
       }
-      const fmRow = await getOperatorFarm(supabase, userData.user.id);
-      if (cancelled) return;
-      if (!fmRow) {
+      if (!me.farm) {
         setFarmLoadError("No farm found for this account.");
         return;
       }
-      setFarmId(fmRow.farm_id);
+      setFarmId(me.farm.id);
 
-      const [{ data: shares }, { data: pickups }] = await Promise.all([
-        supabase
-          .from("share_definitions")
-          .select("id, name, description")
-          .eq("farm_id", fmRow.farm_id)
-          .eq("is_active", true)
-          .order("name"),
-        supabase
-          .from("pickup_sites")
-          .select("id, name, address")
-          .eq("farm_id", fmRow.farm_id)
-          .eq("is_active", true)
-          .order("display_order"),
+      const [sharesRes, pickupsRes] = await Promise.all([
+        listShares(),
+        listPickupSites(),
       ]);
       if (cancelled) return;
-      setShareDefs((shares ?? []) as ShareDef[]);
-      setPickupSites((pickups ?? []) as PickupSite[]);
+      if ("ok" in sharesRes && sharesRes.ok) {
+        setShareDefs(sharesRes.shares.map((s: ApiShareDef) => ({
+          id: s.id,
+          name: s.name,
+          description: s.description,
+        })));
+      }
+      if ("ok" in pickupsRes && pickupsRes.ok) {
+        setPickupSites(pickupsRes.pickup_sites.map((p: ApiPickupSite) => ({
+          id: p.id,
+          name: p.name,
+          address: p.address,
+        })));
+      }
     })();
     return () => {
       cancelled = true;
@@ -259,16 +262,14 @@ function ImportInner() {
   // ---------------------------------------------------------------------------
   async function runAiParse() {
     if (rows.length === 0) return;
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setAiError("Supabase isn't configured on this deploy.");
-      return;
-    }
     setAiLoading(true);
     setAiError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-parse-csv", {
-        body: {
+      const res = await fetch("/api/farmer/ai-parse-csv", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           preview: {
             headers,
             rows: rows.slice(0, 30),
@@ -276,10 +277,12 @@ function ImportInner() {
           share_definitions: shareDefs,
           pickup_sites: pickupSites,
           source_hint: source || undefined,
-        },
+        }),
       });
-      if (error) throw new Error(error.message);
-      if (!data?.ok) throw new Error(data?.error ?? "AI parse failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error ?? "AI parse failed");
+      }
 
       const cm = data.column_map as Record<string, CanonField>;
       const sm = data.share_map as Record<string, string | null>;
@@ -337,18 +340,6 @@ function ImportInner() {
       });
       return;
     }
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setResult({
-        imported: 0,
-        warned: 0,
-        invited: 0,
-        messages: ["Supabase isn't configured on this deploy."],
-        importableEmails: [],
-      });
-      return;
-    }
-
     setCommitting(true);
     setResult(null);
 
@@ -371,15 +362,19 @@ function ImportInner() {
       })),
     };
 
-    const { data, error } = await supabase.functions.invoke("import-members", {
-      body: payload,
+    const res = await fetch("/api/farmer/import-members", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-    if (error) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) {
       setResult({
         imported: 0,
         warned: 0,
         invited: 0,
-        messages: [error.message],
+        messages: [data?.error ?? `Import failed (HTTP ${res.status}).`],
         importableEmails: [],
       });
     } else {
@@ -396,8 +391,6 @@ function ImportInner() {
           .map((r) => r.email)
           .filter((e): e is string => Boolean(e)),
       });
-      // After commit, jump to the invite step (3) so the operator can
-      // choose whether to send invites now.
       setStep(3);
     }
     setCommitting(false);
@@ -409,22 +402,25 @@ function ImportInner() {
   // ---------------------------------------------------------------------------
   async function sendInvites() {
     if (!farmId || !result) return;
-    const supabase = getSupabaseBrowser();
-    if (!supabase) return;
     setSendingInvites(true);
-    const redirectTo =
-      typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
-    const { data, error } = await supabase.functions.invoke("invite-members", {
-      body: {
+    const res = await fetch("/api/farmer/invite-members", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         farm_id: farmId,
         emails: result.importableEmails,
-        redirect_to: redirectTo,
-      },
+        redirect_to: "/share/",
+      }),
     });
-    if (error) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) {
       setResult({
         ...result,
-        messages: [...result.messages, `Invite send failed: ${error.message}`],
+        messages: [
+          ...result.messages,
+          `Invite send failed: ${data?.error ?? `HTTP ${res.status}`}`,
+        ],
       });
     } else {
       setResult({

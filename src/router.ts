@@ -68,6 +68,9 @@ import * as createFarm from "../functions/api/farmer/onboarding/create-farm";
 import * as shares from "../functions/api/farmer/shares";
 import * as pickupSites from "../functions/api/farmer/pickup-sites";
 import * as completeOnboarding from "../functions/api/farmer/complete-onboarding";
+import * as importMembersWorker from "../functions/api/farmer/import-members";
+import * as aiParseWorker from "../functions/api/farmer/ai-parse-csv";
+import * as inviteMembersWorker from "../functions/api/farmer/invite-members";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -149,6 +152,12 @@ const ROUTES: Route[] = [
   { method: "OPTIONS", pattern: P("/api/farmer/pickup-sites"), handler: adapt(pickupSites.onRequestOptions) },
   { method: "POST",    pattern: P("/api/farmer/complete-onboarding"), handler: adapt(completeOnboarding.onRequestPost) },
   { method: "OPTIONS", pattern: P("/api/farmer/complete-onboarding"), handler: adapt(completeOnboarding.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/import-members"), handler: adapt(importMembersWorker.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/import-members"), handler: adapt(importMembersWorker.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/ai-parse-csv"),   handler: adapt(aiParseWorker.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/ai-parse-csv"),   handler: adapt(aiParseWorker.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/invite-members"), handler: adapt(inviteMembersWorker.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/invite-members"), handler: adapt(inviteMembersWorker.onRequestOptions) },
 ];
 
 // -----------------------------------------------------------------------------

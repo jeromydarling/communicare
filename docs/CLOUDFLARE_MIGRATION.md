@@ -96,11 +96,22 @@ talk to D1 instead of Supabase Postgres.
 
 ### Phase 5 — Storage + Images
 
-- [ ] R2 buckets: `farm-photos`, `product-photos`, `imports` (audit CSVs)
-- [ ] Worker: signed-upload URLs for browser direct-upload to R2
-- [ ] Cloudflare Images set up with R2 as the source; variant rules for
-  card / detail / hero / OG image sizes
-- [ ] Replace any Supabase Storage references in the codebase
+- [x] R2 buckets declared in `wrangler.jsonc`: `FARM_PHOTOS`,
+  `PRODUCT_PHOTOS`, `IMPORTS`. You still need to run
+  `wrangler r2 bucket create communicare-farm-photos` (× 3) in the
+  dashboard or CLI.
+- [x] `functions/api/uploads/[bucket].ts` — multipart upload Pages
+  Function. Auth-gated (Supabase JWT during transition), per-bucket
+  size + MIME limits, server-side namespacing on user id so a request
+  can't overwrite another user's keys.
+- [x] `functions/i/[bucket]/[[key]].ts` — public serve endpoint for the
+  two public buckets. Cloudflare image transformations (`?w=240&q=80`)
+  pass through automatically when the zone has Image Transformations
+  on.
+- [x] `lib/images.ts` — variant URL builder (`thumb / card / detail /
+  hero / og`).
+- [ ] Replace any Supabase Storage references in the codebase (none
+  active today — the existing app uses sample images from `public/`).
 
 ### Phase 6 — KV caching + rate limiting
 
@@ -111,7 +122,11 @@ talk to D1 instead of Supabase Postgres.
 
 ### Phase 7 — Workers AI (low-stakes only)
 
-- [ ] Alt-text for uploaded farm/product photos (Llama 3.2 vision)
+- [x] Alt-text for uploaded farm/product photos
+  (`functions/api/ai/alt-text.ts`, Llama 3.2 11B Vision Instruct).
+  Auth-gated; takes either a URL or a (bucket, key) and returns a
+  12-25 word description with the editorial voice constraints baked
+  into the prompt.
 - [ ] Embedding generation for farm descriptions, stored in D1 (powers
   semantic search later via Vectorize)
 - [ ] **Stays on Anthropic**: homepage drafter, ai-parse-csv. Structured-
@@ -119,6 +134,13 @@ talk to D1 instead of Supabase Postgres.
 
 ### Phase 8 — Decommission Supabase
 
+- [x] `scripts/migrate-pg-to-d1.ts` — one-shot Postgres → D1 export
+  script. Reads every table from Supabase via the service-role key,
+  emits a SQLite dump file `wrangler d1 execute --file` can play
+  back. FK-correct table order, jsonb → text, boolean → 0/1, single-
+  quote escaping. Run on a paused snapshot:
+  `npm run pg-to-d1 > d1-import.sql` then
+  `wrangler d1 execute communicare-db --remote --file d1-import.sql`.
 - [ ] Verify D1 has 100% of production data
 - [ ] Verify every Worker route handles its case
 - [ ] Cut DNS / app config to point only at Cloudflare

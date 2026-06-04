@@ -24,6 +24,8 @@
     "node_modules",
     "server/**",
     "supabase/functions/**",
-    "remotion/**"
+    "remotion/**",
+    "functions/**",
+    "scripts/**"
   ]
 }

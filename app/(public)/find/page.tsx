@@ -204,12 +204,17 @@ export default function FindPage() {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "find-nearby-farms",
-        { body: { zip, radiusMiles: radius } },
-      );
-      if (error) {
-        setSearchError(error.message ?? "Couldn't reach the discovery service.");
+      // Goes to the Pages Function at /api/find-nearby-farms, which
+      // KV-caches the response by (zip, radius) and forwards to the
+      // Supabase upstream on miss. Sub-10ms reads on a warm cache.
+      const res = await fetch("/api/find-nearby-farms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zip, radiusMiles: radius }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSearchError(data?.error ?? "Couldn't reach the discovery service.");
         setSearching(false);
         return;
       }
@@ -789,24 +794,36 @@ Thank you,
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "record-farm-inquiry",
-        {
-          body: {
-            discoveredFarmId: farm.id,
-            senderName: name.trim(),
-            senderEmail: email.trim(),
-            senderZip: zip.trim() || undefined,
-            subject: `A note from a neighbor — found you through Communicare`,
-            body: body.trim(),
-          },
-        },
-      );
+      // Goes to the Pages Function at /api/record-farm-inquiry, which
+      // applies per-IP + per-(IP,farm) rate limits in KV before
+      // forwarding to the Supabase upstream. If we have a session, pass
+      // the token through so the upstream tags member_user_id.
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.access_token) {
+        headers.Authorization = `Bearer ${sessionData.session.access_token}`;
+      }
 
-      if (error) {
+      const res = await fetch("/api/record-farm-inquiry", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          discoveredFarmId: farm.id,
+          senderName: name.trim(),
+          senderEmail: email.trim(),
+          senderZip: zip.trim() || undefined,
+          subject: `A note from a neighbor — found you through Communicare`,
+          body: body.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
         setResult({
           ok: false,
-          error: error.message ?? "Couldn't send the note.",
+          error: data?.error ?? "Couldn't send the note.",
         });
         setSending(false);
         return;

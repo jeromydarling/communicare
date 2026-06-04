@@ -65,7 +65,7 @@ export function PendingCropMappings({ farmId }: PendingCropMappingsProps) {
 
     setMappings(
       (data ?? []).map((r: Record<string, unknown>) => ({
-        ...(r as CropMapping),
+        ...(r as unknown as CropMapping),
         suggested_product_name: (r.suggested as { name: string } | null)?.name,
       })),
     );
@@ -167,7 +167,7 @@ export function PendingCropMappings({ farmId }: PendingCropMappingsProps) {
                 {m.hortus_variety && (
                   <span className="text-soil/55 text-sm ml-1.5">({m.hortus_variety})</span>
                 )}
-                {m.raw_payload?.weight_lbs && (
+                {Boolean(m.raw_payload?.weight_lbs) && (
                   <span className="ml-2 text-xs text-soil/50">
                     {String(m.raw_payload.weight_lbs)} lbs logged
                   </span>

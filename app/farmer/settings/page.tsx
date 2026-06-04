@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { getOperatorFarm } from "@/lib/supabase/queries";
 import { PageHeader } from "@/components/farmer/shell";
 import {
   demoFarm,
@@ -16,22 +17,20 @@ import { PendingCropMappings } from "./PendingCropMappings";
 
 export default function FarmerSettingsPage() {
   const [farmId, setFarmId] = useState<string | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
-    async function loadFarmId() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("farm_members")
-        .select("farm_id")
-        .eq("user_id", user.id)
-        .eq("role", "owner")
-        .limit(1)
-        .single();
-      if (data) setFarmId(data.farm_id);
-    }
-    loadFarmId();
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return;
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (cancelled || !userData?.user) return;
+      const fm = await getOperatorFarm(supabase, userData.user.id);
+      if (!cancelled && fm) setFarmId(fm.farm_id);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

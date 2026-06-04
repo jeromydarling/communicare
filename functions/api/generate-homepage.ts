@@ -31,6 +31,8 @@ import { rateLimit, ipBucket } from "../_lib/ratelimit";
 
 type Env = {
   ANTHROPIC_API_KEY?: string;
+  AI_GATEWAY_URL?: string;
+  AI_GATEWAY_TOKEN?: string;
   RATELIMIT?: KVNamespace;
 };
 
@@ -176,7 +178,22 @@ ${parsed.data.pickupInfo}${farmerNote}
 Render the homepage now, in the voice and style I described. Output only the JSON.`;
 
   try {
-    const client = new Anthropic({ apiKey: ctx.env.ANTHROPIC_API_KEY });
+    // Route through Cloudflare AI Gateway when configured. Gives us
+    // caching, cost monitoring, and per-call observability without
+    // changing the SDK surface. The Anthropic key still pays for the
+    // call; the gateway token (cf-aig-authorization) authenticates the
+    // gateway-side hop when "Authenticated Gateway" is on.
+    const baseURL = ctx.env.AI_GATEWAY_URL
+      ? `${ctx.env.AI_GATEWAY_URL.replace(/\/+$/, "")}/anthropic`
+      : undefined;
+    const defaultHeaders = ctx.env.AI_GATEWAY_TOKEN
+      ? { "cf-aig-authorization": `Bearer ${ctx.env.AI_GATEWAY_TOKEN}` }
+      : undefined;
+    const client = new Anthropic({
+      apiKey: ctx.env.ANTHROPIC_API_KEY,
+      baseURL,
+      defaultHeaders,
+    });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await (client.messages as any).parse({
       model: "claude-opus-4-7",

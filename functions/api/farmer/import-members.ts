@@ -29,6 +29,7 @@ type Env = {
   DB?: D1Database;
   EMAIL?: EmailSendBinding;
   SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
   SITE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -285,11 +286,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
           );
           const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
           const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
-          const sent = await sendEmail(
-            ctx.env.EMAIL,
-            ctx.env.SEND_FROM,
-            magicLinkEmail({ to: emailLower, link, purpose: "invite" }),
-          );
+          const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
+            ...magicLinkEmail({ to: emailLower, link, purpose: "invite" }),
+            replyTo: ctx.env.SYSTEM_REPLY_TO,
+          });
           if (sent.ok) didInvite = true;
         } catch (err) {
           console.warn("invite failed for row", row.row_number, err);

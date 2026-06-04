@@ -90,6 +90,7 @@ encrypted.
 | Secret | Required? | What it does |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | yes | Homepage drafter (Claude Opus — editorial voice) |
+| `AI_GATEWAY_TOKEN` | yes | Authenticated Gateway header (`cf-aig-authorization`) on every Claude + Workers AI call |
 | `PERPLEXITY_API_KEY` | yes | `/find` ZIP search |
 | `MAPBOX_TOKEN` | yes | Geocoding inside `find-nearby-farms` (server-side; the public token still goes in vars) |
 | `TURNSTILE_SECRET` | recommended | Anti-spam on `/api/waitlist`; pass-through if unset (dev-friendly) |
@@ -136,20 +137,18 @@ show "domain not verified" errors.
 Sending is available on the **Workers Paid plan** ($5/mo). The first
 ~100k messages/month are included.
 
-## 5. Inbound email routing
+## 5. Reply-to on system emails
 
-Cloudflare Email Routing forwards mail at custom addresses to your real
-inbox without an SMTP server. In the CF dashboard:
+Every system-generated email (signup confirmation, magic link, password
+reset, invite) carries `Reply-To: gardener@thecros.app` so members
+write back to a real address even though the From: is `hello@
+mycommuni.care`. Declared as `vars.SYSTEM_REPLY_TO` in
+`wrangler.jsonc` — change the value there to swap inboxes.
 
-**mycommuni.care → Email → Email Routing**
-
-Add routes:
-
-- `hello@mycommuni.care` → your real inbox
-- `migrate@mycommuni.care` → your real inbox (or a shared one if you've
-  got migration help)
-
-Cloudflare auto-adds the MX records. SPF you already added in step 4.
+Inbound Email Routing is **not** required. If you want to forward
+mail addressed to `hello@mycommuni.care` or other custom addresses to
+a real inbox without an SMTP server, enable Email Routing on the
+zone — but the app itself doesn't need it.
 
 ## 6. Deploy
 

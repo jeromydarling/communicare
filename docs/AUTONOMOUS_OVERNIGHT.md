@@ -47,18 +47,25 @@ Then uncomment the `vectorize` block in `wrangler.jsonc`.
 
 CF dashboard → **Compute & AI → Email Service → Onboard Domain →
 `mycommuni.care`**. CF adds SPF + DKIM records to your zone
-automatically (since DNS is on CF). Verification typically completes in
-5–15 minutes. **Until this finishes, all `EMAIL.send()` calls fail —
-sign-up, magic link, forgot password, invite emails will all return
-"binding missing" or upstream errors.**
+automatically. Verification typically completes in 5–15 minutes.
+**Until this finishes, all `EMAIL.send()` calls fail — sign-up, magic
+link, forgot password, invite emails will all return "binding missing"
+or upstream errors.**
+
+Reply-to on every system email defaults to `gardener@thecros.app`
+(declared as `vars.SYSTEM_REPLY_TO` in `wrangler.jsonc`). Inbound Email
+Routing isn't needed — you said skip it. Members reply to that
+gardener address; farm-to-member emails carry the farm's own reply-to
+when that flow lands.
 
 ### 4. Secrets (~2 min via `wrangler secret put`)
 
 ```bash
-npx wrangler secret put ANTHROPIC_API_KEY      # homepage drafter (Claude — Llama failed the voice test)
-npx wrangler secret put PERPLEXITY_API_KEY     # /find ZIP search
-npx wrangler secret put MAPBOX_TOKEN           # server-side geocoding
-npx wrangler secret put TURNSTILE_SECRET       # /api/waitlist anti-spam (optional — pass-through if unset)
+npx wrangler secret put ANTHROPIC_API_KEY     # homepage drafter (Claude — Llama failed the voice test)
+npx wrangler secret put AI_GATEWAY_TOKEN      # cfut_... — routes Claude + Workers AI through the gateway
+npx wrangler secret put PERPLEXITY_API_KEY    # /find ZIP search
+npx wrangler secret put MAPBOX_TOKEN          # server-side geocoding
+npx wrangler secret put TURNSTILE_SECRET      # /api/waitlist anti-spam — value: 0x4AAAAAADe1zpDIC8hHHiYKSs5y3lbVY5s
 ```
 
 ### 5. Build-time public vars (~1 min in dashboard)
@@ -66,7 +73,7 @@ npx wrangler secret put TURNSTILE_SECRET       # /api/waitlist anti-spam (option
 CF dashboard → your Worker → Settings → Variables → Build environment:
 
 - `NEXT_PUBLIC_MAPBOX_TOKEN` (the public Mapbox token)
-- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (paired with the secret above)
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAADe1zsvubT9uji8o`
 
 ## What's deferred
 

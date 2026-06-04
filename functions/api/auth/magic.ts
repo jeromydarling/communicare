@@ -17,6 +17,7 @@ type Env = {
   RATELIMIT?: KVNamespace;
   EMAIL?: EmailSendBinding;
   SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
   SITE_URL?: string;
 };
 
@@ -79,11 +80,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   );
 
   const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
-  const sent = await sendEmail(
-    ctx.env.EMAIL,
-    ctx.env.SEND_FROM,
-    magicLinkEmail({ to: email, link, purpose: "signin" }),
-  );
+  const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
+    ...magicLinkEmail({ to: email, link, purpose: "signin" }),
+    replyTo: ctx.env.SYSTEM_REPLY_TO,
+  });
   if (!sent.ok) {
     console.error("magic send failed:", sent.error);
     // Still return success — never tell the caller why the email failed

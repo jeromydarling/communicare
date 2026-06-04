@@ -17,6 +17,7 @@ type Env = {
   RATELIMIT?: KVNamespace;
   EMAIL?: EmailSendBinding;
   SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
   SITE_URL?: string;
 };
 
@@ -66,11 +67,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
   const link = `${siteUrl}/farmer/reset-password/?token=${encodeURIComponent(token)}`;
-  const sent = await sendEmail(
-    ctx.env.EMAIL,
-    ctx.env.SEND_FROM,
-    passwordResetEmail({ to: email, link }),
-  );
+  const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
+    ...passwordResetEmail({ to: email, link }),
+    replyTo: ctx.env.SYSTEM_REPLY_TO,
+  });
   if (!sent.ok) console.error("reset send failed:", sent.error);
 
   return json({ ok: true });

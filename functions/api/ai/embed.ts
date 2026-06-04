@@ -32,6 +32,7 @@ import { verifyAuth } from "../../_lib/auth";
 
 type Env = {
   AI?: Ai;
+  AI_GATEWAY_NAME?: string;
   EMBEDDINGS?: VectorizeIndex;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -75,11 +76,15 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     );
   }
 
+  const gatewayOpts = ctx.env.AI_GATEWAY_NAME
+    ? { gateway: { id: ctx.env.AI_GATEWAY_NAME } }
+    : undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = (await ctx.env.AI.run(MODEL as never, { text } as never)) as {
-    data?: number[][];
-    shape?: number[];
-  };
+  const result = (await ctx.env.AI.run(
+    MODEL as never,
+    { text } as never,
+    gatewayOpts as never,
+  )) as { data?: number[][]; shape?: number[] };
   const vector = result?.data?.[0];
   if (!vector || vector.length === 0) {
     return json({ error: "Model returned no embedding." }, 502);

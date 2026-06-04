@@ -24,6 +24,7 @@ import { verifyAuth } from "../../_lib/auth";
 
 type Env = {
   AI?: Ai;
+  AI_GATEWAY_NAME?: string;
   FARM_PHOTOS?: R2Bucket;
   PRODUCT_PHOTOS?: R2Bucket;
   SUPABASE_URL?: string;
@@ -76,6 +77,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   // Llama 3.2 11B Vision Instruct — the smallest of the vision-capable
   // models on Workers AI, plenty for this task.
+  const gatewayOpts = ctx.env.AI_GATEWAY_NAME
+    ? { gateway: { id: ctx.env.AI_GATEWAY_NAME } }
+    : undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const out = (await ctx.env.AI.run(
     "@cf/meta/llama-3.2-11b-vision-instruct" as never,
@@ -84,6 +88,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       image: Array.from(bytes),
       max_tokens: 80,
     } as never,
+    gatewayOpts as never,
   )) as { description?: string; response?: string };
 
   const text = (out?.description ?? out?.response ?? "").trim();

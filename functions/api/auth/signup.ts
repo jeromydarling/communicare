@@ -24,6 +24,7 @@ type Env = {
   DB?: D1Database;
   EMAIL?: EmailSendBinding;
   SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
   SITE_URL?: string;
 };
 
@@ -149,9 +150,8 @@ async function sendConfirmationEmail(
   );
   const siteUrl = env.SITE_URL ?? "https://mycommuni.care";
   const link = `${siteUrl.replace(/\/+$/, "")}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
-  await sendEmail(env.EMAIL, env.SEND_FROM, magicLinkEmail({
-    to: email,
-    link,
-    purpose: "confirm",
-  }));
+  await sendEmail(env.EMAIL, env.SEND_FROM, {
+    ...magicLinkEmail({ to: email, link, purpose: "confirm" }),
+    replyTo: env.SYSTEM_REPLY_TO,
+  });
 }

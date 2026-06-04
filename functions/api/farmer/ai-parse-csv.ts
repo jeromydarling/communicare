@@ -17,6 +17,7 @@ import { parseCsv } from "../../../lib/csv-utils";
 
 type Env = {
   AI?: Ai;
+  AI_GATEWAY_NAME?: string;
   DB?: D1Database;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
@@ -147,22 +148,29 @@ For share_map and pickup_map: extract DISTINCT values seen in the share/pickup c
 Return ONLY the JSON object that satisfies the schema.`;
 
   try {
+    const gatewayOpts = ctx.env.AI_GATEWAY_NAME
+      ? { gateway: { id: ctx.env.AI_GATEWAY_NAME } }
+      : undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const aiResp: any = await ctx.env.AI.run(MODEL as never, {
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a careful data-mapping assistant. Respond with strict JSON matching the schema. If you're not sure about a mapping, prefer null over a wrong guess.",
+    const aiResp: any = await ctx.env.AI.run(
+      MODEL as never,
+      {
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a careful data-mapping assistant. Respond with strict JSON matching the schema. If you're not sure about a mapping, prefer null over a wrong guess.",
+          },
+          { role: "user", content: userMessage },
+        ],
+        response_format: {
+          type: "json_schema",
+          schema: RESPONSE_SCHEMA,
         },
-        { role: "user", content: userMessage },
-      ],
-      response_format: {
-        type: "json_schema",
-        schema: RESPONSE_SCHEMA,
-      },
-      max_tokens: 4000,
-    } as never);
+        max_tokens: 4000,
+      } as never,
+      gatewayOpts as never,
+    );
 
     const candidate =
       typeof aiResp === "object" && aiResp !== null && "response" in aiResp

@@ -65,6 +65,9 @@
   "vars": {
     "SITE_URL": "https://mycommuni.care",
     "SEND_FROM": "Communicare <hello@mycommuni.care>",
+    "SYSTEM_REPLY_TO": "gardener@thecros.app",
+    "AI_GATEWAY_URL": "https://gateway.ai.cloudflare.com/v1/f84f7181c051be0040e972dcad48e697/communicare",
+    "AI_GATEWAY_NAME": "communicare",
     "ENVIRONMENT": "production"
   },
 

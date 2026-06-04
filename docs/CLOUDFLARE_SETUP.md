@@ -19,7 +19,10 @@ from the edge. Data lives in **D1** (SQLite). Sessions, cache, and rate
 limits live in **KV**. Photos and import CSVs live in **R2**. Embeddings
 live in **Vectorize**. Outbound mail goes through the **Cloudflare Email Service `send_email` binding**; inbound at
 `hello@`, `migrate@` goes through **Cloudflare Email Routing**. The
-homepage drafter and the CSV column mapper run on **Workers AI** (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, JSON schema mode);
+homepage drafter runs on **Anthropic Claude Opus** (editorial-voice
+constraint adherence — we tried Llama 3.3 70B and it kept producing the
+exact SaaS-y phrases the prompt forbids); the CSV column mapper runs on
+**Workers AI** (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, JSON schema mode);
 low-stakes AI (alt-text, embeddings) uses **Workers AI**.
 
 ## 0. Prerequisites
@@ -30,7 +33,8 @@ low-stakes AI (alt-text, embeddings) uses **Workers AI**.
 - A registered domain on Cloudflare DNS (this repo expects `mycommuni.care`
   but any domain works — see "Customizing the domain" at the bottom).
 - (No Resend account needed — outbound uses Cloudflare Email Service direct.)
-- (No Anthropic key needed — homepage drafter + CSV mapper run on Workers AI Llama 3.3 70B.)
+- An Anthropic API key for the homepage drafter only (CSV mapper +
+  low-stakes AI run on Workers AI).
 - A Mapbox token for the `/find` geocoder.
 - A Perplexity API key for the discovery search.
 - Local: Node 22+, `npx wrangler login` once.
@@ -85,6 +89,7 @@ encrypted.
 
 | Secret | Required? | What it does |
 |---|---|---|
+| `ANTHROPIC_API_KEY` | yes | Homepage drafter (Claude Opus — editorial voice) |
 | `PERPLEXITY_API_KEY` | yes | `/find` ZIP search |
 | `MAPBOX_TOKEN` | yes | Geocoding inside `find-nearby-farms` (server-side; the public token still goes in vars) |
 | `TURNSTILE_SECRET` | recommended | Anti-spam on `/api/waitlist`; pass-through if unset (dev-friendly) |

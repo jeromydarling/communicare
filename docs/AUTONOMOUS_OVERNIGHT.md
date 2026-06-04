@@ -55,6 +55,7 @@ sign-up, magic link, forgot password, invite emails will all return
 ### 4. Secrets (~2 min via `wrangler secret put`)
 
 ```bash
+npx wrangler secret put ANTHROPIC_API_KEY      # homepage drafter (Claude — Llama failed the voice test)
 npx wrangler secret put PERPLEXITY_API_KEY     # /find ZIP search
 npx wrangler secret put MAPBOX_TOKEN           # server-side geocoding
 npx wrangler secret put TURNSTILE_SECRET       # /api/waitlist anti-spam (optional — pass-through if unset)

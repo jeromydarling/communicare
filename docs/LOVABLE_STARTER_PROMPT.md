@@ -16,7 +16,9 @@ REPO        https://github.com/jeromydarling/communicare  (branch: main)
 STACK       Next.js 15 static export · Cloudflare Workers Assets
             · Cloudflare D1 + KV + R2 + Vectorize + Workers AI
             · Custom auth on Workers · CF Email Sending (outbound)
-            · CF Email Routing (inbound) · Workers AI (Llama 3.3 70B)
+            · CF Email Routing (inbound) · Anthropic Claude (homepage
+              drafter only) · Workers AI Llama 3.3 70B (CSV mapper +
+              alt-text + embeddings)
             · Mapbox · Perplexity Sonar · ElevenLabs
 
 YOUR JOB — five steps, in order
@@ -45,6 +47,10 @@ YOUR JOB — five steps, in order
    --command "select name from sqlite_master where type='table'"
 
 4. SECRETS  (npx wrangler secret put <NAME>)
+     ANTHROPIC_API_KEY      required · homepage drafter (Claude Opus —
+                                       editorial-voice constraint
+                                       adherence; Llama failed the
+                                       voice test)
      PERPLEXITY_API_KEY     required · /find ZIP search
      MAPBOX_TOKEN           required · server-side geocoding
      TURNSTILE_SECRET       recommended · /api/waitlist anti-spam
@@ -52,8 +58,8 @@ YOUR JOB — five steps, in order
      TWILIO_AUTH_TOKEN      defer · SMS swap loop comes later
    (No outbound-mail API key needed — CF Email Service binding handles
    it. Onboard the domain at dash → Compute & AI → Email Service.)
-   (No Anthropic key needed — Workers AI Llama 3.3 70B handles the
-   homepage drafter and CSV column mapper in JSON-schema mode.)
+   (CSV mapper + low-stakes AI run on Workers AI Llama 3.3 70B; only
+   the homepage drafter uses Claude.)
 
 5. BUILD-TIME ENV VARS (CF dashboard → Worker → Settings → Variables)
      NEXT_PUBLIC_MAPBOX_TOKEN          public Mapbox token for the map widget

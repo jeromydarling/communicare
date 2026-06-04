@@ -71,6 +71,7 @@ import * as completeOnboarding from "../functions/api/farmer/complete-onboarding
 import * as importMembersWorker from "../functions/api/farmer/import-members";
 import * as aiParseWorker from "../functions/api/farmer/ai-parse-csv";
 import * as inviteMembersWorker from "../functions/api/farmer/invite-members";
+import * as generateHomepage from "../functions/api/generate-homepage";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -158,6 +159,10 @@ const ROUTES: Route[] = [
   { method: "OPTIONS", pattern: P("/api/farmer/ai-parse-csv"),   handler: adapt(aiParseWorker.onRequestOptions) },
   { method: "POST",    pattern: P("/api/farmer/invite-members"), handler: adapt(inviteMembersWorker.onRequestPost) },
   { method: "OPTIONS", pattern: P("/api/farmer/invite-members"), handler: adapt(inviteMembersWorker.onRequestOptions) },
+
+  // Homepage drafter (Anthropic Claude, public + rate-limited)
+  { method: "POST",    pattern: P("/api/generate-homepage"), handler: adapt(generateHomepage.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/generate-homepage"), handler: adapt(generateHomepage.onRequestOptions) },
 ];
 
 // -----------------------------------------------------------------------------

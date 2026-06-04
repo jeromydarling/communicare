@@ -9,8 +9,6 @@ import {
   type GeneratedHomepage,
 } from "@/lib/homepage-schema";
 import { sampleGenerated } from "@/lib/sample-homepages";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const SAMPLE_PREFILL: GenerateInput = {
   farmName: "Wren Hollow Farm",
@@ -60,26 +58,17 @@ export default function HomepageGenerator() {
     setResult(null);
 
     // Priority:
-    //   1. Supabase Edge Function (live Claude generation) — when env vars set
+    //   1. /api/generate-homepage Worker (live Claude) when ANTHROPIC_API_KEY
+    //      is set on the Worker
     //   2. Pre-baked sample homepage per farm kind — fallback for static demo
-    const supabase = getSupabaseBrowser();
-
-    if (supabase) {
-      try {
-        const { data, error: fnError } = await supabase.functions.invoke(
-          "generate-homepage",
-          { body: form },
-        );
-        if (fnError) {
-          setError(fnError.message ?? "The model didn't respond.");
-          setLoading(false);
-          return;
-        }
-        if (!data?.homepage) {
-          setError(data?.error ?? "The model returned no homepage.");
-          setLoading(false);
-          return;
-        }
+    try {
+      const res = await fetch("/api/generate-homepage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.homepage) {
         setResult(data.homepage);
         setUsage(data.usage ?? null);
         requestAnimationFrame(() =>
@@ -87,21 +76,21 @@ export default function HomepageGenerator() {
             .getElementById("preview")
             ?.scrollIntoView({ behavior: "smooth", block: "start" }),
         );
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "We couldn't reach the generator. Try again in a moment.",
-        );
-      } finally {
         setLoading(false);
+        return;
       }
-      return;
+      // 401/500 with missing API key → fall through to baked sample.
+      if (res.status >= 400 && res.status !== 500) {
+        setError(data?.error ?? "The model didn't respond.");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // network/parse error — fall through to sample
     }
 
-    // No Supabase — show a pre-baked sample homepage so visitors can see
-    // what the generator produces.
-    await new Promise((r) => setTimeout(r, 2000));
+    // Fallback: pre-baked sample so the demo still works.
+    await new Promise((r) => setTimeout(r, 1200));
     const baked = sampleGenerated[form.kind] ?? sampleGenerated["Mixed farm"];
     setResult(baked);
     setUsage(null);
@@ -134,24 +123,13 @@ export default function HomepageGenerator() {
                 like and publish in a click.
               </p>
               <p className="mt-3 text-sm italic text-soil/55 max-w-xl">
-                {isSupabaseConfigured ? (
-                  <>
-                    <span className="not-italic small-caps text-[10px] text-moss mr-2">
-                      Live
-                    </span>
-                    The generator is wired to the Supabase Edge Function — each
-                    draft is unique to your inputs and may take 10–25 seconds.
-                  </>
-                ) : (
-                  <>
-                    <span className="not-italic small-caps text-[10px] text-wheat mr-2">
-                      Demo mode
-                    </span>
-                    This public preview serves a pre-baked sample (one per
-                    farm kind) so you can see the format. The live generator
-                    runs when the Supabase backend is configured.
-                  </>
-                )}
+                <span className="not-italic small-caps text-[10px] text-moss mr-2">
+                  Live
+                </span>
+                The generator is wired to Claude through a Cloudflare Worker
+                — each draft is unique to your inputs and takes 10–25 seconds.
+                Falls back to a per-farm-kind sample if the deploy doesn&apos;t
+                have an Anthropic API key.
               </p>
             </div>
             <div className="md:col-span-4 flex justify-end">

@@ -55,6 +55,14 @@ import * as uploads from "../functions/api/uploads/[bucket]";
 import * as altText from "../functions/api/ai/alt-text";
 import * as embed from "../functions/api/ai/embed";
 import * as imageServe from "../functions/i/[bucket]/[[key]]";
+import * as authSignup from "../functions/api/auth/signup";
+import * as authSignin from "../functions/api/auth/signin";
+import * as authSignout from "../functions/api/auth/signout";
+import * as authMe from "../functions/api/auth/me";
+import * as authMagic from "../functions/api/auth/magic";
+import * as authMagicCallback from "../functions/api/auth/magic-callback";
+import * as authForgot from "../functions/api/auth/forgot";
+import * as authReset from "../functions/api/auth/reset";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -105,6 +113,23 @@ const ROUTES: Route[] = [
 
   // Image serve (R2 → CDN, public buckets only)
   { method: "GET", pattern: P("/i/:bucket/:key+"), handler: adapt(imageServe.onRequestGet) },
+
+  // Auth — custom Workers auth (Phase 3)
+  { method: "POST",    pattern: P("/api/auth/signup"),  handler: adapt(authSignup.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/auth/signup"),  handler: adapt(authSignup.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/auth/signin"),  handler: adapt(authSignin.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/auth/signin"),  handler: adapt(authSignin.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/auth/signout"), handler: adapt(authSignout.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/auth/signout"), handler: adapt(authSignout.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/auth/me"),      handler: adapt(authMe.onRequestGet) },
+  { method: "OPTIONS", pattern: P("/api/auth/me"),      handler: adapt(authMe.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/auth/magic"),   handler: adapt(authMagic.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/auth/magic"),   handler: adapt(authMagic.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/auth/magic-callback"), handler: adapt(authMagicCallback.onRequestGet) },
+  { method: "POST",    pattern: P("/api/auth/forgot"),  handler: adapt(authForgot.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/auth/forgot"),  handler: adapt(authForgot.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/auth/reset"),   handler: adapt(authReset.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/auth/reset"),   handler: adapt(authReset.onRequestOptions) },
 ];
 
 // -----------------------------------------------------------------------------

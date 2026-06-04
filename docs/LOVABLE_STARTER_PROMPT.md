@@ -2,6 +2,8 @@
 
 Copy the block below into Lovable as your first message. It tells Lovable
 exactly what to do, what NOT to touch, and where the existing docs live.
+The stack is now fully Cloudflare — Supabase is gone except as a legacy
+reference directory.
 
 ---
 
@@ -11,58 +13,51 @@ backend services. No design changes, no feature additions, no copy
 rewrites — just the wiring described in the project's existing docs.
 
 REPO        https://github.com/jeromydarling/communicare  (branch: main)
-STACK       Next.js 15 static export · Cloudflare Pages (hosting)
-            · Supabase Postgres + Edge Functions (transitional —
-              see docs/CLOUDFLARE_MIGRATION.md for the move to D1
-              + Workers)
-            · Mapbox · Perplexity Sonar · ElevenLabs · Resend · Stripe
+STACK       Next.js 15 static export · Cloudflare Workers Assets
+            · Cloudflare D1 + KV + R2 + Vectorize + Workers AI
+            · Custom auth on Workers · Resend (outbound mail)
+            · CF Email Routing (inbound) · Anthropic Claude · Mapbox
+            · Perplexity Sonar · ElevenLabs
 
 YOUR JOB — five steps, in order
 
-1. DATABASE
-   Connect a fresh Supabase project. Run the eight migrations in
-   supabase/migrations/ in timestamp order. They're idempotent and tested:
-     20260524180000_initial_schema.sql        multi-tenant skeleton, 30+ tables
-     20260525120000_limited_quantity.sql      limited-drop product columns
-     20260525130000_farm_discovery.sql        public farm directory + RLS
-     20260525200000_drop_sites.sql            pickup-distance search
-     20260525215000_import_runs.sql           CSV-import audit trail + RLS
-     20260525220000_onboarding.sql            farms.onboarded_at + index
-     20260525230000_onboarding_rls_fixes.sql  create_farm_for_self RPC + enum
-     20260525240000_perf_indexes.sql          profiles.phone partial index
+1. CLOUDFLARE PROJECT
+   Connect the repo to a Cloudflare Worker project (NOT Pages — the
+   modern unified Workers Assets pattern is what's wired up). Build
+   command: `npm run build`. Deploy command: `npx wrangler deploy`.
+   Custom domain: mycommuni.care (or your fork's domain).
 
-2. SECRETS  (Supabase → Project Settings → Edge Functions → Secrets)
-     ANTHROPIC_API_KEY      required · homepage drafter
+2. PROVISION RESOURCES
+   Run from a local checkout once `wrangler login` is done:
+
+     npm run cf:provision
+
+   This creates D1, three KV namespaces (CACHE, SESSIONS, RATELIMIT),
+   three R2 buckets, and the Vectorize index — then prints sed/node
+   commands to apply the new IDs to wrangler.jsonc. Run those.
+
+3. D1 MIGRATIONS
+   Five migration files in cloudflare/d1/migrations/:
+
+     npm run d1:migrate
+
+   Verifies with: wrangler d1 execute communicare-db --remote
+   --command "select name from sqlite_master where type='table'"
+
+4. SECRETS  (npx wrangler secret put <NAME>)
+     ANTHROPIC_API_KEY      required · homepage drafter + CSV mapper
      PERPLEXITY_API_KEY     required · /find ZIP search
-     VITE_MAPBOX_KEY        required · live map on /find
-     ELEVENLABS_API_KEY     required · soundtrack for the screencast
-     RESEND_API_KEY         optional · enables auto-send on "Send them a note"
-     RESEND_FROM            optional · the From: address (e.g. hello@communicare.farm)
-     TWILIO_AUTH_TOKEN      optional · only if the SMS swap loop goes live now
-     STRIPE_SECRET_KEY      defer · we'll wire Stripe Connect after a
-                                       Claude Chrome end-to-end click test
+     MAPBOX_TOKEN           required · server-side geocoding
+     RESEND_API_KEY         required · outbound mail
+     RESEND_FROM            required · "Communicare <hello@mycommuni.care>"
+     TURNSTILE_SECRET       recommended · /api/waitlist anti-spam
+     STRIPE_SECRET_KEY      defer · billing comes later
+     TWILIO_AUTH_TOKEN      defer · SMS swap loop comes later
 
-3. EDGE FUNCTIONS
-   Deploy all eight with --no-verify-jwt:
-     supabase functions deploy generate-homepage   --no-verify-jwt
-     supabase functions deploy find-nearby-farms   --no-verify-jwt
-     supabase functions deploy record-farm-inquiry --no-verify-jwt
-     supabase functions deploy twilio-webhook      --no-verify-jwt
-     supabase functions deploy stripe-connect      --no-verify-jwt
-     supabase functions deploy ai-parse-csv        --no-verify-jwt
-     supabase functions deploy import-members      --no-verify-jwt
-     supabase functions deploy invite-members      --no-verify-jwt
-
-4. AUTH
-   Flip Google OAuth on in your auth panel — that's all the operator
-   sign-in needs. Email + password is already configured server-side.
-   Members use magic links only; no separate setup.
-
-5. ENV VARS ON THE BUILD
-     NEXT_PUBLIC_SUPABASE_URL       from your Supabase project
-     NEXT_PUBLIC_SUPABASE_ANON_KEY  from your Supabase project (publishable)
-     VITE_MAPBOX_KEY                same key as #2 (the build aliases it)
-     NEXT_PUBLIC_SITE_URL           the live domain (https://communicare.farm)
+5. BUILD-TIME ENV VARS (CF dashboard → Worker → Settings → Variables)
+     NEXT_PUBLIC_MAPBOX_TOKEN          public Mapbox token for the map widget
+     NEXT_PUBLIC_TURNSTILE_SITE_KEY    Turnstile site key (paired with
+                                       the TURNSTILE_SECRET above)
 
 HANDS OFF
 
@@ -74,46 +69,57 @@ HANDS OFF
   "what stays SVG" inventory is in docs/IMAGES.md.
 - DO NOT touch the Remotion video pipeline (remotion/ folder) — that
   builds via GitHub Actions independently.
+- DO NOT migrate anything back to Supabase. The legacy supabase/
+  directory is reference-only; the live stack reads/writes D1.
 
 READ FIRST
 
-  docs/SUPABASE_SETUP.md   canonical setup guide, top-to-bottom
-  docs/IMAGES.md           watercolor handoff + Gemini prompts
-  docs/CUSTOM_DOMAINS.md   path-based farm URLs (communicare.farm/slug)
-  docs/SEO.md              SEO surface, sitemap, robots, JSON-LD
-  README.md                project map
+  docs/CLOUDFLARE_SETUP.md     canonical setup guide, top-to-bottom
+  docs/CLOUDFLARE_MIGRATION.md the phased history of the move from
+                               Supabase (Phase 0 → 8). Read this if
+                               you wonder why something is structured
+                               the way it is.
+  docs/IMAGES.md               watercolor handoff + Gemini prompts
+  docs/CUSTOM_DOMAINS.md       custom-domain wiring
+  docs/SEO.md                  SEO surface, sitemap, robots, JSON-LD
+  README.md                    project map
 
 VERIFY WHEN DONE
 
-The checklist at the bottom of docs/SUPABASE_SETUP.md walks every
-critical path: magic-link sign-in, ZIP search returning farms sorted
-by pickup distance, "Send them a note" logging an inquiry, /claim
-loading a discovered farm, the deploy commit SHA appearing in the
-asset cache-bust URLs.
+The checklist at the bottom of docs/CLOUDFLARE_SETUP.md walks every
+critical path: magic-link sign-in, email + password sign-up landing in
+the onboarding wizard, ZIP search returning farms with sub-10ms cache
+hits, "Send them a note" inserting an inquiry, CSV import end-to-end
+into D1, /join writing through the Turnstile-gated worker.
 
-Once those pass, ping me. Stripe Connect comes next, after the
-end-to-end click test.
+curl https://mycommuni.care/api/_health | jq
+
+That endpoint reports which bindings are wired. Every entry should be
+`true`. If anything is `false`, the dashboard's Bindings tab for the
+Worker needs to be re-checked.
+
+Stripe Connect and SMS swap loop come next, after the end-to-end
+Claude Chrome click test confirms the core flow works.
 
 — Jeromy
 ```
 
 ---
 
-## Notes on what Lovable WILL handle automatically
+## Notes on what Cloudflare handles automatically
 
-- Google OAuth (their built-in integration — no Cloud Console step)
-- HTTPS + custom domain DNS (they manage cert provisioning)
+- HTTPS + custom domain DNS (CF manages cert provisioning)
 - Continuous deploys on push to `main`
-- Preview environments per branch
+- Preview deployments per branch (Worker Preview URLs)
+- KV / D1 / R2 / Vectorize globally distributed at the edge
 
-## What Lovable WON'T handle (you'll do these later)
+## What you (the human) still click
 
-- Stripe Connect onboarding flow — defer until after the Claude Chrome
-  end-to-end test confirms the rest of the platform works
-- Resend domain verification (DKIM / SPF) — once you've decided whether
-  `hello@communicare.farm` is the From address
-- The watercolor image generation via Gemini — per `docs/IMAGES.md`,
-  drop four JPEGs into `public/watercolors/` and flip
-  `NEXT_PUBLIC_USE_WATERCOLORS=true`. This can land any time.
-- Submitting the sitemap to Google Search Console + Bing Webmaster once
-  the real domain resolves
+- `wrangler login` once
+- `npm run cf:provision` and paste the IDs (the script tells you the
+  exact commands)
+- Add secrets via `wrangler secret put`
+- Add Resend's DNS records (DKIM, SPF, DMARC) to Cloudflare DNS
+- Set up Cloudflare Email Routing for hello@, migrate@
+- (Optional) `npm run pg-to-d1` if you're migrating from a previous
+  Supabase deploy

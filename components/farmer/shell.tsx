@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Mark } from "@/components/mark";
 import { type AuthState, DemoBanner } from "./auth-gate";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { signOut as authSignOut } from "@/lib/auth/client";
 
 type NavItem = {
   href: string;
@@ -46,8 +46,7 @@ export function FarmerShell({
   const [menuOpen, setMenuOpen] = useState(false);
 
   async function signOut() {
-    const sb = getSupabaseBrowser();
-    if (sb) await sb.auth.signOut();
+    await authSignOut();
     router.push("/");
   }
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Wheat, Barn } from "@/components/mark";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/brand-strings";
 
@@ -74,53 +73,34 @@ export default function ClaimPage() {
       return;
     }
     (async () => {
-      const supabase = getSupabaseBrowser();
-      if (!supabase) {
-        setError("This page needs Supabase to load. Check back later.");
-        setLoading(false);
-        return;
-      }
-
-      // Look up by slug OR by uuid (the email may have either)
-      const looksLikeUuid =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          s,
-        );
-      const query = supabase
-        .from("discovered_farms")
-        .select(
-          "id, slug, name, kind, description, location, city, state, website, email, phone, pickup_info, share_price, inquiry_count, last_inquiry_at, claimed_at, opted_out_at, citations, discovered_via_zip",
-        )
-        .limit(1);
-      const { data, error: fnError } = await (looksLikeUuid
-        ? query.eq("id", s)
-        : query.eq("slug", s));
-
-      if (fnError) {
-        setError(fnError.message);
-        setLoading(false);
-        return;
-      }
-      type Row = ClaimableFarm;
-      const row = (data as Row[] | null)?.[0] ?? null;
-      if (!row) {
+      const res = await fetch(`/api/discovered/${encodeURIComponent(s)}`);
+      if (res.status === 404) {
         setError("not_found");
         setLoading(false);
         return;
       }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.farm) {
+        setError(data?.error ?? `HTTP ${res.status}`);
+        setLoading(false);
+        return;
+      }
+      // The API returns trimmed/cleaned columns; pad the shape the
+      // existing render code expects with nulls for fields it ignores.
+      const row: ClaimableFarm = {
+        ...data.farm,
+        email: null,
+        phone: null,
+        opted_out_at: null,
+        citations: null,
+        discovered_via_zip: null,
+        claimed_at: data.farm.claimed ? "claimed" : null,
+      };
       setFarm(row);
-
-      // Pull anonymised inquiries (RLS lets the claimed farm read all of
-      // theirs; for unclaimed rows the anon role won't see contact info
-      // but can see sender_name + body via the public-read policy we set
-      // up). For safety, we also strip emails from the body before showing.
-      const { data: iq } = await supabase
-        .from("farm_inquiries")
-        .select("id, sender_name, sender_zip, body, sent_at")
-        .eq("discovered_farm_id", row.id)
-        .order("sent_at", { ascending: false })
-        .limit(10);
-      setInquiries((iq as Inquiry[] | null) ?? []);
+      // farm_inquiries detail isn't returned by the public API (would
+      // leak sender info); we surface the count via inquiry_count and
+      // leave the list empty.
+      setInquiries([]);
       setLoading(false);
     })();
   }, []);

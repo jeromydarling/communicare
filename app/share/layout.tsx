@@ -6,7 +6,7 @@ import { AuthGate } from "@/components/farmer/auth-gate";
 import { DemoBanner } from "@/components/farmer/auth-gate";
 import { Mark } from "@/components/mark";
 import { ScrollFade } from "@/components/scroll-fade";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { signOut as authSignOut } from "@/lib/auth/client";
 
 const SHARE_NAV = [
   { href: "/share/", label: "This week" },
@@ -26,8 +26,7 @@ export default function ShareLayout({
   const pathname = usePathname();
 
   async function signOut() {
-    const sb = getSupabaseBrowser();
-    if (sb) await sb.auth.signOut();
+    await authSignOut();
     router.push("/");
   }
 

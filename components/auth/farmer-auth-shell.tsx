@@ -158,7 +158,7 @@ export function FormNotice({ children }: { children: React.ReactNode }) {
 }
 
 // Convenience: build the absolute callback URL for OAuth + magic-link
-// redirects. Honors any BASE_PATH (e.g. /communicare on GitHub Pages).
+// redirects. Lives at the site root on mycommuni.care.
 export function callbackUrl(): string | undefined {
   if (typeof window === "undefined") return undefined;
   // Strip the current path back to the site root + add /auth/callback/.

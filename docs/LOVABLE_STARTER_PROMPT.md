@@ -11,7 +11,10 @@ backend services. No design changes, no feature additions, no copy
 rewrites — just the wiring described in the project's existing docs.
 
 REPO        https://github.com/jeromydarling/communicare  (branch: main)
-STACK       Next.js 15 static export · Supabase Postgres + Edge Functions
+STACK       Next.js 15 static export · Cloudflare Pages (hosting)
+            · Supabase Postgres + Edge Functions (transitional —
+              see docs/CLOUDFLARE_MIGRATION.md for the move to D1
+              + Workers)
             · Mapbox · Perplexity Sonar · ElevenLabs · Resend · Stripe
 
 YOUR JOB — five steps, in order

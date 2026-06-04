@@ -236,9 +236,11 @@ ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
 ```
 
-When deploying as a GitHub Pages project page, also set
-`BASE_PATH=/communicare` in the GitHub Actions secret store. For custom
-domains or Lovable hosting, leave it unset.
+Hosting is **Cloudflare Pages** at `mycommuni.care` (root domain). CF
+auto-builds on push to `main` — no GitHub Actions deploy step is needed.
+Build env vars are set in the CF dashboard (Pages → Settings →
+Environment variables). The full migration plan toward the all-CF stack
+(D1, Workers, R2, KV, Images) is in `docs/CLOUDFLARE_MIGRATION.md`.
 
 ---
 

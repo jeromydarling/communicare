@@ -1,13 +1,18 @@
-// Static export for GitHub Pages. When BASE_PATH is unset (e.g. local dev or
-// custom domain), it stays empty. For project-page deploys (github.io/<repo>),
-// the deploy workflow sets BASE_PATH=/communicare at build time.
-const basePath = process.env.BASE_PATH || "";
+// Deploys to Cloudflare Pages, mycommuni.care at root.
+//
+// Cloudflare Pages auto-builds on push to main (configured in the CF
+// dashboard, project linked to this GitHub repo). We don't need a GitHub
+// Actions deploy step — CF handles the build with `npm run build` and
+// publishes the `out/` directory directly. Per-branch preview deploys
+// happen automatically.
+//
+// `output: "export"` produces a static `out/` directory; that's what CF
+// Pages serves. When we add Workers for server-side logic we'll either
+// keep this static export and call Workers as APIs from the client, or
+// switch to `@cloudflare/next-on-pages` for SSR-on-Workers. Static-export
+// remains the right call today because every server need is already
+// served by edge functions.
 
-// Normalize the Mapbox token across the common env-var names people set.
-// Lovable's UI tends to write VITE_MAPBOX_KEY, our docs say
-// NEXT_PUBLIC_MAPBOX_TOKEN, some CI configs just use MAPBOX_TOKEN. Whichever
-// is present at build time gets baked into NEXT_PUBLIC_MAPBOX_TOKEN, which is
-// what the /find page actually reads.
 const mapboxToken =
   process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
   process.env.VITE_MAPBOX_KEY ||
@@ -17,12 +22,9 @@ const mapboxToken =
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
-  basePath,
-  assetPrefix: basePath || undefined,
   trailingSlash: true,
   images: { unoptimized: true },
   env: {
-    NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_MAPBOX_TOKEN: mapboxToken,
   },
 };

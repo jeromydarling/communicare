@@ -5,19 +5,13 @@
 
 const explicit = process.env.NEXT_PUBLIC_SITE_URL;
 
-const githubBase =
-  process.env.NEXT_PUBLIC_BASE_PATH && process.env.NEXT_PUBLIC_BASE_PATH !== ""
-    ? `https://jeromydarling.github.io${process.env.NEXT_PUBLIC_BASE_PATH}`
-    : null;
-
 // Order of precedence:
-//   1. NEXT_PUBLIC_SITE_URL (explicit; set this on custom-domain deploys)
-//   2. GitHub Pages project-page URL inferred from BASE_PATH
+//   1. NEXT_PUBLIC_SITE_URL (explicit override, e.g. a preview deploy)
+//   2. The canonical production domain
 //   3. Local dev default
 export const SITE_URL = (
   explicit ??
-  githubBase ??
-  "http://localhost:3000"
+  "https://mycommuni.care"
 ).replace(/\/+$/, "");
 
 export const SITE_NAME = "Communicare";

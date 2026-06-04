@@ -63,6 +63,11 @@ import * as authMagic from "../functions/api/auth/magic";
 import * as authMagicCallback from "../functions/api/auth/magic-callback";
 import * as authForgot from "../functions/api/auth/forgot";
 import * as authReset from "../functions/api/auth/reset";
+import * as meWithFarm from "../functions/api/farmer/me-with-farm";
+import * as createFarm from "../functions/api/farmer/onboarding/create-farm";
+import * as shares from "../functions/api/farmer/shares";
+import * as pickupSites from "../functions/api/farmer/pickup-sites";
+import * as completeOnboarding from "../functions/api/farmer/complete-onboarding";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -130,6 +135,20 @@ const ROUTES: Route[] = [
   { method: "OPTIONS", pattern: P("/api/auth/forgot"),  handler: adapt(authForgot.onRequestOptions) },
   { method: "POST",    pattern: P("/api/auth/reset"),   handler: adapt(authReset.onRequestPost) },
   { method: "OPTIONS", pattern: P("/api/auth/reset"),   handler: adapt(authReset.onRequestOptions) },
+
+  // Farmer dashboard data (D1)
+  { method: "GET",     pattern: P("/api/farmer/me-with-farm"), handler: adapt(meWithFarm.onRequestGet) },
+  { method: "OPTIONS", pattern: P("/api/farmer/me-with-farm"), handler: adapt(meWithFarm.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/onboarding/create-farm"), handler: adapt(createFarm.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/onboarding/create-farm"), handler: adapt(createFarm.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/farmer/shares"), handler: adapt(shares.onRequestGet) },
+  { method: "POST",    pattern: P("/api/farmer/shares"), handler: adapt(shares.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/shares"), handler: adapt(shares.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/farmer/pickup-sites"), handler: adapt(pickupSites.onRequestGet) },
+  { method: "POST",    pattern: P("/api/farmer/pickup-sites"), handler: adapt(pickupSites.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/pickup-sites"), handler: adapt(pickupSites.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/complete-onboarding"), handler: adapt(completeOnboarding.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/complete-onboarding"), handler: adapt(completeOnboarding.onRequestOptions) },
 ];
 
 // -----------------------------------------------------------------------------

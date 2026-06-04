@@ -6,8 +6,15 @@ import Link from "next/link";
 import { PageHeader } from "@/components/farmer/shell";
 import { Sun, Wheat, Barn, Leaf } from "@/components/mark";
 import { StepBar } from "@/components/step-bar";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { getOperatorFarm } from "@/lib/supabase/queries";
+import {
+  getMeWithFarm,
+  createFarm,
+  listShares,
+  createShare,
+  listPickupSites,
+  createPickupSite,
+  completeOnboarding,
+} from "@/lib/farmer/api";
 import { slugify } from "@/lib/slugify";
 import { CLOSING_BLESSING, SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/brand-strings";
 
@@ -131,76 +138,40 @@ function Inner() {
   // On mount, figure out where this farm is in the flow.
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      // Demo / no-Supabase mode — show the wizard but disable writes.
-      setLoading(false);
-      return;
-    }
     let cancelled = false;
     (async () => {
-      const { data: userData } = await supabase.auth.getUser();
+      const me = await getMeWithFarm();
       if (cancelled) return;
-      if (!userData?.user) {
+      if (!("ok" in me) || !me.ok) {
         router.replace("/farmer/come-in/?next=%2Ffarmer%2Fonboarding%2F");
         return;
       }
 
-      // Prefill farm name from user_metadata (set at signup)
-      const meta = userData.user.user_metadata ?? {};
-      if (typeof meta.farm_name === "string") setFarmName(meta.farm_name);
-
-      // Does the user already own a farm?
-      const fmRow = await getOperatorFarm(supabase, userData.user.id);
-      if (cancelled) return;
-
-      if (!fmRow) {
+      if (!me.farm) {
         // No farm yet — start at step 0
         setStep(0);
         setLoading(false);
         return;
       }
-      setFarmId(fmRow.farm_id);
+      setFarmId(me.farm.id);
+      setFarmName(me.farm.name);
+      setFarmKind(me.farm.kind as FarmKind);
+      setFarmLocation(me.farm.location);
+      if (me.farm.onboarded_at) {
+        router.replace("/farmer/");
+        return;
+      }
 
-      // Load the farm + its shares + pickups
-      const [farmRes, sharesRes, pickupsRes] = await Promise.all([
-        supabase
-          .from("farms")
-          .select("name, kind, location, onboarded_at")
-          .eq("id", fmRow.farm_id)
-          .single(),
-        supabase
-          .from("share_definitions")
-          .select("id")
-          .eq("farm_id", fmRow.farm_id)
-          .limit(1),
-        supabase
-          .from("pickup_sites")
-          .select("id")
-          .eq("farm_id", fmRow.farm_id)
-          .limit(1),
+      const [sharesRes, pickupsRes] = await Promise.all([
+        listShares(),
+        listPickupSites(),
       ]);
       if (cancelled) return;
 
-      const farm = farmRes.data as {
-        name: string;
-        kind: FarmKind;
-        location: string;
-        onboarded_at: string | null;
-      } | null;
-      if (farm) {
-        setFarmName(farm.name);
-        setFarmKind(farm.kind);
-        setFarmLocation(farm.location);
-        if (farm.onboarded_at) {
-          // Already done — let them in
-          router.replace("/farmer/");
-          return;
-        }
-      }
-
-      const hasShares = (sharesRes.data ?? []).length > 0;
-      const hasPickups = (pickupsRes.data ?? []).length > 0;
+      const hasShares =
+        "ok" in sharesRes && sharesRes.ok && sharesRes.shares.length > 0;
+      const hasPickups =
+        "ok" in pickupsRes && pickupsRes.ok && pickupsRes.pickup_sites.length > 0;
 
       // Honor an explicit ?step= override (used when returning from import)
       const explicit = Number(params.get("step") ?? NaN);
@@ -226,53 +197,21 @@ function Inner() {
   // ---------------------------------------------------------------------------
   async function saveFarm() {
     if (!farmName.trim() || !farmKind || !farmLocation.trim()) return;
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setError("Supabase isn't configured on this deploy.");
-      return;
-    }
     setSaving(true);
     setError(null);
-    try {
-      const slug = slugify(farmName.trim());
-
-      // Use the create_farm_for_self RPC — it does both inserts (farms +
-      // farm_members(owner)) in a single transaction with security definer,
-      // which is needed because the schema's RLS doesn't allow authenticated
-      // users to INSERT into public.farms directly. See migration
-      // 20260525230000_farm_self_create.sql.
-      // The generated Database type has Functions: {} so rpc() isn't aware
-      // of create_farm_for_self yet. Cast through `unknown` to call it.
-      // When the CLI-generated types catch up, this cast can come out.
-      const { data: newFarmIdRaw, error: rpcErr } = await (
-        supabase.rpc as unknown as (
-          fn: string,
-          args: Record<string, unknown>,
-        ) => Promise<{ data: string | null; error: { message: string } | null }>
-      )("create_farm_for_self", {
-        p_name: farmName.trim(),
-        p_slug: slug,
-        p_kind: farmKind,
-        p_location: farmLocation.trim(),
-      });
-      if (rpcErr) {
-        const msg = rpcErr.message ?? "";
-        throw new Error(
-          msg.toLowerCase().includes("unique") || msg.toLowerCase().includes("duplicate")
-            ? "That farm name's taken — try adding your town or initials."
-            : msg || "Couldn't create the farm.",
-        );
-      }
-      const newFarmId = newFarmIdRaw as unknown as string;
-      if (!newFarmId) throw new Error("The farm wasn't created.");
-
-      setFarmId(newFarmId);
-      setStep(1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
+    const result = await createFarm({
+      name: farmName.trim(),
+      slug: slugify(farmName.trim()),
+      kind: farmKind,
+      location: farmLocation.trim(),
+    });
+    setSaving(false);
+    if (!("ok" in result) || !result.ok) {
+      setError(result.error);
+      return;
     }
+    setFarmId(result.farm_id);
+    setStep(1);
   }
 
   // ---------------------------------------------------------------------------
@@ -280,41 +219,23 @@ function Inner() {
   // ---------------------------------------------------------------------------
   async function saveShare() {
     if (!farmId || !shareName.trim()) return;
-    const supabase = getSupabaseBrowser();
-    if (!supabase) return;
     const priceCents = sharePriceDollars
       ? Math.round(parseFloat(sharePriceDollars) * 100)
-      : null;
-
+      : undefined;
     setSaving(true);
     setError(null);
-    try {
-      // Match price field to the chosen billing model
-      const priceFields: Record<string, number | null> = {};
-      if (shareBilling === "pay_per_pickup")
-        priceFields.price_per_pickup_cents = priceCents;
-      else if (shareBilling === "monthly_installment" || shareBilling === "monthly_boarding_fee")
-        priceFields.monthly_price_cents = priceCents;
-      else if (shareBilling === "season_upfront")
-        priceFields.season_price_cents = priceCents;
-
-      const { error: shareErr } = await supabase
-        .from("share_definitions")
-        .insert({
-          farm_id: farmId,
-          name: shareName.trim(),
-          cadence: shareCadence,
-          billing_model: shareBilling,
-          is_active: true,
-          ...priceFields,
-        } as never);
-      if (shareErr) throw new Error(shareErr.message);
-      setStep(2);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
+    const result = await createShare({
+      name: shareName.trim(),
+      cadence: shareCadence,
+      billing_model: shareBilling,
+      price_cents: priceCents,
+    });
+    setSaving(false);
+    if (!("ok" in result) || !result.ok) {
+      setError(result.error);
+      return;
     }
+    setStep(2);
   }
 
   // ---------------------------------------------------------------------------
@@ -322,30 +243,21 @@ function Inner() {
   // ---------------------------------------------------------------------------
   async function savePickup() {
     if (!farmId || !pickupName.trim()) return;
-    const supabase = getSupabaseBrowser();
-    if (!supabase) return;
     setSaving(true);
     setError(null);
-    try {
-      const { error: pErr } = await supabase
-        .from("pickup_sites")
-        .insert({
-          farm_id: farmId,
-          name: pickupName.trim(),
-          address: pickupAddress.trim() || null,
-          day_of_week: pickupDay,
-          window_start: pickupStart || null,
-          window_end: pickupEnd || null,
-          is_active: true,
-          display_order: 0,
-        } as never);
-      if (pErr) throw new Error(pErr.message);
-      setStep(3);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
+    const result = await createPickupSite({
+      name: pickupName.trim(),
+      address: pickupAddress.trim() || undefined,
+      day_of_week: pickupDay,
+      window_start: pickupStart || undefined,
+      window_end: pickupEnd || undefined,
+    });
+    setSaving(false);
+    if (!("ok" in result) || !result.ok) {
+      setError(result.error);
+      return;
     }
+    setStep(3);
   }
 
   // ---------------------------------------------------------------------------
@@ -356,16 +268,8 @@ function Inner() {
       router.replace("/farmer/");
       return;
     }
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      router.replace("/farmer/");
-      return;
-    }
     setSaving(true);
-    await supabase
-      .from("farms")
-      .update({ onboarded_at: new Date().toISOString() } as never)
-      .eq("id", farmId);
+    await completeOnboarding();
     router.replace("/farmer/");
   }
 

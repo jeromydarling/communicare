@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Sun } from "@/components/mark";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getCurrentUser } from "@/lib/auth/client";
 import {
   getDemoSession,
   clearDemoSession,
@@ -19,10 +18,10 @@ export type AuthState =
   | { kind: "authed"; email: string; userId: string }
   | { kind: "anon" };
 
-// Client-side auth-gate. In "demo" mode (no Supabase configured), it lets
-// content render with mock data. When Supabase is configured and the user
-// isn't signed in, it redirects to /come-in. When signed in, it passes
-// auth state down to children.
+// Client-side auth-gate. Calls /api/auth/me on mount; on 401 redirects
+// to the operator sign-in. A form-gated demo session in localStorage
+// (set by /demo) lets unsigned-in visitors explore with sample data
+// without ever hitting the gate.
 export function AuthGate({
   children,
 }: {
@@ -44,61 +43,25 @@ export function AuthGate({
       bypassDemo();
     }
 
-    // No Supabase wired → site-wide demo mode (anyone can explore).
-    if (!isSupabaseConfigured) {
-      setState({ kind: "demo", session: getDemoSession() ?? undefined });
-      return;
-    }
-    const supabase = getSupabaseBrowser();
-    if (!supabase) {
-      setState({ kind: "demo", session: getDemoSession() ?? undefined });
-      return;
-    }
-
     let cancelled = false;
-    supabase.auth.getUser().then(({ data, error }) => {
+    getCurrentUser().then((user) => {
       if (cancelled) return;
-      if (error || !data.user) {
-        // Not signed in. Check for a form-gated demo session before sending
-        // them to the gate.
+      if (!user) {
         const demo = getDemoSession();
         if (demo) {
           setState({ kind: "demo", session: demo });
           return;
         }
         setState({ kind: "anon" });
-        // Farms with no session go to the operator sign-in. The form-gated
-        // demo lives at /demo for unsigned-in visitors who want to poke
-        // around with sample data instead.
         const next = encodeURIComponent(pathname);
         router.replace(`/farmer/come-in/?next=${next}`);
         return;
       }
-      setState({
-        kind: "authed",
-        email: data.user.email ?? "",
-        userId: data.user.id,
-      });
-    });
-
-    const sub = supabase.auth.onAuthStateChange((_event, session) => {
-      if (cancelled) return;
-      if (session?.user) {
-        setState({
-          kind: "authed",
-          email: session.user.email ?? "",
-          userId: session.user.id,
-        });
-      } else {
-        const demo = getDemoSession();
-        if (demo) setState({ kind: "demo", session: demo });
-        else setState({ kind: "anon" });
-      }
+      setState({ kind: "authed", email: user.email, userId: user.id });
     });
 
     return () => {
       cancelled = true;
-      sub.data.subscription.unsubscribe();
     };
   }, [router, pathname]);
 

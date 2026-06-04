@@ -12,8 +12,7 @@ import {
   formatCents,
 } from "@/lib/farmer-demo";
 import { Sun, Wheat, Leaf } from "@/components/mark";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
-import { getOperatorFarm } from "@/lib/supabase/queries";
+import { getMeWithFarm } from "@/lib/farmer/api";
 
 export default function FarmerHomePage() {
   // First-five-minutes guard: if the operator is signed in but hasn't
@@ -22,26 +21,12 @@ export default function FarmerHomePage() {
   // session by the time this runs.
   const router = useRouter();
   useEffect(() => {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) return; // demo mode — show the demo dashboard
     let cancelled = false;
     (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (cancelled || !userData?.user) return;
-      const fmRow = await getOperatorFarm(supabase, userData.user.id);
+      const me = await getMeWithFarm();
       if (cancelled) return;
-      if (!fmRow) {
-        router.replace("/farmer/onboarding/");
-        return;
-      }
-      const { data: farm } = await supabase
-        .from("farms")
-        .select("onboarded_at")
-        .eq("id", fmRow.farm_id)
-        .single();
-      if (cancelled) return;
-      const f = farm as { onboarded_at: string | null } | null;
-      if (f && !f.onboarded_at) {
+      if (!("ok" in me) || !me.ok) return; // anon / demo — let it render
+      if (!me.farm || !me.farm.onboarded_at) {
         router.replace("/farmer/onboarding/");
       }
     })();

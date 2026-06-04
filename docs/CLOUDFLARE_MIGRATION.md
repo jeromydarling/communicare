@@ -115,10 +115,21 @@ talk to D1 instead of Supabase Postgres.
 
 ### Phase 6 — KV caching + rate limiting
 
-- [ ] KV namespace: `cache` (find-nearby-farms results, 7-day TTL)
-- [ ] KV namespace: `ratelimit` (per-IP buckets on `/find` searches and
-  `/record-farm-inquiry` submissions)
-- [ ] KV namespace: `sessions` (if we go custom auth in Phase 3)
+- [x] KV namespaces declared in `wrangler.jsonc`: `CACHE`, `SESSIONS`,
+  `RATELIMIT`. You still need `wrangler kv:namespace create CACHE`
+  (× 3) and to paste the printed IDs into `wrangler.jsonc`.
+- [x] `functions/api/find-nearby-farms.ts` — KV-cached front for the
+  Perplexity search. 7-day TTL on `(zip, radiusMiles)`. Sub-10ms KV
+  reads on hit; on miss it forwards to the Supabase upstream and
+  populates the cache via `ctx.waitUntil` so the cache write doesn't
+  block the response. `force: true` bypasses.
+- [x] `functions/_lib/ratelimit.ts` — KV-backed aligned-window counter
+  + `ipBucket(req, prefix)` helper. Returns `{ ok, remaining }` or a
+  pre-built 429 response.
+- [x] `functions/api/record-farm-inquiry.ts` — anti-spam wrapper. Two
+  gates: per-IP (5/hr) and per-(IP, farm) (1/hr). Forwards to the
+  Supabase upstream on pass, preserving the caller's Authorization
+  header so member_user_id still tags on the inquiry row.
 
 ### Phase 7 — Workers AI (low-stakes only)
 

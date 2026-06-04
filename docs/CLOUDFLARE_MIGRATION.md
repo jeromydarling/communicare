@@ -152,6 +152,30 @@ talk to D1 instead of Supabase Postgres.
 - [ ] **Stays on Anthropic**: homepage drafter, ai-parse-csv. Structured-
   output quality + system-prompt steering matter more than CF margin.
 
+### Phase 7.5 — Anti-spam + read-API for farms
+
+Folded into the no-auth track since none of it needs the Phase 3 decision.
+
+- [x] `functions/_lib/turnstile.ts` — Cloudflare Turnstile verifier.
+  Pass-through when `TURNSTILE_SECRET` is unset, so local dev isn't
+  blocked.
+- [x] `functions/api/waitlist.ts` — Turnstile-gated + rate-limited
+  POST endpoint replacing the direct-from-browser insert in
+  `app/(public)/join/page.tsx`. Frontend swap: add the Turnstile
+  widget, post to `/api/waitlist`.
+- [x] `functions/_lib/db.ts` — D1 helpers (`one`, `many`, `run`,
+  `nowIso`, `uuid`). Read-friendly call sites, no ORM.
+- [x] `functions/api/farms/index.ts` — list published farms from D1
+  (5-minute edge cache, optional `kind` filter).
+- [x] `functions/api/farms/[slug].ts` — single farm + its published
+  homepage row from D1. Closes the loop on the audit P3
+  (static-export staleness): the renderer at
+  `app/(public)/farm/[slug]/page.tsx` can pull from this API instead
+  of `lib/sample-farms.ts` once the D1 cutover lands.
+- [x] `wrangler.jsonc` — `_planned_triggers` block records what cron
+  schedules will be registered when the standalone background
+  Workers are added (Pages itself can't host cron handlers).
+
 ### Phase 8 — Decommission Supabase
 
 - [x] `scripts/migrate-pg-to-d1.ts` — one-shot Postgres → D1 export

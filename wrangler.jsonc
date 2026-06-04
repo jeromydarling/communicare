@@ -87,5 +87,18 @@
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1.0
+  },
+
+  // Cron triggers — scheduled Workers (configured per-Worker in their
+  // own wrangler files; this entry is informational, since Pages projects
+  // don't run cron handlers themselves). When we add a standalone
+  // background Worker (e.g. cloudflare/workers/cache-refresher/), its
+  // wrangler.toml carries the actual `triggers` block. Recorded here so
+  // there's one place to see what schedules exist:
+  //   - cache-refresher: "0 */6 * * *"  (refresh top-N ZIPs every 6 hours)
+  //   - hortus-sync:      "0 4 * * *"   (4am UTC daily, idempotent)
+  "_planned_triggers": {
+    "cache-refresher": "0 */6 * * *",
+    "hortus-sync": "0 4 * * *"
   }
 }

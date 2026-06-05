@@ -18,6 +18,7 @@ type UserRow = {
   email: string;
   display_name: string | null;
   email_verified_at: string | null;
+  preferred_locale: string;
 };
 
 export const onRequestOptions: PagesFunction = () => preflight();
@@ -32,7 +33,9 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 
   const user = await one<UserRow>(
     ctx.env.DB,
-    `select id, email, display_name, email_verified_at from users where id = ?`,
+    `select id, email, display_name, email_verified_at,
+            coalesce(preferred_locale, 'en') as preferred_locale
+       from users where id = ?`,
     [result.session.user_id],
   );
   if (!user) return json({ user: null });
@@ -43,6 +46,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
       email: user.email,
       display_name: user.display_name,
       email_verified: Boolean(user.email_verified_at),
+      preferred_locale: user.preferred_locale === "es" ? "es" : "en",
     },
   });
 

@@ -17,7 +17,13 @@
 import { preflight, json } from "../../_lib/cors";
 import { hashPassword, isPasswordStrongEnough, newToken, sha256Hex } from "../../_lib/crypto";
 import { createSession, sessionCookie } from "../../_lib/sessions";
-import { magicLinkEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
+import {
+  magicLinkEmail,
+  sendEmail,
+  detectLocaleFromRequest,
+  type EmailSendBinding,
+  type Locale,
+} from "../../_lib/email";
 import { one, run, uuid, nowIso } from "../../_lib/db";
 
 type Env = {
@@ -33,6 +39,8 @@ type RequestBody = {
   password?: string;
   display_name?: string;
   farm_name?: string;
+  /** Optional override for the auto-detected locale. */
+  locale?: Locale;
 };
 
 export const onRequestOptions: PagesFunction = () => preflight();
@@ -87,20 +95,25 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const userId = uuid();
   const passwordHash = await hashPassword(password);
   const now = nowIso();
+  const locale: Locale =
+    body.locale === "es" || body.locale === "en"
+      ? body.locale
+      : detectLocaleFromRequest(ctx.request);
 
   // Two writes in a D1 batch (atomic):
   await db.batch([
     db
       .prepare(
         `insert into users (id, email, password_hash, display_name,
-                            metadata, created_at, updated_at)
-         values (?, ?, ?, ?, ?, ?, ?)`,
+                            preferred_locale, metadata, created_at, updated_at)
+         values (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         userId,
         email,
         passwordHash,
         displayName || null,
+        locale,
         JSON.stringify(body.farm_name ? { farm_name: body.farm_name } : {}),
         now,
         now,
@@ -122,7 +135,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   // Fire-and-forget confirmation email so we have a record of who
   // controls the address. The signup doesn't block on it — the
   // sliding-window session is durable until the user clicks back in.
-  ctx.waitUntil(sendConfirmationEmail(ctx.env, db, userId, email));
+  ctx.waitUntil(sendConfirmationEmail(ctx.env, db, userId, email, locale));
 
   const res = json({
     ok: true,
@@ -137,21 +150,22 @@ async function sendConfirmationEmail(
   db: D1Database,
   userId: string,
   email: string,
+  locale: Locale,
 ): Promise<void> {
-  if (!env.EMAIL) return; // Resend not wired, skip silently
+  if (!env.EMAIL) return; // Email Service not wired, skip silently
   const token = newToken();
   const tokenHash = await sha256Hex(token);
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   await run(
     db,
-    `insert into magic_link_tokens (token_hash, email, user_id, purpose, expires_at)
-     values (?, ?, ?, 'confirm', ?)`,
-    [tokenHash, email, userId, expires],
+    `insert into magic_link_tokens (token_hash, email, user_id, purpose, locale, expires_at)
+     values (?, ?, ?, 'confirm', ?, ?)`,
+    [tokenHash, email, userId, locale, expires],
   );
   const siteUrl = env.SITE_URL ?? "https://mycommuni.care";
   const link = `${siteUrl.replace(/\/+$/, "")}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
   await sendEmail(env.EMAIL, env.SEND_FROM, {
-    ...magicLinkEmail({ to: email, link, purpose: "confirm" }),
+    ...magicLinkEmail({ to: email, link, purpose: "confirm", locale }),
     replyTo: env.SYSTEM_REPLY_TO,
   });
 }

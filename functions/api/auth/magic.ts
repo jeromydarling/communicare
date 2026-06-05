@@ -9,7 +9,13 @@
 import { preflight, json } from "../../_lib/cors";
 import { newToken, sha256Hex } from "../../_lib/crypto";
 import { rateLimit, ipBucket } from "../../_lib/ratelimit";
-import { magicLinkEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
+import {
+  magicLinkEmail,
+  sendEmail,
+  detectLocaleFromRequest,
+  type EmailSendBinding,
+  type Locale,
+} from "../../_lib/email";
 import { one, run } from "../../_lib/db";
 
 type Env = {
@@ -52,14 +58,19 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   // Look up the user. If they don't exist we STILL return success and
   // skip sending — leaking "this email has an account" via timing or
   // response shape is the easy account-enumeration attack.
-  const user = await one<{ id: string }>(
+  const user = await one<{ id: string; preferred_locale: string }>(
     ctx.env.DB,
-    `select id from users where email = ?`,
+    `select id, preferred_locale from users where email = ?`,
     [email],
   );
   if (!user) {
     return json({ ok: true });
   }
+  // Locale precedence: stored user preference, then Accept-Language.
+  const locale: Locale =
+    user.preferred_locale === "es" || user.preferred_locale === "en"
+      ? (user.preferred_locale as Locale)
+      : detectLocaleFromRequest(ctx.request);
 
   const token = newToken();
   const tokenHash = await sha256Hex(token);
@@ -74,14 +85,14 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   await run(
     ctx.env.DB,
-    `insert into magic_link_tokens (token_hash, email, user_id, purpose, redirect_to, expires_at)
-     values (?, ?, ?, 'signin', ?, ?)`,
-    [tokenHash, email, user.id, redirectTo, expires],
+    `insert into magic_link_tokens (token_hash, email, user_id, purpose, redirect_to, locale, expires_at)
+     values (?, ?, ?, 'signin', ?, ?, ?)`,
+    [tokenHash, email, user.id, redirectTo, locale, expires],
   );
 
   const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
   const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
-    ...magicLinkEmail({ to: email, link, purpose: "signin" }),
+    ...magicLinkEmail({ to: email, link, purpose: "signin", locale }),
     replyTo: ctx.env.SYSTEM_REPLY_TO,
   });
   if (!sent.ok) {

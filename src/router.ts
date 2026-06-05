@@ -72,6 +72,7 @@ import * as importMembersWorker from "../functions/api/farmer/import-members";
 import * as aiParseWorker from "../functions/api/farmer/ai-parse-csv";
 import * as inviteMembersWorker from "../functions/api/farmer/invite-members";
 import * as generateHomepage from "../functions/api/generate-homepage";
+import * as translate from "../functions/api/translate";
 import * as discoveredBySlug from "../functions/api/discovered/[slug]";
 
 // -----------------------------------------------------------------------------
@@ -164,6 +165,10 @@ const ROUTES: Route[] = [
   // Homepage drafter (Anthropic Claude, public + rate-limited)
   { method: "POST",    pattern: P("/api/generate-homepage"), handler: adapt(generateHomepage.onRequestPost) },
   { method: "OPTIONS", pattern: P("/api/generate-homepage"), handler: adapt(generateHomepage.onRequestOptions) },
+
+  // Llama-powered, KV-cached EN ↔ ES translation
+  { method: "POST",    pattern: P("/api/translate"), handler: adapt(translate.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/translate"), handler: adapt(translate.onRequestOptions) },
 
   // Public discovered-farm read for /claim
   { method: "GET",     pattern: P("/api/discovered/:slug"), handler: adapt(discoveredBySlug.onRequestGet) },

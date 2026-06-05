@@ -75,11 +75,31 @@ export async function sendEmail(
   }
 }
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 // Templates
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Two languages: en (default) and es. Spanish copy is hand-tuned to
+// preserve the editorial register — warm, plain-spoken, not formal /
+// "Estimado señor" register. If you add a third language, mirror this
+// pattern (template-per-locale) rather than runtime-translating the
+// template body via /api/translate — voice consistency matters more
+// than the LOC savings.
+
+export type Locale = "en" | "es";
 
 export function magicLinkEmail(opts: {
+  to: string;
+  link: string;
+  purpose: "signin" | "invite" | "confirm";
+  farmName?: string;
+  locale?: Locale;
+}): SendArgs {
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") return magicLinkEmailEs(opts);
+  return magicLinkEmailEn(opts);
+}
+
+function magicLinkEmailEn(opts: {
   to: string;
   link: string;
   purpose: "signin" | "invite" | "confirm";
@@ -142,10 +162,99 @@ ${CLOSING_BLESSING}
   };
 }
 
+// Spanish templates — same plain-spoken register as the English ones.
+// Reviewed for tone, not literal back-translation. "Pax tibi" stays in
+// Latin (it's a brand signature, not a phrase to translate).
+function magicLinkEmailEs(opts: {
+  to: string;
+  link: string;
+  purpose: "signin" | "invite" | "confirm";
+  farmName?: string;
+}): SendArgs {
+  if (opts.purpose === "signin") {
+    return {
+      to: opts.to,
+      subject: "Tu enlace para entrar a Communicare",
+      text: `Hola —
+
+Aquí está tu enlace para entrar a Communicare. Es válido por una hora
+y te abre la cuenta directamente — no hay contraseña que recordar:
+
+${opts.link}
+
+Si no pediste esto, puedes ignorarlo. No pasa nada hasta que se haga
+clic en el enlace.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  if (opts.purpose === "invite") {
+    const farm = opts.farmName ?? "tu granja";
+    return {
+      to: opts.to,
+      subject: `${farm} te añadió en Communicare`,
+      text: `Hola —
+
+${farm} acaba de añadirte en Communicare. Haz clic en este enlace para
+confirmar tu parte, elegir tu punto de recogida, y dejar una tarjeta
+guardada si quieres. El enlace es válido por una hora:
+
+${opts.link}
+
+No hay contraseña nueva que memorizar — al hacer clic en el enlace ya
+estás dentro. Puedes ponerte una contraseña después desde tu cuenta.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: "Confirma tu correo en Communicare",
+    text: `Hola —
+
+Confirma tu correo haciendo clic en este enlace. Válido por una hora:
+
+${opts.link}
+
+Si no te registraste, puedes ignorar este mensaje.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
 export function passwordResetEmail(opts: {
   to: string;
   link: string;
+  locale?: Locale;
 }): SendArgs {
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "Restablece tu contraseña de Communicare",
+      text: `Hola —
+
+Pediste restablecer tu contraseña de Communicare. Haz clic aquí para
+escoger una nueva — el enlace es válido por una hora:
+
+${opts.link}
+
+Si no lo pediste, ignora este mensaje. Tu contraseña actual sigue
+funcionando.
+
+¿Algún problema? Escríbenos a ${SUPPORT_EMAIL}.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
   return {
     to: opts.to,
     subject: "Reset your Communicare password",
@@ -165,4 +274,28 @@ ${CLOSING_BLESSING}
 — Communicare
 `,
   };
+}
+
+// =============================================================================
+// Locale detection
+// =============================================================================
+// Browsers send Accept-Language with weighted preferences. We pick the
+// first supported language; default to English if none match. This is
+// used at signup to seed users.preferred_locale.
+//
+// Once the user is signed in, their stored preference takes over and
+// Accept-Language is ignored — they've expressed an explicit choice.
+
+export function detectLocaleFromRequest(req: Request): Locale {
+  const header = req.headers.get("Accept-Language") ?? "";
+  // Accept-Language: "es-MX,es;q=0.9,en;q=0.8"
+  const tags = header
+    .split(",")
+    .map((part) => part.split(";")[0].trim().toLowerCase())
+    .filter(Boolean);
+  for (const tag of tags) {
+    if (tag === "es" || tag.startsWith("es-")) return "es";
+    if (tag === "en" || tag.startsWith("en-")) return "en";
+  }
+  return "en";
 }

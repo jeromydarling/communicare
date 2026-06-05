@@ -9,7 +9,13 @@
 import { preflight, json } from "../../_lib/cors";
 import { newToken, sha256Hex } from "../../_lib/crypto";
 import { rateLimit, ipBucket } from "../../_lib/ratelimit";
-import { passwordResetEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
+import {
+  passwordResetEmail,
+  sendEmail,
+  detectLocaleFromRequest,
+  type EmailSendBinding,
+  type Locale,
+} from "../../_lib/email";
 import { one, run } from "../../_lib/db";
 
 type Env = {
@@ -48,12 +54,16 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return json({ error: "Valid email required." }, 400);
   }
 
-  const user = await one<{ id: string }>(
+  const user = await one<{ id: string; preferred_locale: string }>(
     ctx.env.DB,
-    `select id from users where email = ?`,
+    `select id, preferred_locale from users where email = ?`,
     [email],
   );
   if (!user) return json({ ok: true });
+  const locale: Locale =
+    user.preferred_locale === "es" || user.preferred_locale === "en"
+      ? (user.preferred_locale as Locale)
+      : detectLocaleFromRequest(ctx.request);
 
   const token = newToken();
   const tokenHash = await sha256Hex(token);
@@ -68,7 +78,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
   const link = `${siteUrl}/farmer/reset-password/?token=${encodeURIComponent(token)}`;
   const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
-    ...passwordResetEmail({ to: email, link }),
+    ...passwordResetEmail({ to: email, link, locale }),
     replyTo: ctx.env.SYSTEM_REPLY_TO,
   });
   if (!sent.ok) console.error("reset send failed:", sent.error);

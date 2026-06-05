@@ -28,6 +28,7 @@ type TokenRow = {
   user_id: string | null;
   purpose: "signin" | "invite" | "confirm";
   redirect_to: string | null;
+  locale: string;
   expires_at: string;
   used_at: string | null;
 };
@@ -48,7 +49,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const row = await one<TokenRow>(
     db,
     `select token_hash, email, user_id, purpose, redirect_to,
-            expires_at, used_at
+            coalesce(locale, 'en') as locale, expires_at, used_at
        from magic_link_tokens where token_hash = ?`,
     [tokenHash],
   );
@@ -104,6 +105,16 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     },
   });
   res.headers.append("Set-Cookie", sessionCookie(sess.id, sess.expiresAt));
+
+  // Carry the token's locale forward as a readable cookie. Front-end
+  // language toggle reads this to pick the right copy on first paint.
+  // Not __Host- prefixed because it needs to be JS-readable; not
+  // sensitive (it's a locale code, not a credential).
+  const locale = row.locale === "es" ? "es" : "en";
+  res.headers.append(
+    "Set-Cookie",
+    `cmcr_locale=${locale}; Path=/; Secure; SameSite=Lax; Max-Age=${365 * 24 * 60 * 60}`,
+  );
   return res;
 };
 

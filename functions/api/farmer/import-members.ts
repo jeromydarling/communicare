@@ -23,7 +23,13 @@ import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
 import { one, run, uuid, nowIso } from "../../_lib/db";
 import { newToken, sha256Hex } from "../../_lib/crypto";
-import { magicLinkEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
+import {
+  magicLinkEmail,
+  sendEmail,
+  detectLocaleFromRequest,
+  type EmailSendBinding,
+  type Locale,
+} from "../../_lib/email";
 
 type Env = {
   DB?: D1Database;
@@ -50,6 +56,8 @@ type Row = {
   credit_cents?: number;
   started_on?: string | null;
   note?: string | null;
+  /** Per-row locale override. Falls back to the request default. */
+  locale?: Locale;
 };
 
 type RequestBody = {
@@ -91,6 +99,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const farmId = body.farm_id ?? "";
   const source = body.source ?? "";
+  const defaultLocale: Locale = detectLocaleFromRequest(ctx.request);
   if (!farmId) return json({ error: "Missing farm_id." }, 400);
   if (!VALID_SOURCE.has(source)) return json({ error: "Invalid source." }, 400);
   if (!Array.isArray(body.rows) || body.rows.length === 0) {
@@ -286,8 +295,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
           );
           const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
           const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
+          const locale: Locale =
+            row.locale === "es" || row.locale === "en"
+              ? row.locale
+              : defaultLocale;
           const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
-            ...magicLinkEmail({ to: emailLower, link, purpose: "invite" }),
+            ...magicLinkEmail({ to: emailLower, link, purpose: "invite", locale }),
             replyTo: ctx.env.SYSTEM_REPLY_TO,
           });
           if (sent.ok) didInvite = true;

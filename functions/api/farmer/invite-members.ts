@@ -13,7 +13,12 @@
 import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
 import { newToken, sha256Hex } from "../../_lib/crypto";
-import { magicLinkEmail, sendEmail, type EmailSendBinding } from "../../_lib/email";
+import {
+  magicLinkEmail,
+  sendEmail,
+  type EmailSendBinding,
+  type Locale,
+} from "../../_lib/email";
 import { one, run } from "../../_lib/db";
 
 type Env = {
@@ -67,20 +72,26 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return json({ error: "You're not on staff at this farm." }, 403);
   }
 
-  // Find which of these emails belong to users on this farm
+  // Find which of these emails belong to users on this farm. Also pull
+  // each user's preferred_locale so the invite goes out in their
+  // language.
   const placeholders = emails.map(() => "?").join(",");
   const rows = await db
     .prepare(
-      `select u.id as user_id, u.email
+      `select u.id as user_id, u.email, u.preferred_locale
          from users u
          join farm_members fm on fm.user_id = u.id
         where fm.farm_id = ? and u.email in (${placeholders}) collate nocase`,
     )
     .bind(farmId, ...emails)
-    .all<{ user_id: string; email: string }>();
-  const userByEmail = new Map<string, string>();
+    .all<{ user_id: string; email: string; preferred_locale: string }>();
+  const userByEmail = new Map<
+    string,
+    { userId: string; locale: Locale }
+  >();
   for (const r of rows.results ?? []) {
-    userByEmail.set(r.email.toLowerCase(), r.user_id);
+    const loc: Locale = r.preferred_locale === "es" ? "es" : "en";
+    userByEmail.set(r.email.toLowerCase(), { userId: r.user_id, locale: loc });
   }
 
   // Default to mycommuni.care root if no redirect provided
@@ -96,12 +107,13 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const results: { email: string; status: "invited" | "skipped" | "error"; message?: string }[] = [];
 
   for (const email of emails) {
-    const userId = userByEmail.get(email);
-    if (!userId) {
+    const entry = userByEmail.get(email);
+    if (!entry) {
       results.push({ email, status: "skipped", message: "not a member of this farm" });
       skipped++;
       continue;
     }
+    const { userId, locale } = entry;
     try {
       const token = newToken();
       const tokenHash = await sha256Hex(token);
@@ -109,13 +121,13 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       await run(
         db,
         `insert into magic_link_tokens
-            (token_hash, email, user_id, purpose, redirect_to, expires_at)
-         values (?, ?, ?, 'invite', ?, ?)`,
-        [tokenHash, email, userId, redirectTo, expires],
+            (token_hash, email, user_id, purpose, redirect_to, locale, expires_at)
+         values (?, ?, ?, 'invite', ?, ?, ?)`,
+        [tokenHash, email, userId, redirectTo, locale, expires],
       );
       const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
       const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
-        ...magicLinkEmail({ to: email, link, purpose: "invite" }),
+        ...magicLinkEmail({ to: email, link, purpose: "invite", locale }),
         replyTo: ctx.env.SYSTEM_REPLY_TO,
       });
       if (sent.ok) {

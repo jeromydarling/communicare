@@ -20,6 +20,7 @@ import {
   type Locale,
 } from "../../_lib/email";
 import { one, run } from "../../_lib/db";
+import { safeRedirectOr } from "../../_lib/redirects";
 
 type Env = {
   DB?: D1Database;
@@ -94,12 +95,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     userByEmail.set(r.email.toLowerCase(), { userId: r.user_id, locale: loc });
   }
 
-  // Default to mycommuni.care root if no redirect provided
+  // Default to /share/ if no redirect provided. Reject protocol-
+  // relative redirects + anything not single-slash same-origin.
   const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
-  const redirectTo =
-    typeof body.redirect_to === "string" && body.redirect_to.startsWith("/")
-      ? body.redirect_to.slice(0, 256)
-      : "/share/";
+  const redirectTo = safeRedirectOr(body.redirect_to, "/share/");
 
   let invited = 0;
   let skipped = 0;

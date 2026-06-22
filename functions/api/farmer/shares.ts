@@ -35,15 +35,33 @@ type ShareRow = {
   season_price_cents: number | null;
 };
 
-async function findOperatorFarm(
+// Resolve the farm to operate on. If the caller passed a farm_id, verify
+// they're staff there; otherwise fall back to their first farm. The body
+// override is what lets a multi-farm operator pick which farm a write
+// lands on; without it everyone who staffs >1 farm would silently hit
+// the first row returned by farm_members.
+async function resolveOperatorFarm(
   db: D1Database,
   userId: string,
+  requestedFarmId: string | null,
 ): Promise<string | null> {
+  if (requestedFarmId) {
+    const fm = await one<{ farm_id: string }>(
+      db,
+      `select farm_id from farm_members
+        where user_id = ? and farm_id = ?
+          and role in ('owner', 'staff')
+          and archived_at is null`,
+      [userId, requestedFarmId],
+    );
+    return fm?.farm_id ?? null;
+  }
   const fm = await one<{ farm_id: string }>(
     db,
     `select farm_id from farm_members
       where user_id = ? and role in ('owner', 'staff')
         and archived_at is null
+      order by joined_at asc
       limit 1`,
     [userId],
   );
@@ -57,7 +75,12 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
 
-  const farmId = await findOperatorFarm(ctx.env.DB, auth.user.id);
+  const url = new URL(ctx.request.url);
+  const farmId = await resolveOperatorFarm(
+    ctx.env.DB,
+    auth.user.id,
+    url.searchParams.get("farm_id"),
+  );
   if (!farmId) return json({ shares: [] });
 
   const shares = await many<ShareRow>(
@@ -78,6 +101,7 @@ type CreateBody = {
   cadence?: string;
   billing_model?: string;
   price_cents?: number;
+  farm_id?: string;
 };
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
@@ -85,16 +109,20 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
 
-  const farmId = await findOperatorFarm(ctx.env.DB, auth.user.id);
-  if (!farmId) {
-    return json({ error: "You don't own a farm yet — finish onboarding first." }, 400);
-  }
-
   let body: CreateBody;
   try {
     body = (await ctx.request.json()) as CreateBody;
   } catch {
     return json({ error: "Invalid JSON body." }, 400);
+  }
+
+  const farmId = await resolveOperatorFarm(
+    ctx.env.DB,
+    auth.user.id,
+    typeof body.farm_id === "string" ? body.farm_id : null,
+  );
+  if (!farmId) {
+    return json({ error: "You don't own a farm yet — finish onboarding first." }, 400);
   }
 
   const name = (body.name ?? "").trim();

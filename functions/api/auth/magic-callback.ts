@@ -16,6 +16,7 @@ import { json } from "../../_lib/cors";
 import { sha256Hex } from "../../_lib/crypto";
 import { createSession, sessionCookie } from "../../_lib/sessions";
 import { one, run, nowIso } from "../../_lib/db";
+import { isSafeRedirect } from "../../_lib/redirects";
 
 type Env = {
   DB?: D1Database;
@@ -93,10 +94,12 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const sess = await createSession(db, userId, { ip, userAgent: ua });
 
   const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
-  let landing = row.redirect_to;
-  if (!landing || !landing.startsWith("/")) {
-    landing = row.purpose === "invite" ? "/farmer/onboarding/" : "/farmer/";
-  }
+  // Re-validate the token's redirect_to: even though magic.ts validated
+  // at request time, the DB row should never be trusted as plain
+  // browser-followable input. Belt + suspenders for open-redirect.
+  const safeRedirect = isSafeRedirect(row.redirect_to);
+  const landing =
+    safeRedirect ?? (row.purpose === "invite" ? "/farmer/onboarding/" : "/farmer/");
 
   const res = new Response(null, {
     status: 302,

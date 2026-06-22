@@ -38,6 +38,19 @@ export default {
       );
     }
 
+    // For unrouted /api/* and /i/* paths, return a clean JSON 404
+    // instead of falling through to the static asset handler. Without
+    // this, a typo like /api/auth/sigin would serve the Next.js 404
+    // page — confusing for clients and a hypothetical exposure if
+    // anything ever shipped a static file under those prefixes.
+    const url = new URL(req.url);
+    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/i/")) {
+      return new Response(
+        JSON.stringify({ error: `Not found: ${req.method} ${url.pathname}` }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     // Static-asset fallback. ASSETS.fetch handles content-type, etag,
     // cache headers, and the not_found_handling: "404-page" we
     // configured in wrangler.jsonc.

@@ -17,6 +17,7 @@
 import { preflight, json } from "../../_lib/cors";
 import { hashPassword, isPasswordStrongEnough, newToken, sha256Hex } from "../../_lib/crypto";
 import { createSession, sessionCookie } from "../../_lib/sessions";
+import { rateLimit, ipBucket } from "../../_lib/ratelimit";
 import {
   magicLinkEmail,
   sendEmail,
@@ -32,6 +33,7 @@ type Env = {
   SEND_FROM?: string;
   SYSTEM_REPLY_TO?: string;
   SITE_URL?: string;
+  RATELIMIT?: KVNamespace;
 };
 
 type RequestBody = {
@@ -50,6 +52,16 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return json({ error: "Database not configured on this deploy." }, 500);
   }
   const db = ctx.env.DB;
+
+  // Rate-limit per-IP: signup is expensive (PBKDF2 ~250ms CPU + a DB
+  // batch + an email send). 10/hr/IP is generous for a real user
+  // fumbling, tight for a scripted abuse run.
+  const gate = await rateLimit(ctx.env.RATELIMIT, {
+    bucket: ipBucket(ctx.request, "signup"),
+    limit: 10,
+    windowSeconds: 60 * 60,
+  });
+  if (!gate.ok) return gate.response;
 
   let body: RequestBody;
   try {

@@ -27,6 +27,7 @@ type Env = {
   AI_GATEWAY_NAME?: string;
   FARM_PHOTOS?: R2Bucket;
   PRODUCT_PHOTOS?: R2Bucket;
+  SITE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
 };
@@ -62,7 +63,26 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     if (!obj) return json({ error: "Object not found." }, 404);
     bytes = new Uint8Array(await obj.arrayBuffer());
   } else if (body.url) {
-    const res = await fetch(body.url);
+    // SSRF guard: only allow image URLs on our own origin (the
+    // /i/<bucket>/<key> serve route). Without this an authenticated
+    // attacker could use the Worker as a proxy to probe internal
+    // services or fetch arbitrary HTTPS resources.
+    const siteOrigin = new URL(
+      ctx.env.SITE_URL ?? "https://mycommuni.care",
+    ).origin;
+    let parsed: URL;
+    try {
+      parsed = new URL(body.url);
+    } catch {
+      return json({ error: "Invalid url." }, 400);
+    }
+    if (parsed.origin !== siteOrigin) {
+      return json(
+        { error: "url must be on the same origin as the site." },
+        400,
+      );
+    }
+    const res = await fetch(parsed.toString());
     if (!res.ok) return json({ error: `Couldn't fetch image (${res.status}).` }, 502);
     bytes = new Uint8Array(await res.arrayBuffer());
   } else {

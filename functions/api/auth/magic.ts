@@ -17,6 +17,7 @@ import {
   type Locale,
 } from "../../_lib/email";
 import { one, run } from "../../_lib/db";
+import { isSafeRedirect } from "../../_lib/redirects";
 
 type Env = {
   DB?: D1Database;
@@ -76,12 +77,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const tokenHash = await sha256Hex(token);
   const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
-  // Only allow same-origin redirect_to. Don't trust the client.
+  // Same-origin redirect_to only. isSafeRedirect rejects protocol-
+  // relative URLs (//evil.com/x), backslash variants, and over-length.
   const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
-  let redirectTo: string | null = null;
-  if (typeof body.redirect_to === "string" && body.redirect_to.startsWith("/")) {
-    redirectTo = body.redirect_to.slice(0, 256);
-  }
+  const redirectTo: string | null = isSafeRedirect(body.redirect_to);
 
   await run(
     ctx.env.DB,

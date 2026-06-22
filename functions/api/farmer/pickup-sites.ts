@@ -21,15 +21,28 @@ type PickupRow = {
   window_end: string | null;
 };
 
-async function findOperatorFarm(
+async function resolveOperatorFarm(
   db: D1Database,
   userId: string,
+  requestedFarmId: string | null,
 ): Promise<string | null> {
+  if (requestedFarmId) {
+    const fm = await one<{ farm_id: string }>(
+      db,
+      `select farm_id from farm_members
+        where user_id = ? and farm_id = ?
+          and role in ('owner', 'staff')
+          and archived_at is null`,
+      [userId, requestedFarmId],
+    );
+    return fm?.farm_id ?? null;
+  }
   const fm = await one<{ farm_id: string }>(
     db,
     `select farm_id from farm_members
       where user_id = ? and role in ('owner', 'staff')
         and archived_at is null
+      order by joined_at asc
       limit 1`,
     [userId],
   );
@@ -38,12 +51,21 @@ async function findOperatorFarm(
 
 export const onRequestOptions: PagesFunction = () => preflight();
 
+function farmIdFromQuery(req: Request): string | null {
+  const v = new URL(req.url).searchParams.get("farm_id");
+  return v && v.trim() ? v.trim() : null;
+}
+
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   if (!ctx.env.DB) return json({ error: "Database not configured." }, 500);
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
 
-  const farmId = await findOperatorFarm(ctx.env.DB, auth.user.id);
+  const farmId = await resolveOperatorFarm(
+    ctx.env.DB,
+    auth.user.id,
+    farmIdFromQuery(ctx.request),
+  );
   if (!farmId) return json({ pickup_sites: [] });
 
   const rows = await many<PickupRow>(
@@ -63,6 +85,7 @@ type CreateBody = {
   day_of_week?: number;
   window_start?: string;
   window_end?: string;
+  farm_id?: string;
 };
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
@@ -70,16 +93,20 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
 
-  const farmId = await findOperatorFarm(ctx.env.DB, auth.user.id);
-  if (!farmId) {
-    return json({ error: "You don't own a farm yet — finish onboarding first." }, 400);
-  }
-
   let body: CreateBody;
   try {
     body = (await ctx.request.json()) as CreateBody;
   } catch {
     return json({ error: "Invalid JSON body." }, 400);
+  }
+
+  const farmId = await resolveOperatorFarm(
+    ctx.env.DB,
+    auth.user.id,
+    typeof body.farm_id === "string" ? body.farm_id : null,
+  );
+  if (!farmId) {
+    return json({ error: "You don't own a farm yet — finish onboarding first." }, 400);
   }
 
   const name = (body.name ?? "").trim();

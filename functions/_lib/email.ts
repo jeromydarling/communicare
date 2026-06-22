@@ -46,6 +46,14 @@ export type SendResult =
   | { ok: true; id: string }
   | { ok: false; status: number; error: string };
 
+// Strip CR/LF from any value that lands in a mail header. Defense
+// against header injection if user-supplied content (e.g. farm_name)
+// reaches Subject / From / Reply-To. Truncate over-long values too.
+function safeHeader(value: string | undefined, maxLen = 200): string {
+  if (!value) return "";
+  return value.replace(/[\r\n\t]+/g, " ").slice(0, maxLen).trim();
+}
+
 export async function sendEmail(
   binding: EmailSendBinding | undefined,
   fromDefault: string | undefined,
@@ -58,15 +66,15 @@ export async function sendEmail(
       error: "EMAIL binding missing — onboard the domain to Cloudflare Email Service.",
     };
   }
-  const from = args.from ?? fromDefault ?? "Communicare <hello@mycommuni.care>";
+  const from = safeHeader(args.from ?? fromDefault ?? "Communicare <hello@mycommuni.care>");
 
   try {
     const resp = await binding.send({
       from,
       to: args.to,
-      subject: args.subject,
+      subject: safeHeader(args.subject, 300),
       text: args.text,
-      replyTo: args.replyTo,
+      replyTo: safeHeader(args.replyTo, 200) || undefined,
     });
     return { ok: true, id: resp?.messageId ?? "" };
   } catch (err) {

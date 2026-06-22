@@ -40,7 +40,11 @@ export async function verifyAuth(
   env: Env,
 ): Promise<AuthResult> {
   // ---- Path 1: D1 session cookie ----
-  if (env.DB && req.headers.get("Cookie")?.includes("__Host-cmcr_session=")) {
+  const cookieHeader = req.headers.get("Cookie");
+  const cookiePresent = Boolean(
+    cookieHeader && cookieHeader.includes("__Host-cmcr_session="),
+  );
+  if (env.DB && cookiePresent) {
     const result = await getSessionFromRequest(env.DB, req);
     if (result) {
       const user = await one<{ id: string; email: string }>(
@@ -50,9 +54,11 @@ export async function verifyAuth(
       );
       if (user) return { ok: true, user };
     }
-    // Cookie present but invalid — fall through to bearer path rather
-    // than rejecting; lets us migrate one user at a time without
-    // breaking the others.
+    // Cookie present but invalid: deny rather than fall through to
+    // bearer. A stale/forged cookie shouldn't get a second chance via
+    // Supabase JWT — that path is only for callers who haven't moved
+    // off Supabase yet, identified by absence of cookie.
+    return { ok: false, response: json({ error: "Sign in to continue." }, 401) };
   }
 
   // ---- Path 2: Supabase JWT fallback ----

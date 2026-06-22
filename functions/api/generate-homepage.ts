@@ -194,8 +194,7 @@ Render the homepage now, in the voice and style I described. Output only the JSO
       baseURL,
       defaultHeaders,
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await (client.messages as any).parse({
+    const response = await client.messages.parse({
       model: "claude-opus-4-7",
       max_tokens: 4000,
       thinking: { type: "adaptive" },

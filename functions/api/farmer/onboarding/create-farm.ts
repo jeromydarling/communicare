@@ -12,13 +12,21 @@
 
 import { preflight, json } from "../../../_lib/cors";
 import { verifyAuth } from "../../../_lib/auth";
+import { rateLimit } from "../../../_lib/ratelimit";
 import { one, uuid, nowIso } from "../../../_lib/db";
 
 type Env = {
   DB?: D1Database;
+  RATELIMIT?: KVNamespace;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
 };
+
+// Operators rarely run more than one or two farms. A small hard cap
+// prevents the obvious abuse of squatting slugs / DoSing the farms
+// table. If a real multi-farm operator hits this, we can lift it from
+// the dashboard one user at a time.
+const MAX_FARMS_PER_USER = 5;
 
 type RequestBody = {
   name?: string;
@@ -43,6 +51,33 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
+
+  // Per-user lifetime cap on farm creation. Prevents slug-squatting +
+  // farms-table pollution by a single account.
+  const farmCount = await one<{ n: number }>(
+    db,
+    `select count(*) as n from farm_members
+       where user_id = ? and role = 'owner' and archived_at is null`,
+    [auth.user.id],
+  );
+  if (farmCount && farmCount.n >= MAX_FARMS_PER_USER) {
+    return json(
+      {
+        error: `You already own ${farmCount.n} farms on Communicare — write hello@mycommuni.care if you need more.`,
+      },
+      403,
+    );
+  }
+
+  // Hourly per-user cap — slows down even a legitimate operator who's
+  // bumping the unique-slug error and retrying. 2 farms/hour is plenty
+  // for any real onboarding session.
+  const gate = await rateLimit(ctx.env.RATELIMIT, {
+    bucket: `create-farm:${auth.user.id}`,
+    limit: 2,
+    windowSeconds: 60 * 60,
+  });
+  if (!gate.ok) return gate.response;
 
   let body: RequestBody;
   try {

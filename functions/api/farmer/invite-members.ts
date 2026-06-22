@@ -12,6 +12,7 @@
 
 import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
+import { dailyCap } from "../../_lib/ratelimit";
 import { newToken, sha256Hex } from "../../_lib/crypto";
 import {
   magicLinkEmail,
@@ -28,9 +29,16 @@ type Env = {
   SEND_FROM?: string;
   SYSTEM_REPLY_TO?: string;
   SITE_URL?: string;
+  RATELIMIT?: KVNamespace;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
 };
+
+// Per-operator daily invite cap. A farm with 1,000 members might
+// legitimately re-invite all of them after a season reset; 2,000/day
+// covers that case with plenty of headroom while still limiting a
+// compromised operator account's blast radius.
+const DAILY_INVITE_CAP = 2000;
 
 type RequestBody = {
   farm_id?: string;
@@ -72,6 +80,17 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (!fm || (fm.role !== "owner" && fm.role !== "staff")) {
     return json({ error: "You're not on staff at this farm." }, 403);
   }
+
+  // Daily cap per operator. We count BEFORE the per-row filtering so
+  // a caller can't probe to find out which emails are on the farm by
+  // sending 2,000 emails one at a time; even rejected/skipped rows
+  // contribute to the cap.
+  const capCheck = await dailyCap(ctx.env.RATELIMIT, {
+    bucket: `invite:${auth.user.id}`,
+    dailyLimit: DAILY_INVITE_CAP,
+    incrementBy: emails.length,
+  });
+  if (!capCheck.ok) return capCheck.response;
 
   // Find which of these emails belong to users on this farm. Also pull
   // each user's preferred_locale so the invite goes out in their

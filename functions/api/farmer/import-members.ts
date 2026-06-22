@@ -21,6 +21,7 @@
 
 import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
+import { dailyCap } from "../../_lib/ratelimit";
 import { one, run, uuid, nowIso } from "../../_lib/db";
 import { newToken, sha256Hex } from "../../_lib/crypto";
 import {
@@ -37,9 +38,16 @@ type Env = {
   SEND_FROM?: string;
   SYSTEM_REPLY_TO?: string;
   SITE_URL?: string;
+  RATELIMIT?: KVNamespace;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
 };
+
+// Per-operator daily row cap. A migration is a one-day event; allowing
+// 10,000 rows/day across (at most) a few attempts covers any
+// legitimate scenario while limiting the damage a compromised operator
+// account can do.
+const DAILY_IMPORT_ROW_CAP = 10_000;
 
 const VALID_SOURCE = new Set([
   "barn2door", "local-line", "harvie", "grazecart", "csaware",
@@ -118,6 +126,17 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   );
   if (!fm || (fm.role !== "owner" && fm.role !== "staff")) {
     return json({ error: "You're not on staff at this farm." }, 403);
+  }
+
+  // Daily row cap per operator. Skipped in dry-run mode since that's
+  // just a preview pass without side effects.
+  if (!body.dry_run) {
+    const capCheck = await dailyCap(ctx.env.RATELIMIT, {
+      bucket: `import:${auth.user.id}`,
+      dailyLimit: DAILY_IMPORT_ROW_CAP,
+      incrementBy: body.rows.length,
+    });
+    if (!capCheck.ok) return capCheck.response;
   }
 
   // Sanity-check share + pickup IDs belong to this farm

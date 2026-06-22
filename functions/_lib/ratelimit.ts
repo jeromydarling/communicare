@@ -91,3 +91,63 @@ export function ipBucket(req: Request, prefix: string): string {
     "unknown";
   return `${prefix}:${ip}`;
 }
+
+// =============================================================================
+// dailyCap — per-actor counter that accepts a CHUNK SIZE per call
+// =============================================================================
+// rateLimit treats each call as one unit; that's right for "one signup
+// per call". For batch sends like invite-members or import-members, one
+// call may represent N units (emails sent / rows imported) and the cap
+// is on the TOTAL units per day.
+//
+//   await dailyCap(env.RATELIMIT, {
+//     bucket: `import:${userId}`,
+//     dailyLimit: 5000,
+//     incrementBy: rows.length,
+//   })
+//
+// Returns { ok: true, remaining } when the increment fits, or
+// { ok: false, response } with a 429 JSON body.
+//
+// Same aligned-window approach as rateLimit; one key per UTC day.
+// =============================================================================
+
+type DailyCapArgs = {
+  bucket: string;
+  dailyLimit: number;
+  incrementBy?: number;
+};
+
+export async function dailyCap(
+  kv: KVNamespace | undefined,
+  args: DailyCapArgs,
+): Promise<RateLimitResult> {
+  const incrementBy = args.incrementBy ?? 1;
+  if (incrementBy < 1) return { ok: true, remaining: args.dailyLimit };
+  if (!kv) {
+    console.warn(`dailyCap: RATELIMIT KV missing; bucket=${args.bucket}`);
+    return { ok: true, remaining: args.dailyLimit };
+  }
+
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+  const key = `dailycap:${args.bucket}:${today}`;
+  const current = await kv.get(key);
+  const count = current ? parseInt(current, 10) || 0 : 0;
+
+  if (count + incrementBy > args.dailyLimit) {
+    return {
+      ok: false,
+      response: json(
+        {
+          error: `Daily limit reached for this account. Try again tomorrow, or write hello@mycommuni.care if you need a higher cap.`,
+        },
+        429,
+      ),
+    };
+  }
+
+  // 26-hour TTL gives a safe margin around DST + clock skew between
+  // edge regions; the next day's key starts fresh regardless.
+  await kv.put(key, String(count + incrementBy), { expirationTtl: 26 * 60 * 60 });
+  return { ok: true, remaining: args.dailyLimit - count - incrementBy };
+}

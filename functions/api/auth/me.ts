@@ -2,13 +2,22 @@
 // GET /api/auth/me — current session's user
 // =============================================================================
 // Used by the client to bootstrap the auth state on page load. Returns:
-//   { user: null }                       — anonymous
-//   { user: { id, email, display_name } } — signed in
+//   { user: null }                                — anonymous
+//   { user: { id, email, display_name, ... } }    — signed in
 // Never errors on missing session — that's a valid state, not a failure.
+//
+// On a sliding-window session that just got extended server-side, we
+// could re-emit Set-Cookie here to bump the browser-side Max-Age, but
+// we'd need the plaintext session id and only the hash is available
+// after the lookup. Browsers honor the cookie until its own expiry;
+// the server-side row stays valid past that, and the next /me call
+// re-reads the user transparently. The trade-off is documented and
+// intentional — not worth re-architecting sessions.ts to surface the
+// plaintext id back up to here.
 // =============================================================================
 
 import { preflight, json } from "../../_lib/cors";
-import { getSessionFromRequest, sessionCookie } from "../../_lib/sessions";
+import { getSessionFromRequest } from "../../_lib/sessions";
 import { one } from "../../_lib/db";
 
 type Env = { DB?: D1Database };
@@ -40,7 +49,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   );
   if (!user) return json({ user: null });
 
-  const res = json({
+  return json({
     user: {
       id: user.id,
       email: user.email,
@@ -49,20 +58,4 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
       preferred_locale: user.preferred_locale === "es" ? "es" : "en",
     },
   });
-
-  // If the session got extended in the sliding window, re-emit the
-  // cookie so the browser bumps Max-Age too.
-  if (result.refreshed) {
-    // Re-derive the plaintext id from the cookie (we already verified it)
-    // — we only have the hash here. Workaround: don't refresh the
-    // cookie's Max-Age client-side; the server-side row is what matters.
-    // Browsers refresh the cookie's lifetime only when Set-Cookie carries
-    // it, so the cookie expires when the server-side row was originally
-    // due. That's fine — the next /me call re-reads the row, and the
-    // session is still valid because we extended expires_at server-side.
-    // (Trade-off: marginally worse UX if the cookie's own Max-Age was
-    // shorter than the session row's extended expiry.)
-    void sessionCookie; // keep the import linted-clean for future use
-  }
-  return res;
 };

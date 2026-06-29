@@ -21,6 +21,7 @@ const FARMER_NAV: NavItem[] = [
   { href: "/farmer/herd-share/", label: "Herd-share", hint: "contracts + milk tests" },
   { href: "/farmer/members/", label: "Members", hint: "the people you feed" },
   { href: "/farmer/messages/", label: "Messages", hint: "two-way SMS inbox" },
+  { href: "/farmer/sms/", label: "SMS line", hint: "the Tuesday text loop" },
   { href: "/farmer/emails/", label: "Emails", hint: "the newsletter" },
   { href: "/farmer/share-cards/", label: "Share cards", hint: "Instagram-ready posters" },
   { href: "/farmer/log/", label: "Harvest log", hint: "what came in from the field" },

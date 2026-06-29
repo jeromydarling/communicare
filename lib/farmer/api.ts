@@ -134,3 +134,88 @@ export function completeOnboarding() {
     method: "POST",
   });
 }
+
+// -----------------------------------------------------------------------------
+// SMS — Tuesday text loop
+// -----------------------------------------------------------------------------
+
+export type SmsConfig = {
+  farm_id: string;
+  twilio_phone_number: string | null;
+  twilio_messaging_service_sid: string | null;
+  send_day_of_week: number;
+  send_local_hour: number;
+  send_timezone: string;
+  reply_window_hours: number;
+  auto_action_on_no_reply: "confirm" | "skip";
+  is_active: number;
+};
+
+export type SmsSubscription = {
+  id: string;
+  farm_id: string;
+  phone_e164: string;
+  display_name: string | null;
+  locale: "en" | "es";
+  consent_status: "pending" | "opted_in" | "opted_out";
+  consent_text_sent_at: string | null;
+  opted_in_at: string | null;
+  opted_out_at: string | null;
+  outbound_number: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function getSmsConfig() {
+  return api<{ config: SmsConfig | null }>("/api/farmer/sms/config");
+}
+
+export function updateSmsConfig(args: Partial<{
+  twilio_phone_number: string | null;
+  send_day_of_week: number;
+  send_local_hour: number;
+  send_timezone: string;
+  reply_window_hours: number;
+  auto_action_on_no_reply: "confirm" | "skip";
+  is_active: boolean;
+}>) {
+  return api<{ config: SmsConfig }>("/api/farmer/sms/config", {
+    method: "PUT",
+    body: JSON.stringify(args),
+  });
+}
+
+export function listSmsSubscriptions() {
+  return api<{ subscriptions: SmsSubscription[] }>(
+    "/api/farmer/sms/subscriptions",
+  );
+}
+
+export function addSmsSubscription(args: {
+  phone: string;
+  display_name?: string;
+  locale?: "en" | "es";
+}) {
+  return api<{
+    subscription: SmsSubscription;
+    already_existed: boolean;
+    consent_text_sent: boolean;
+  }>("/api/farmer/sms/subscriptions", {
+    method: "POST",
+    body: JSON.stringify(args),
+  });
+}
+
+export function deleteSmsSubscription(id: string) {
+  return api<{ ok: true }>(
+    `/api/farmer/sms/subscriptions?id=${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function sendSmsTest(phone: string) {
+  return api<{ ok: true; sid: string; status: string }>(
+    "/api/farmer/sms/send-test",
+    { method: "POST", body: JSON.stringify({ phone }) },
+  );
+}

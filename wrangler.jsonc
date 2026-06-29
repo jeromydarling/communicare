@@ -71,6 +71,14 @@
     "ENVIRONMENT": "production"
   },
 
+  // Hourly cron heartbeat for the Tuesday SMS loop. The scheduled()
+  // handler in src/worker.ts checks each farm's local (day_of_week,
+  // hour) against NOW and fans out weekly_offers for any farm whose
+  // turn it is. The handler is idempotent so duplicate ticks are safe.
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1.0

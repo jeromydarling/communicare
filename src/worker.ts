@@ -13,8 +13,27 @@
 // =============================================================================
 
 import { route, type Env } from "./router";
+import { runCronTick } from "../functions/_lib/cron-tick";
 
 export default {
+  // -------------------------------------------------------------------------
+  // scheduled() — hourly cron heartbeat for the Tuesday SMS loop. wrangler's
+  // triggers.crons fires this; runCronTick fans out weekly offers for any
+  // farms whose local (day_of_week, hour) match NOW, and expires stale
+  // offers. Idempotent — duplicate ticks in the same hour write nothing
+  // extra.
+  // -------------------------------------------------------------------------
+  async scheduled(
+    _event: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    const result = await runCronTick(new Date(), env);
+    console.log("[cron]", JSON.stringify(result));
+    // Let logs flush before the isolate sleeps.
+    ctx.waitUntil(Promise.resolve());
+  },
+
   async fetch(
     req: Request,
     env: Env,

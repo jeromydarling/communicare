@@ -29,6 +29,10 @@ export type Env = {
   SUPABASE_ANON_KEY?: string;
   TURNSTILE_SECRET?: string;
 
+  // Twilio (secrets — set via `wrangler secret put`)
+  TWILIO_ACCOUNT_SID?: string;
+  TWILIO_AUTH_TOKEN?: string;
+
   // Optional bindings — added in wrangler.jsonc after provisioning
   DB?: D1Database;
   CACHE?: KVNamespace;
@@ -74,13 +78,16 @@ import * as inviteMembersWorker from "../functions/api/farmer/invite-members";
 import * as generateHomepage from "../functions/api/generate-homepage";
 import * as translate from "../functions/api/translate";
 import * as discoveredBySlug from "../functions/api/discovered/[slug]";
+import * as smsConfig from "../functions/api/farmer/sms/config";
+import * as smsSubscriptions from "../functions/api/farmer/sms/subscriptions";
+import * as smsSendTest from "../functions/api/farmer/sms/send-test";
 
 // -----------------------------------------------------------------------------
 // Route table
 // -----------------------------------------------------------------------------
 
 type Route = {
-  method: "GET" | "POST" | "OPTIONS";
+  method: "GET" | "POST" | "PUT" | "DELETE" | "OPTIONS";
   pattern: URLPattern;
   handler: AdaptedHandler<Env>;
 };
@@ -173,6 +180,19 @@ const ROUTES: Route[] = [
   // Public discovered-farm read for /claim
   { method: "GET",     pattern: P("/api/discovered/:slug"), handler: adapt(discoveredBySlug.onRequestGet) },
   { method: "OPTIONS", pattern: P("/api/discovered/:slug"), handler: adapt(discoveredBySlug.onRequestOptions) },
+
+  // SMS — farmer-facing config + roster + test send (PR 2 of the
+  // Tuesday text loop). The Twilio webhook lives at /api/sms/inbound
+  // and lands in PR 3.
+  { method: "GET",     pattern: P("/api/farmer/sms/config"), handler: adapt(smsConfig.onRequestGet) },
+  { method: "PUT",     pattern: P("/api/farmer/sms/config"), handler: adapt(smsConfig.onRequestPut) },
+  { method: "OPTIONS", pattern: P("/api/farmer/sms/config"), handler: adapt(smsConfig.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/farmer/sms/subscriptions"), handler: adapt(smsSubscriptions.onRequestGet) },
+  { method: "POST",    pattern: P("/api/farmer/sms/subscriptions"), handler: adapt(smsSubscriptions.onRequestPost) },
+  { method: "DELETE",  pattern: P("/api/farmer/sms/subscriptions"), handler: adapt(smsSubscriptions.onRequestDelete) },
+  { method: "OPTIONS", pattern: P("/api/farmer/sms/subscriptions"), handler: adapt(smsSubscriptions.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/sms/send-test"), handler: adapt(smsSendTest.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/sms/send-test"), handler: adapt(smsSendTest.onRequestOptions) },
 ];
 
 // -----------------------------------------------------------------------------

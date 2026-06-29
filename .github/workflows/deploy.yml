@@ -42,6 +42,18 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
         run: npx next build
 
+      # Apply any pending D1 migrations BEFORE deploying the Worker.
+      # If a migration introduces a column the Worker reads, deploying
+      # first would error until the migration lands. Idempotent: wrangler
+      # tracks applied migrations in the d1_migrations table.
+      - name: Apply D1 migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.97.0'
+          command: d1 migrations apply communicare-db --remote
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:

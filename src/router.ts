@@ -81,6 +81,7 @@ import * as discoveredBySlug from "../functions/api/discovered/[slug]";
 import * as smsConfig from "../functions/api/farmer/sms/config";
 import * as smsSubscriptions from "../functions/api/farmer/sms/subscriptions";
 import * as smsSendTest from "../functions/api/farmer/sms/send-test";
+import * as smsInbound from "../functions/api/sms/inbound";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -193,6 +194,12 @@ const ROUTES: Route[] = [
   { method: "OPTIONS", pattern: P("/api/farmer/sms/subscriptions"), handler: adapt(smsSubscriptions.onRequestOptions) },
   { method: "POST",    pattern: P("/api/farmer/sms/send-test"), handler: adapt(smsSendTest.onRequestPost) },
   { method: "OPTIONS", pattern: P("/api/farmer/sms/send-test"), handler: adapt(smsSendTest.onRequestOptions) },
+
+  // Twilio inbound webhook — HMAC-verified at the handler boundary.
+  // Twilio's console points each Twilio number's "messaging webhook"
+  // at https://communicare.farm/api/sms/inbound (POST). The handler
+  // routes by To-number to the right farm.
+  { method: "POST",    pattern: P("/api/sms/inbound"), handler: adapt(smsInbound.onRequestPost) },
 ];
 
 // -----------------------------------------------------------------------------

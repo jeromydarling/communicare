@@ -236,7 +236,7 @@ ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
 ```
 
-Hosting is **Cloudflare Pages** at `mycommuni.care` (root domain). CF
+Hosting is **Cloudflare Pages** at `communicare.farm` (root domain). CF
 auto-builds on push to `main` — no GitHub Actions deploy step is needed.
 Build env vars are set in the CF dashboard (Pages → Settings →
 Environment variables). The full migration plan toward the all-CF stack

@@ -11,7 +11,7 @@
     "deploy": "next build && wrangler deploy",
     "deploy:dry": "next build && wrangler deploy --dry-run",
     "cf:provision": "bash scripts/cf-provision.sh",
-    "cf:status": "curl -fsS https://mycommuni.care/api/_health | jq .",
+    "cf:status": "curl -fsS https://communicare.farm/api/_health | jq .",
     "d1:migrate": "wrangler d1 migrations apply communicare-db --remote",
     "d1:migrate:local": "wrangler d1 migrations apply communicare-db --local",
     "pg-to-d1": "node --experimental-strip-types scripts/migrate-pg-to-d1.ts"

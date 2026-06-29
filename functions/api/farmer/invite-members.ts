@@ -116,7 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   // Default to /share/ if no redirect provided. Reject protocol-
   // relative redirects + anything not single-slash same-origin.
-  const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
+  const siteUrl = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
   const redirectTo = safeRedirectOr(body.redirect_to, "/share/");
 
   let invited = 0;

@@ -75,7 +75,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     [tokenHash, user.id, expires],
   );
 
-  const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
+  const siteUrl = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
   const link = `${siteUrl}/farmer/reset-password/?token=${encodeURIComponent(token)}`;
   const sent = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
     ...passwordResetEmail({ to: email, link, locale }),

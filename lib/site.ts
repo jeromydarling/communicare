@@ -11,7 +11,7 @@ const explicit = process.env.NEXT_PUBLIC_SITE_URL;
 //   3. Local dev default
 export const SITE_URL = (
   explicit ??
-  "https://mycommuni.care"
+  "https://communicare.farm"
 ).replace(/\/+$/, "");
 
 export const SITE_NAME = "Communicare";

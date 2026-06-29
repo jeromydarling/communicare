@@ -30,7 +30,7 @@ low-stakes AI (alt-text, embeddings) uses **Workers AI**.
 - A Cloudflare account with Workers paid plan ($5/mo for the D1 + Vectorize
   + Workers AI quota we'll use). The free tier works for everything except
   prolonged AI usage.
-- A registered domain on Cloudflare DNS (this repo expects `mycommuni.care`
+- A registered domain on Cloudflare DNS (this repo expects `communicare.farm`
   but any domain works — see "Customizing the domain" at the bottom).
 - (No Resend account needed — outbound uses Cloudflare Email Service direct.)
 - An Anthropic API key for the homepage drafter only (CSV mapper +
@@ -105,8 +105,8 @@ step (next section).
 
 Public env vars (safe in `wrangler.jsonc`'s `vars` block):
 
-- `SITE_URL=https://mycommuni.care`
-- `SEND_FROM=Communicare <hello@mycommuni.care>` (the From: address every Worker uses)
+- `SITE_URL=https://communicare.farm`
+- `SEND_FROM=Communicare <hello@communicare.farm>` (the From: address every Worker uses)
 - `ENVIRONMENT=production`
 
 Browser-side env vars baked at build time:
@@ -125,7 +125,7 @@ transactional mail directly through the `send_email` Workers binding —
 no third-party provider needed. One-time setup:
 
 1. CF dashboard → **Compute & AI → Email Service**
-2. Click **Onboard Domain**, pick `mycommuni.care`
+2. Click **Onboard Domain**, pick `communicare.farm`
 3. CF adds SPF + DKIM records to your zone automatically (since DNS is
    already on Cloudflare)
 
@@ -142,11 +142,11 @@ Sending is available on the **Workers Paid plan** ($5/mo). The first
 Every system-generated email (signup confirmation, magic link, password
 reset, invite) carries `Reply-To: gardener@thecros.app` so members
 write back to a real address even though the From: is `hello@
-mycommuni.care`. Declared as `vars.SYSTEM_REPLY_TO` in
+communicare.farm`. Declared as `vars.SYSTEM_REPLY_TO` in
 `wrangler.jsonc` — change the value there to swap inboxes.
 
 Inbound Email Routing is **not** required. If you want to forward
-mail addressed to `hello@mycommuni.care` or other custom addresses to
+mail addressed to `hello@communicare.farm` or other custom addresses to
 a real inbox without an SMTP server, enable Email Routing on the
 zone — but the app itself doesn't need it.
 
@@ -162,7 +162,7 @@ CF runs `npm run build` (produces `./out`) then `npx wrangler deploy`
 (uploads the Worker + assets). When green:
 
 ```bash
-curl https://mycommuni.care/api/_health | jq
+curl https://communicare.farm/api/_health | jq
 ```
 
 You should see `ok: true` and every binding showing `true`. If any
@@ -228,7 +228,7 @@ sign-in; from there they can set a new password if they want one.
 
 ## Customizing the domain
 
-`mycommuni.care` is hardcoded in two places:
+`communicare.farm` is hardcoded in two places:
 
 - `wrangler.jsonc` → `vars.SITE_URL`
 - `lib/site.ts` → the default for `SITE_URL`

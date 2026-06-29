@@ -93,7 +93,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const ua = ctx.request.headers.get("user-agent") ?? undefined;
   const sess = await createSession(db, userId, { ip, userAgent: ua });
 
-  const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
+  const siteUrl = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
   // Re-validate the token's redirect_to: even though magic.ts validated
   // at request time, the DB row should never be trusted as plain
   // browser-followable input. Belt + suspenders for open-redirect.

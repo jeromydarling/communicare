@@ -116,7 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   // The variant URL builder (lib/images.ts) constructs serve URLs from
   // (bucket, key). We return both so the caller can store whichever shape
   // is cleanest for its use case.
-  const siteUrl = ctx.env.SITE_URL ?? "https://mycommuni.care";
+  const siteUrl = ctx.env.SITE_URL ?? "https://communicare.farm";
   const canonicalUrl = `${siteUrl.replace(/\/+$/, "")}/i/${bucket}/${key}`;
 
   return json({

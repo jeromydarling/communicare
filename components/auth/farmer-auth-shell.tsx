@@ -158,7 +158,7 @@ export function FormNotice({ children }: { children: React.ReactNode }) {
 }
 
 // Convenience: build the absolute callback URL for OAuth + magic-link
-// redirects. Lives at the site root on mycommuni.care.
+// redirects. Lives at the site root on communicare.farm.
 export function callbackUrl(): string | undefined {
   if (typeof window === "undefined") return undefined;
   // Strip the current path back to the site root + add /auth/callback/.

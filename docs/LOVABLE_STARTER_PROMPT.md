@@ -27,7 +27,7 @@ YOUR JOB — five steps, in order
    Connect the repo to a Cloudflare Worker project (NOT Pages — the
    modern unified Workers Assets pattern is what's wired up). Build
    command: `npm run build`. Deploy command: `npx wrangler deploy`.
-   Custom domain: mycommuni.care (or your fork's domain).
+   Custom domain: communicare.farm (or your fork's domain).
 
 2. PROVISION RESOURCES
    Run from a local checkout once `wrangler login` is done:
@@ -99,7 +99,7 @@ the onboarding wizard, ZIP search returning farms with sub-10ms cache
 hits, "Send them a note" inserting an inquiry, CSV import end-to-end
 into D1, /join writing through the Turnstile-gated worker.
 
-curl https://mycommuni.care/api/_health | jq
+curl https://communicare.farm/api/_health | jq
 
 That endpoint reports which bindings are wired. Every entry should be
 `true`. If anything is `false`, the dashboard's Bindings tab for the
@@ -127,7 +127,7 @@ Claude Chrome click test confirms the core flow works.
   exact commands)
 - Add secrets via `wrangler secret put`
 - CF dashboard → Compute & AI → Email Service → Onboard the
-  `mycommuni.care` domain (CF adds SPF + DKIM automatically)
+  `communicare.farm` domain (CF adds SPF + DKIM automatically)
 - Set up Cloudflare Email Routing for hello@, migrate@
 - (Optional) `npm run pg-to-d1` if you're migrating from a previous
   Supabase deploy

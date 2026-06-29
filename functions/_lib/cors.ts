@@ -1,5 +1,5 @@
 // =============================================================================
-// CORS — shared across every Pages Function on mycommuni.care
+// CORS — shared across every Pages Function on communicare.farm
 // =============================================================================
 // Same shape as supabase/functions/_lib/cors.ts. Kept separate because the
 // runtimes are different (Workers vs Deno) and importing across that line

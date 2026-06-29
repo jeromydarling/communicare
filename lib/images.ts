@@ -15,7 +15,7 @@
 //
 // To use:
 //   imageUrl({ bucket: "farm-photos", key: "abc/2026/06/uuid.jpg", variant: "card" })
-//   → "https://mycommuni.care/i/farm-photos/abc/2026/06/uuid.jpg?w=240&h=240&fit=cover&q=80&fm=auto"
+//   → "https://communicare.farm/i/farm-photos/abc/2026/06/uuid.jpg?w=240&h=240&fit=cover&q=80&fm=auto"
 // =============================================================================
 
 import { SITE_URL } from "./site";

@@ -2,7 +2,7 @@
 
 A small, slow-built tool for farm shares and the neighbors they feed.
 
-- Live at **[mycommuni.care](https://mycommuni.care)**
+- Live at **[communicare.farm](https://communicare.farm)**
 - Manifesto — `/manifesto`
 - Find a farm by ZIP — `/find`
 - Run a farm yourself — `/farmer/`
@@ -102,7 +102,7 @@ supabase/                  # LEGACY — kept as reference until next cleanup
 ## Health
 
 ```bash
-curl https://mycommuni.care/api/_health | jq
+curl https://communicare.farm/api/_health | jq
 ```
 
 Reports which bindings (D1, KV, R2, AI, Vectorize) are wired on the

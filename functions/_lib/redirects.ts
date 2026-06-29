@@ -4,7 +4,7 @@
 // Magic-link and invite tokens carry a `redirect_to` field so the user
 // lands back where they were trying to go. Naive validation (just
 // `.startsWith("/")`) lets a protocol-relative URL like `//evil.com/x`
-// slip through — browsers normalize `https://mycommuni.care` + `//evil.com/x`
+// slip through — browsers normalize `https://communicare.farm` + `//evil.com/x`
 // to `https://evil.com/x`, turning the system into an open-redirect.
 //
 // `isSafeRedirect` returns the input unchanged when it's a single-slash

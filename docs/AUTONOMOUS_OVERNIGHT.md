@@ -46,7 +46,7 @@ Then uncomment the `vectorize` block in `wrangler.jsonc`.
 ### 3. Cloudflare Email Service domain onboarding (~10 min in dashboard)
 
 CF dashboard → **Compute & AI → Email Service → Onboard Domain →
-`mycommuni.care`**. CF adds SPF + DKIM records to your zone
+`communicare.farm`**. CF adds SPF + DKIM records to your zone
 automatically. Verification typically completes in 5–15 minutes.
 **Until this finishes, all `EMAIL.send()` calls fail — sign-up, magic
 link, forgot password, invite emails will all return "binding missing"
@@ -109,7 +109,7 @@ CF dashboard → your Worker → Settings → Variables → Build environment:
 After the four remaining click-tasks above:
 
 ```bash
-curl https://mycommuni.care/api/_health | jq
+curl https://communicare.farm/api/_health | jq
 ```
 
 Every binding should report `true`. Then walk the verification

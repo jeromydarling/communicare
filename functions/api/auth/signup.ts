@@ -174,7 +174,7 @@ async function sendConfirmationEmail(
      values (?, ?, ?, 'confirm', ?, ?)`,
     [tokenHash, email, userId, locale, expires],
   );
-  const siteUrl = env.SITE_URL ?? "https://mycommuni.care";
+  const siteUrl = env.SITE_URL ?? "https://communicare.farm";
   const link = `${siteUrl.replace(/\/+$/, "")}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
   await sendEmail(env.EMAIL, env.SEND_FROM, {
     ...magicLinkEmail({ to: email, link, purpose: "confirm", locale }),

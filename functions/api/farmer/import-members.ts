@@ -312,7 +312,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
              values (?, ?, ?, 'invite', ?)`,
             [tokenHash, emailLower, userId, expires],
           );
-          const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
+          const siteUrl = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
           const link = `${siteUrl}/api/auth/magic-callback?token=${encodeURIComponent(token)}`;
           const locale: Locale =
             row.locale === "es" || row.locale === "en"

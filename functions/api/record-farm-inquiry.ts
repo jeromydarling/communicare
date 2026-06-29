@@ -168,7 +168,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     // One-time outreach to the farm itself — only the FIRST inquiry
     // ever, and only if the farm hasn't already claimed their listing.
     if (!farm.first_inquiry_email_sent_at && !farm.claimed_at) {
-      const siteBase = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
+      const siteBase = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
       const claimUrl = `${siteBase}/claim?slug=${encodeURIComponent(farm.slug ?? farm.id)}`;
       const outreach = await sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
         to: farm.email,
@@ -211,7 +211,7 @@ function outreachBody(opts: {
   const where = opts.senderZip ? ` in ${opts.senderZip}` : "";
   return `Hi —
 
-A neighbor named ${opts.senderName}${where} just sent you a note about your farm. They found you through a small directory we run at mycommuni.care.
+A neighbor named ${opts.senderName}${where} just sent you a note about your farm. They found you through a small directory we run at communicare.farm.
 
 We're writing once, briefly, because we think you should know it's reaching the people you're growing for.
 

@@ -38,7 +38,7 @@ export type SendArgs = {
   subject: string;
   text: string;
   replyTo?: string;
-  /** Optional From override. Defaults to the SEND_FROM env var, then hello@mycommuni.care. */
+  /** Optional From override. Defaults to the SEND_FROM env var, then hello@communicare.farm. */
   from?: string;
 };
 
@@ -66,7 +66,7 @@ export async function sendEmail(
       error: "EMAIL binding missing — onboard the domain to Cloudflare Email Service.",
     };
   }
-  const from = safeHeader(args.from ?? fromDefault ?? "Communicare <hello@mycommuni.care>");
+  const from = safeHeader(args.from ?? fromDefault ?? "Communicare <hello@communicare.farm>");
 
   try {
     const resp = await binding.send({

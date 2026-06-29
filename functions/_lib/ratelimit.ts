@@ -139,7 +139,7 @@ export async function dailyCap(
       ok: false,
       response: json(
         {
-          error: `Daily limit reached for this account. Try again tomorrow, or write hello@mycommuni.care if you need a higher cap.`,
+          error: `Daily limit reached for this account. Try again tomorrow, or write hello@communicare.farm if you need a higher cap.`,
         },
         429,
       ),

@@ -52,7 +52,7 @@ the handler, import it, add the pattern.
 | Inbound email | Resend forward | Cloudflare Email Routing |
 | Outbound email | Resend (partial) | Resend (full) |
 | DNS | various | Cloudflare |
-| Domain | communicare.farm (planned) | **mycommuni.care** (live) |
+| Domain | communicare.farm (planned) | **communicare.farm** (live) |
 
 ## Phases
 
@@ -77,7 +77,7 @@ npm run cf:status         # curl /api/_health, confirm every binding is true
 ### Phase 0 — Hosting move (shipped)
 
 - [x] Drop `BASE_PATH` plumbing — root domain
-- [x] `SITE_URL` → `https://mycommuni.care`
+- [x] `SITE_URL` → `https://communicare.farm`
 - [x] Delete `.github/workflows/deploy.yml` (CF builds on push)
 - [x] `wrangler.jsonc` rewritten for **Workers Assets** (the initial
   Pages-style config didn't work — `wrangler deploy` on a Workers
@@ -91,15 +91,15 @@ What you click in the CF dashboard:
 - Worker project Deploy command: `npx wrangler deploy` (default)
 - Add build env vars: `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`,
-  `NEXT_PUBLIC_SITE_URL=https://mycommuni.care`
-- Confirm `mycommuni.care` is the production custom domain
+  `NEXT_PUBLIC_SITE_URL=https://communicare.farm`
+- Confirm `communicare.farm` is the production custom domain
 
 ### Phase 1 — Email + DNS hygiene
 
-- [ ] Resend account, verify `mycommuni.care` sending domain (DKIM via 2 CNAMEs, SPF as TXT, DMARC as TXT)
+- [ ] Resend account, verify `communicare.farm` sending domain (DKIM via 2 CNAMEs, SPF as TXT, DMARC as TXT)
 - [ ] Wire Resend into the existing `record-farm-inquiry` send path
 - [ ] Set the same Resend SMTP credentials in Supabase Auth (temporary — until Phase 3 replaces auth entirely)
-- [ ] Cloudflare Email Routing already enabled for `mycommuni.care`; confirm `hello@`, `migrate@` route to your real inbox
+- [ ] Cloudflare Email Routing already enabled for `communicare.farm`; confirm `hello@`, `migrate@` route to your real inbox
 
 ### Phase 2 — D1 schema port
 
@@ -125,7 +125,7 @@ If custom:
 - [ ] Session cookies (`__Host-` prefix, `SameSite=Lax`, `Secure`, `HttpOnly`); session store in KV with a D1 fallback for durability
 - [ ] Password hashing with `oslo` (`argon2id` via WebAssembly on Workers)
 - [ ] Magic-link + email-confirmation tokens delivered via Resend
-- [ ] Google OAuth flow against `mycommuni.care/auth/oauth/google/callback`
+- [ ] Google OAuth flow against `communicare.farm/auth/oauth/google/callback`
 
 If Clerk:
 - [ ] Clerk project, custom domain, theming

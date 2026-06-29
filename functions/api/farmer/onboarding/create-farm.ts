@@ -63,7 +63,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (farmCount && farmCount.n >= MAX_FARMS_PER_USER) {
     return json(
       {
-        error: `You already own ${farmCount.n} farms on Communicare — write hello@mycommuni.care if you need more.`,
+        error: `You already own ${farmCount.n} farms on Communicare — write hello@communicare.farm if you need more.`,
       },
       403,
     );

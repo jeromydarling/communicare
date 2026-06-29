@@ -7,7 +7,7 @@
 // photo in 12-25 plain words." Claude isn't worth the cost for it.
 //
 // POST body:
-//   { "url": "https://mycommuni.care/i/farm-photos/abc/..." }
+//   { "url": "https://communicare.farm/i/farm-photos/abc/..." }
 // or:
 //   { "bucket": "farm-photos", "key": "abc/..." }
 //
@@ -68,7 +68,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     // attacker could use the Worker as a proxy to probe internal
     // services or fetch arbitrary HTTPS resources.
     const siteOrigin = new URL(
-      ctx.env.SITE_URL ?? "https://mycommuni.care",
+      ctx.env.SITE_URL ?? "https://communicare.farm",
     ).origin;
     let parsed: URL;
     try {

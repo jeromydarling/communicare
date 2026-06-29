@@ -1,4 +1,4 @@
-// Deploys to Cloudflare Pages, mycommuni.care at root.
+// Deploys to Cloudflare Pages, communicare.farm at root.
 //
 // Cloudflare Pages auto-builds on push to main (configured in the CF
 // dashboard, project linked to this GitHub repo). We don't need a GitHub

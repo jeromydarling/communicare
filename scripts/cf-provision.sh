@@ -185,7 +185,7 @@ cat <<EOF
 ${c_green}Next steps:${c_reset}
   1. Review the diff:                 ${c_dim}git diff wrangler.jsonc${c_reset}
   2. Run D1 migrations:               ${c_dim}npm run d1:migrate${c_reset}
-  3. Verify bindings are wired:       ${c_dim}curl https://mycommuni.care/api/_health | jq${c_reset}
+  3. Verify bindings are wired:       ${c_dim}curl https://communicare.farm/api/_health | jq${c_reset}
   4. (Once you have a Resend account) add SMTP creds to Supabase Auth
      and set TURNSTILE_SECRET + NEXT_PUBLIC_TURNSTILE_SITE_KEY in the
      CF Pages dashboard env vars.

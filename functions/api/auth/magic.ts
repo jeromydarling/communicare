@@ -79,7 +79,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   // Same-origin redirect_to only. isSafeRedirect rejects protocol-
   // relative URLs (//evil.com/x), backslash variants, and over-length.
-  const siteUrl = (ctx.env.SITE_URL ?? "https://mycommuni.care").replace(/\/+$/, "");
+  const siteUrl = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
   const redirectTo: string | null = isSafeRedirect(body.redirect_to);
 
   await run(

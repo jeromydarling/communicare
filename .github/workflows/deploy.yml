@@ -46,4 +46,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Pin wrangler 4 — the action's default v3 can't read our
+          # wrangler.jsonc (Workers Assets schema, send_email binding).
+          wranglerVersion: '4.97.0'
           command: deploy

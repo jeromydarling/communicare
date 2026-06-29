@@ -1,0 +1,49 @@
+name: Deploy to Cloudflare
+
+# Ship-it-always: every push to main builds the Next.js static export and
+# deploys the Worker (which serves /api/* and the static assets together)
+# via wrangler. Manual runs available from the Actions tab too.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   - CLOUDFLARE_API_TOKEN   account-scoped token with Workers Scripts:Edit,
+#                            Workers KV:Edit, D1:Edit, Account Settings:Read
+#   - CLOUDFLARE_ACCOUNT_ID  account id (visible in any dashboard URL)
+#
+# Build-time public envs (Settings → Secrets and variables → Actions →
+# Variables tab, NOT secrets):
+#   - NEXT_PUBLIC_MAPBOX_TOKEN
+#   - NEXT_PUBLIC_TURNSTILE_SITE_KEY
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cf-deploy-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build static export
+        env:
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ vars.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+        run: npx next build
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy

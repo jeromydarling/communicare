@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Sun, Wheat } from "@/components/mark";
 import type { FarmKind } from "@/lib/supabase/types";
 import { CLOSING_BLESSING, SUPPORT_EMAIL } from "@/lib/brand-strings";
+import { TurnstileWidget } from "@/components/forms/turnstile-widget";
 
 type FormData = {
   farm_name: string;
@@ -58,6 +59,7 @@ export default function JoinPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   function update<K extends keyof FormData>(k: K, v: FormData[K]) {
     setData((d) => ({ ...d, [k]: v }));
@@ -93,10 +95,11 @@ export default function JoinPage() {
     }
     setBusy(true);
 
-    // POST to /api/waitlist (Turnstile-gated + rate-limited).
-    // turnstileToken is rendered as null until the widget lands; the
-    // Worker passes through when TURNSTILE_SECRET isn't set so dev
-    // and pre-Turnstile deploys keep working.
+    // POST to /api/waitlist (Turnstile-gated + rate-limited). The
+    // server passes through when TURNSTILE_SECRET isn't set (dev), and
+    // the widget itself short-circuits when the site key isn't baked
+    // into the build — so submitting before either side is configured
+    // still works.
     const res = await fetch("/api/waitlist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -109,6 +112,7 @@ export default function JoinPage() {
         current_tool: data.current_tool || null,
         note: data.pain || null,
         source: "landing",
+        turnstileToken,
       }),
     });
     const body = await res.json().catch(() => ({}));
@@ -175,7 +179,13 @@ export default function JoinPage() {
       <div className="paper p-8 md:p-10 mt-6">
         {step === 0 && <StepFarm data={data} update={update} />}
         {step === 1 && <StepCurrent data={data} update={update} />}
-        {step === 2 && <StepContact data={data} update={update} />}
+        {step === 2 && (
+          <StepContact
+            data={data}
+            update={update}
+            onTurnstileToken={setTurnstileToken}
+          />
+        )}
 
         {error && (
           <div className="border border-brick bg-brick/5 px-4 py-3 text-brick text-sm mt-6">
@@ -391,9 +401,11 @@ function StepCurrent({
 function StepContact({
   data,
   update,
+  onTurnstileToken,
 }: {
   data: FormData;
   update: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
+  onTurnstileToken: (token: string | null) => void;
 }) {
   return (
     <>
@@ -430,6 +442,10 @@ function StepContact({
           <div className="hint">
             We write only when we&apos;re ready. No marketing emails. Ever.
           </div>
+        </div>
+
+        <div className="pt-2">
+          <TurnstileWidget onToken={onTurnstileToken} />
         </div>
       </div>
 

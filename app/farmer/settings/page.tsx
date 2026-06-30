@@ -13,6 +13,7 @@ import {
 import { downloadBundle, downloadCsv } from "@/lib/csv-export";
 import { HortusIntegrationCard } from "./HortusIntegrationCard";
 import { PendingCropMappings } from "./PendingCropMappings";
+import { openBillingPortal } from "@/lib/farmer/api";
 
 export default function FarmerSettingsPage() {
   const [farmId, setFarmId] = useState<string | null>(null);
@@ -128,6 +129,8 @@ export default function FarmerSettingsPage() {
           </section>
         )}
 
+        <BillingSection />
+
         <section className="paper p-8 border-brick/30 bg-brick/5">
           <div className="small-caps text-xs text-brickDark mb-2">
             Take your farm with you
@@ -169,6 +172,46 @@ export default function FarmerSettingsPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+function BillingSection() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <section className="paper p-8">
+      <div className="small-caps text-xs text-brick mb-2">Billing</div>
+      <h2 className="display text-2xl font-medium mb-3">
+        Manage your subscription.
+      </h2>
+      <p className="text-sm text-soil/75 mb-5">
+        Update your card, view invoices, or cancel. Stripe handles all of it
+        through their billing portal.
+      </p>
+      {error && (
+        <div className="border border-brick bg-brick/5 px-3 py-2 text-brick text-sm mb-4">
+          {error}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={async () => {
+          setError(null);
+          setBusy(true);
+          const res = await openBillingPortal();
+          setBusy(false);
+          if ("error" in res) {
+            setError(res.error);
+            return;
+          }
+          window.location.href = res.url;
+        }}
+        className="btn btn-primary disabled:opacity-50"
+        disabled={busy}
+      >
+        {busy ? "Opening Stripe…" : "Open billing portal →"}
+      </button>
+    </section>
   );
 }
 

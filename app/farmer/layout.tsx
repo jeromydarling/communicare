@@ -2,6 +2,7 @@
 
 import { AuthGate } from "@/components/farmer/auth-gate";
 import { FarmerShell } from "@/components/farmer/shell";
+import { BillingBanner } from "@/components/farmer/billing-banner";
 import { demoFarm } from "@/lib/farmer-demo";
 
 // Auth-gated client layout. In demo mode (no Supabase configured), shows
@@ -21,6 +22,7 @@ export default function FarmerLayout({
     <AuthGate>
       {(auth) => (
         <FarmerShell auth={auth} farmName={demoFarm.name}>
+          {auth.kind === "authed" && <BillingBanner />}
           {children}
         </FarmerShell>
       )}

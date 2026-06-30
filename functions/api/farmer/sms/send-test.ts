@@ -12,6 +12,7 @@
 
 import { preflight, json } from "../../../_lib/cors";
 import { verifyAuth } from "../../../_lib/auth";
+import { requireActiveSubscription } from "../../../_lib/billing";
 import { one, run, uuid, nowIso } from "../../../_lib/db";
 import { rateLimit } from "../../../_lib/ratelimit";
 import { normalizeUsPhone } from "../../../_lib/phone";
@@ -61,6 +62,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (!ctx.env.DB) return json({ error: "Database not configured." }, 500);
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
+
+  const subGate = await requireActiveSubscription(ctx.env.DB, auth.user.id);
+  if (!subGate.ok) return subGate.response;
 
   const gate = await rateLimit(ctx.env.RATELIMIT, {
     bucket: `sms-test:${auth.user.id}`,

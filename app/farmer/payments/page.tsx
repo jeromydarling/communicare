@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/farmer/shell";
+import { startConnectOnboarding } from "@/lib/farmer/api";
 
 type Mode = "byo" | "managed";
 
@@ -184,7 +185,23 @@ function ByoEditor({
 }
 
 function ManagedEditor() {
-  const [step, setStep] = useState<"intro" | "connecting" | "done">("intro");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function begin() {
+    setError(null);
+    setBusy(true);
+    const res = await startConnectOnboarding();
+    setBusy(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    // Stripe hosts the rest of onboarding. They'll return to
+    // /farmer/payments/?connect=complete; the webhook flips the
+    // farm's connect_charges_enabled flag.
+    window.location.href = res.url;
+  }
 
   return (
     <div className="paper p-8">
@@ -193,53 +210,34 @@ function ManagedEditor() {
         We set up Stripe for you.
       </h2>
 
-      {step === "intro" && (
-        <>
-          <ul className="space-y-3 text-soil/85 mb-8">
-            {[
-              "We open a Stripe Connect Express account in your farm's name.",
-              "You verify your ID and bank account on Stripe (~5 minutes).",
-              "We handle disputes, payouts, and 1099-K issuance.",
-              "Our 1% platform fee comes off the top of card and ACH charges.",
-            ].map((line, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="text-wheat display">№ {i + 1}</span>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => {
-              setStep("connecting");
-              setTimeout(() => setStep("done"), 1500);
-            }}
-            className="btn btn-primary"
-          >
-            Begin Stripe onboarding →
-          </button>
-        </>
-      )}
+      <ul className="space-y-3 text-soil/85 mb-8">
+        {[
+          "We open a Stripe Connect Express account in your farm's name.",
+          "You verify your ID and bank account on Stripe (~5 minutes).",
+          "We handle disputes, payouts, and 1099-K issuance.",
+          "Our 1% platform fee comes off the top of card and ACH charges.",
+        ].map((line, i) => (
+          <li key={i} className="flex gap-3">
+            <span className="text-wheat display">№ {i + 1}</span>
+            <span>{line}</span>
+          </li>
+        ))}
+      </ul>
 
-      {step === "connecting" && (
-        <div className="text-center py-8">
-          <div className="display italic text-soil/65">
-            Opening your Stripe Connect account…
-          </div>
+      {error && (
+        <div className="border border-brick bg-brick/5 px-3 py-2 text-brick text-sm mb-4">
+          {error}
         </div>
       )}
 
-      {step === "done" && (
-        <div className="border border-moss bg-moss/5 p-6 rounded">
-          <div className="display text-lg font-medium text-mossDark mb-2">
-            ✓ Stripe connected.
-          </div>
-          <p className="text-soil/75 text-sm">
-            You're ready to take card and ACH payments. The 1% platform fee
-            applies to processed volume only — no monthly minimum.
-          </p>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={begin}
+        disabled={busy}
+        className="btn btn-primary disabled:opacity-50"
+      >
+        {busy ? "Opening Stripe…" : "Begin Stripe onboarding →"}
+      </button>
     </div>
   );
 }

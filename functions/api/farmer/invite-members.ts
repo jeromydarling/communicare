@@ -12,6 +12,7 @@
 
 import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
+import { requireActiveSubscription } from "../../_lib/billing";
 import { dailyCap } from "../../_lib/ratelimit";
 import { newToken, sha256Hex } from "../../_lib/crypto";
 import {
@@ -54,6 +55,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
+
+  const gate = await requireActiveSubscription(db, auth.user.id);
+  if (!gate.ok) return gate.response;
 
   let body: RequestBody;
   try {

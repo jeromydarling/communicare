@@ -49,10 +49,24 @@ export type OperatorFarm = {
   onboarded_at: string | null;
 };
 
+export type BillingSnapshot = {
+  subscription_status:
+    | "unpaid" | "active" | "past_due" | "canceled"
+    | "incomplete" | "incomplete_expired";
+  period_end: string | null;
+  has_stripe_customer: boolean;
+};
+
 export type MeWithFarm = {
   user: AuthedUser;
-  farm: OperatorFarm | null;
+  farm: (OperatorFarm & {
+    connect_account_id?: string | null;
+    connect_charges_enabled?: number;
+    connect_payouts_enabled?: number;
+    connect_details_submitted?: number;
+  }) | null;
   role: "owner" | "staff" | null;
+  billing: BillingSnapshot;
 };
 
 export type ShareDef = {
@@ -217,5 +231,30 @@ export function sendSmsTest(phone: string) {
   return api<{ ok: true; sid: string; status: string }>(
     "/api/farmer/sms/send-test",
     { method: "POST", body: JSON.stringify({ phone }) },
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Billing — Stripe Checkout + Portal + Connect onboarding
+// -----------------------------------------------------------------------------
+
+export function startCheckoutSession() {
+  return api<{ url: string; sessionId: string }>(
+    "/api/billing/create-checkout-session",
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
+export function openBillingPortal() {
+  return api<{ url: string }>("/api/billing/portal", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function startConnectOnboarding(args: { farm_id?: string } = {}) {
+  return api<{ url: string; accountId: string }>(
+    "/api/billing/connect-onboard",
+    { method: "POST", body: JSON.stringify(args) },
   );
 }

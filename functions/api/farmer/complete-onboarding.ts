@@ -7,6 +7,7 @@
 
 import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
+import { requireActiveSubscription } from "../../_lib/billing";
 import { one, run, nowIso } from "../../_lib/db";
 
 type Env = {
@@ -23,6 +24,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (!ctx.env.DB) return json({ error: "Database not configured." }, 500);
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
+
+  // Publishing the farm flips is_published — that's the moment the
+  // listing goes live. Gate it behind an active subscription so unpaid
+  // accounts can fill in the wizard but can't push the published bit.
+  const gate = await requireActiveSubscription(ctx.env.DB, auth.user.id);
+  if (!gate.ok) return gate.response;
 
   // Body is optional; if present, pin the farm_id.
   let body: RequestBody = {};

@@ -105,21 +105,14 @@ export default function RootLayout({
       className={`${display.variable} ${body.variable} ${mono.variable}`}
     >
       <body className="min-h-screen bg-parchment text-soil">
-        {/* Public env vars surfaced to the browser via a server-side
-            render. Next 15's client-side NEXT_PUBLIC_* inliner stopped
-            picking these up during the CF deploy (confirmed: process.env
-            was set at config-load but the find chunk shipped with no
-            token). Server Components read process.env directly and the
-            value gets baked into the rendered HTML, sidestepping
-            whatever's interfering with the client inliner. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.__COMMUNICARE_PUBLIC_ENV__=${JSON.stringify({
-              MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "",
-              TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "",
-            })};`,
-          }}
-        />
+        {/* Public env shim. Loads window.__COMMUNICARE_PUBLIC_ENV__ from
+            /api/public-env.js, which the Worker fills in from its env
+            (set via `wrangler secret put MAPBOX_TOKEN` etc.). We tried
+            inlining via Next's NEXT_PUBLIC_* mechanism and it silently
+            shipped empty strings into the client bundle; this route is
+            the durable fix. Sync <script> so the values land before any
+            consumer module evaluates. */}
+        <script src="/api/public-env.js" />
         {/* Site-wide Organization structured data — appears on every page so
             crawlers know what entity this is. Per-page JSON-LD layers on top
             of this on /farm/[slug], /manifesto, and the homepage. */}

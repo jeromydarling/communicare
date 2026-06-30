@@ -33,6 +33,11 @@ export type Env = {
   TWILIO_ACCOUNT_SID?: string;
   TWILIO_AUTH_TOKEN?: string;
 
+  // Public-by-design tokens, served to the browser via /api/public-env.js.
+  // Set with `wrangler secret put MAPBOX_TOKEN` etc.
+  MAPBOX_TOKEN?: string;
+  TURNSTILE_SITE_KEY?: string;
+
   // Optional bindings — added in wrangler.jsonc after provisioning
   DB?: D1Database;
   CACHE?: KVNamespace;
@@ -82,6 +87,7 @@ import * as smsConfig from "../functions/api/farmer/sms/config";
 import * as smsSubscriptions from "../functions/api/farmer/sms/subscriptions";
 import * as smsSendTest from "../functions/api/farmer/sms/send-test";
 import * as smsInbound from "../functions/api/sms/inbound";
+import * as publicEnv from "../functions/api/public-env";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -194,6 +200,10 @@ const ROUTES: Route[] = [
   { method: "OPTIONS", pattern: P("/api/farmer/sms/subscriptions"), handler: adapt(smsSubscriptions.onRequestOptions) },
   { method: "POST",    pattern: P("/api/farmer/sms/send-test"), handler: adapt(smsSendTest.onRequestPost) },
   { method: "OPTIONS", pattern: P("/api/farmer/sms/send-test"), handler: adapt(smsSendTest.onRequestOptions) },
+
+  // Public env shim — root layout loads /api/public-env.js to set
+  // window.__COMMUNICARE_PUBLIC_ENV__ at runtime (Mapbox + Turnstile).
+  { method: "GET", pattern: P("/api/public-env.js"), handler: adapt(publicEnv.onRequestGet) },
 
   // Twilio inbound webhook — HMAC-verified at the handler boundary.
   // Twilio's console points each Twilio number's "messaging webhook"

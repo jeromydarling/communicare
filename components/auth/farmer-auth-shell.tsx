@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { WatercolorScene } from "@/components/watercolor-scene";
 import { Mark } from "@/components/mark";
 
 // Shared two-pane layout for all four /farmer auth pages. Mirrors the
@@ -30,7 +29,23 @@ export function FarmerAuthShell({
   return (
     <div className="min-h-[calc(100vh-64px)] grid md:grid-cols-2">
       <div className="relative bg-soil overflow-hidden order-2 md:order-1 min-h-[280px] md:min-h-0">
-        <WatercolorScene name="dawn-pasture" className="absolute inset-0 w-full h-full" />
+        {/* Same hero photograph the homepage uses — keeps the brand
+            visually coherent from landing through signup. The soil-tinted
+            gradient on top tames the highlights enough that the eyebrow
+            text and the Berry quote card stay readable. */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url(/hero-watercolor.jpg)" }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(48,38,30,0.55) 0%, rgba(48,38,30,0.30) 45%, rgba(48,38,30,0.55) 100%)",
+          }}
+          aria-hidden="true"
+        />
         <div className="absolute top-8 left-8 text-parchment/85 z-10">
           <div className="small-caps text-[10px] text-parchment/60 tracking-[0.2em]">
             The farm desk · for operators

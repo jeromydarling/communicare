@@ -44,6 +44,14 @@ const LNG_MAX = -66;
 const LAT_MIN = 25;
 const LAT_MAX = 50;
 
+// Perplexity often returns bare hostnames ("prairiedrifterfarm.com")
+// for the website field. A bare hostname in an <a href> is treated as a
+// relative path, which sends the browser to /find/<hostname> on the
+// current origin. Force https:// when no scheme is present.
+function absoluteUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
 function project(lng: number, lat: number): { x: number; y: number } {
   const x = ((lng - LNG_MIN) / (LNG_MAX - LNG_MIN)) * 100;
   const y = ((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * 100;
@@ -674,7 +682,7 @@ function FarmCard({
               </dt>
               <dd className="truncate">
                 <a
-                  href={farm.website}
+                  href={absoluteUrl(farm.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brick hover:underline"

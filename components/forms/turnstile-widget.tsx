@@ -22,7 +22,23 @@
 import { useEffect, useRef } from "react";
 import Script from "next/script";
 
-const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+// Read from the window global set in the root layout's server-rendered
+// <script>. Process.env fallback so local dev still works. Same root
+// cause as the Mapbox token — the CF build doesn't inline NEXT_PUBLIC_*
+// into client bundles reliably, so we surface them via SSG.
+declare global {
+  interface Window {
+    __COMMUNICARE_PUBLIC_ENV__?: {
+      MAPBOX_TOKEN?: string;
+      TURNSTILE_SITE_KEY?: string;
+    };
+  }
+}
+const SITE_KEY =
+  (typeof window !== "undefined" &&
+    window.__COMMUNICARE_PUBLIC_ENV__?.TURNSTILE_SITE_KEY) ||
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+  "";
 
 type TurnstileGlobal = {
   render: (

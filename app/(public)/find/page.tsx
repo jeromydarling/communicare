@@ -23,7 +23,21 @@ const RADIUS_OPTIONS = [5, 10, 25, 50, 100, 200] as const;
 type Radius = (typeof RADIUS_OPTIONS)[number];
 const DEFAULT_RADIUS: Radius = 25;
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+// Read from the window global set by the root layout's server-rendered
+// script. Falls back to process.env so local dev (where the layout
+// script's value comes from the same env var) still works either way.
+declare global {
+  interface Window {
+    __COMMUNICARE_PUBLIC_ENV__?: {
+      MAPBOX_TOKEN?: string;
+      TURNSTILE_SITE_KEY?: string;
+    };
+  }
+}
+const MAPBOX_TOKEN =
+  (typeof window !== "undefined" && window.__COMMUNICARE_PUBLIC_ENV__?.MAPBOX_TOKEN) ||
+  process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
+  "";
 
 const LNG_MIN = -125;
 const LNG_MAX = -66;

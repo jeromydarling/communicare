@@ -50,14 +50,32 @@ export default function FarmerSignUpPage() {
       display_name: name.trim(),
       farm_name: farmName.trim(),
     });
-    setBusy(false);
     if (!("ok" in result) || !result.ok) {
+      setBusy(false);
       setError(humanize(result.error));
       return;
     }
-    // Session cookie is already set by the server. Straight into the
-    // five-minute onboarding wizard.
-    router.replace("/farmer/onboarding/");
+    // Account exists; session cookie is set. Now we send them straight
+    // to Stripe Checkout for the $9/mo platform plan. The success_url
+    // brings them back into the onboarding wizard once Stripe confirms.
+    // If Stripe isn't reachable for some reason, drop them into the
+    // dashboard with a banner — the gate logic will keep them out of
+    // the destructive paths until they pay.
+    const checkout = await fetch("/api/billing/create-checkout-session", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const body = await checkout.json().catch(() => ({}));
+    setBusy(false);
+    if (checkout.ok && body?.url) {
+      window.location.href = body.url;
+      return;
+    }
+    // Fallback: drop into onboarding; the dashboard surfaces the
+    // "complete payment" banner.
+    router.replace("/farmer/onboarding/?billing=pending");
   }
 
   return (
@@ -65,11 +83,11 @@ export default function FarmerSignUpPage() {
       eyebrow="Start your farm desk"
       title={
         <>
-          The desk is{" "}
-          <span className="italic text-brick">free until June.</span>
+          Open your{" "}
+          <span className="italic text-brick">farm desk.</span>
         </>
       }
-      subtitle="Set up your account in two minutes. After that, the homepage, the SMS swap loop, the pickup roster — all of it works the same evening."
+      subtitle="Two minutes here, then nine dollars, then the homepage, the SMS swap loop, and the pickup roster all work the same evening. Cancel anytime."
       footer={<FarmerAuthFooterLinks current="sign-up" />}
     >
       <div className="mt-5">

@@ -38,6 +38,12 @@ export type Env = {
   MAPBOX_TOKEN?: string;
   TURNSTILE_SITE_KEY?: string;
 
+  // Stripe (all set via `wrangler secret put`)
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_PRICE_ID?: string;            // price id for the $9/mo platform plan
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_CONNECT_WEBHOOK_SECRET?: string;
+
   // Optional bindings — added in wrangler.jsonc after provisioning
   DB?: D1Database;
   CACHE?: KVNamespace;
@@ -88,6 +94,11 @@ import * as smsSubscriptions from "../functions/api/farmer/sms/subscriptions";
 import * as smsSendTest from "../functions/api/farmer/sms/send-test";
 import * as smsInbound from "../functions/api/sms/inbound";
 import * as publicEnv from "../functions/api/public-env";
+import * as billingCheckout from "../functions/api/billing/create-checkout-session";
+import * as billingPortal from "../functions/api/billing/portal";
+import * as billingWebhook from "../functions/api/billing/webhook";
+import * as billingConnectOnboard from "../functions/api/billing/connect-onboard";
+import * as billingConnectWebhook from "../functions/api/billing/connect-webhook";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -204,6 +215,19 @@ const ROUTES: Route[] = [
   // Public env shim — root layout loads /api/public-env.js to set
   // window.__COMMUNICARE_PUBLIC_ENV__ at runtime (Mapbox + Turnstile).
   { method: "GET", pattern: P("/api/public-env.js"), handler: adapt(publicEnv.onRequestGet) },
+
+  // Billing — platform subscription gate + Connect onboarding.
+  // Webhook URLs go to /api/billing/webhook (platform) and
+  // /api/billing/connect-webhook (Connect events). Set both in
+  // Stripe Dashboard → Webhooks; the Connect one is under the Connect tab.
+  { method: "POST",    pattern: P("/api/billing/create-checkout-session"), handler: adapt(billingCheckout.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/billing/create-checkout-session"), handler: adapt(billingCheckout.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/billing/portal"),                 handler: adapt(billingPortal.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/billing/portal"),                 handler: adapt(billingPortal.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/billing/webhook"),                handler: adapt(billingWebhook.onRequestPost) },
+  { method: "POST",    pattern: P("/api/billing/connect-onboard"),       handler: adapt(billingConnectOnboard.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/billing/connect-onboard"),       handler: adapt(billingConnectOnboard.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/billing/connect-webhook"),        handler: adapt(billingConnectWebhook.onRequestPost) },
 
   // Twilio inbound webhook — HMAC-verified at the handler boundary.
   // Twilio's console points each Twilio number's "messaging webhook"

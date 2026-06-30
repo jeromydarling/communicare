@@ -322,11 +322,11 @@ export default function Home() {
             per month. for every farm. for as long as we exist.
           </div>
           <div className="mt-10 max-w-2xl mx-auto text-lg text-parchment/75 leading-relaxed">
-            No setup fee. No annual contract. No per-member, per-pickup,
-            per-SKU, per-SMS, per-anything. No tiers. No "Enterprise." No
-            data-export hostage. A 30-day free trial that does not ask for a
-            card. One-click cancel that returns every byte of your data the
-            same minute.
+            Nine dollars at signup. Nine dollars next month, and the month
+            after that. No setup fee. No annual contract. No per-member,
+            per-pickup, per-SKU, per-SMS, per-anything. No tiers. No
+            "Enterprise." No data-export hostage. One-click cancel that
+            returns every byte of your data the same minute.
           </div>
           <div className="mt-10 inline-flex items-baseline gap-3 text-parchment/65">
             <span className="small-caps text-xs">Optional add-on</span>

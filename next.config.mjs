@@ -1,32 +1,22 @@
-// Deploys to Cloudflare Pages, communicare.farm at root.
-//
-// Cloudflare Pages auto-builds on push to main (configured in the CF
-// dashboard, project linked to this GitHub repo). We don't need a GitHub
-// Actions deploy step — CF handles the build with `npm run build` and
-// publishes the `out/` directory directly. Per-branch preview deploys
-// happen automatically.
-//
-// `output: "export"` produces a static `out/` directory; that's what CF
-// Pages serves. When we add Workers for server-side logic we'll either
-// keep this static export and call Workers as APIs from the client, or
-// switch to `@cloudflare/next-on-pages` for SSR-on-Workers. Static-export
-// remains the right call today because every server need is already
-// served by edge functions.
-
-const mapboxToken =
-  process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
-  process.env.VITE_MAPBOX_KEY ||
-  process.env.MAPBOX_TOKEN ||
-  "";
+// Static export served by the Cloudflare Worker in src/worker.ts.
+// `output: "export"` writes ./out; wrangler uploads it as the
+// ASSETS binding alongside the Worker code.
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
   trailingSlash: true,
   images: { unoptimized: true },
-  env: {
-    NEXT_PUBLIC_MAPBOX_TOKEN: mapboxToken,
-  },
 };
+
+// Diagnostic — surfaces what NEXT_PUBLIC_MAPBOX_TOKEN resolves to at
+// config-load. If this prints empty in CI, the workflow env isn't
+// reaching the next process; if it prints "pk.…", Next's NEXT_PUBLIC_
+// inliner will bake it into the client bundle and the /find map will
+// work. Cheap, deterministic, and leaves a clear trail in the build log.
+const tok = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+console.log(
+  `[next.config] NEXT_PUBLIC_MAPBOX_TOKEN: present=${Boolean(tok)} length=${tok.length} prefix=${tok.slice(0, 8)}`,
+);
 
 export default nextConfig;

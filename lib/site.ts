@@ -36,6 +36,18 @@ export function url(path: string): string {
 // override with their own image when available.
 export const DEFAULT_OG_IMAGE = "/og/default.jpg";
 
+// -----------------------------------------------------------------------------
+// CROS family attribution — Communicare is one of a small set of tools built
+// under the CROS name. The link + short blurb reused across the marketing
+// surface so the connection is visible without shouting.
+// -----------------------------------------------------------------------------
+export const CROS_URL = "https://thecros.app";
+export const CROS_NAME = "CROS";
+export const CROS_SHORT =
+  "Small, slow-built tools for the work that holds us together.";
+export const CROS_LONG =
+  "CROS is a small family of tools built for the work that holds people together — food, care, and the neighborhoods that make both possible. Communicare is one of them. The others are being built one at a time, at the same modest pace, by the same modest hands.";
+
 export const ORG_JSON_LD = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -44,6 +56,12 @@ export const ORG_JSON_LD = {
   url: SITE_URL,
   logo: `${SITE_URL}/icon.svg`,
   slogan: SITE_TAGLINE,
+  parentOrganization: {
+    "@type": "Organization",
+    name: CROS_NAME,
+    url: CROS_URL,
+    description: CROS_SHORT,
+  },
   knowsAbout: [
     "Community Supported Agriculture",
     "CSA",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Sun } from "@/components/mark";
 import { JsonLd } from "@/components/json-ld";
-import { SITE_URL, SITE_NAME } from "@/lib/site";
+import { SITE_URL, SITE_NAME, CROS_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Why we built Communicare — A manifesto",
@@ -104,6 +104,42 @@ export default function ManifestoPage() {
           ads. No sponsored placements on a farm&apos;s page. No sale of
           customer data. Ever. If we betray this, the people who paid us nine
           dollars should feel betrayed, and they should leave.
+        </p>
+
+        <h2 className="display text-3xl font-medium text-soil mt-10">
+          On the family this belongs to
+        </h2>
+        <p>
+          Communicare is one of a small family of tools called{" "}
+          <a
+            href={CROS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brick hover:underline"
+          >
+            CROS
+          </a>
+          , built by the same hands, at the same modest pace. Each tool is made
+          for a piece of the work that holds people together — food, care, the
+          neighborhoods that make both possible. There is no growth target,
+          no roadmap of features designed to raise a round, no plan to be
+          acquired. There is a small number of us, working slowly, on tools
+          we ourselves use.
+        </p>
+        <p>
+          If Communicare is not the tool for you, one of the others might be —
+          or the next one we build might be. You can watch the family
+          grow at{" "}
+          <a
+            href={CROS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brick hover:underline"
+          >
+            thecros.app
+          </a>
+          . Every one of them will be made this way: quiet, small, honest
+          about what it is.
         </p>
 
         <h2 className="display text-3xl font-medium text-soil mt-10">

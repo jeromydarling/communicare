@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mark } from "./mark";
+import { CROS_URL } from "@/lib/site";
 
 // Four nav items + one conversion CTA. Each label tells you exactly what
 // you get on the other side. Old labels ("Try the homepage", "See a farm",
@@ -37,6 +38,16 @@ export function Nav() {
               {item.label}
             </Link>
           ))}
+          <a
+            href={CROS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-soil/15 text-[10px] small-caps text-soil/55 hover:text-brick hover:border-brick/40 transition-colors whitespace-nowrap"
+            title="Communicare is part of the CROS family of apps"
+          >
+            <span className="display italic not-italic tracking-[0.15em]">CROS</span>
+            <span className="text-[8px]">↗</span>
+          </a>
           <Link
             href="/come-in"
             className="hover:text-brick transition-colors text-soil/60 text-sm whitespace-nowrap"

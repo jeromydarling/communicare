@@ -39,6 +39,7 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   authors: [{ name: SITE_NAME }],
+  publisher: "CROS",
   keywords: [
     "CSA",
     "community supported agriculture",

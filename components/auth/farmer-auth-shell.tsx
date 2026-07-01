@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Mark } from "@/components/mark";
+import { CROS_URL } from "@/lib/site";
 
 // Shared two-pane layout for all four /farmer auth pages. Mirrors the
 // /come-in shell so member and farm sign-in feel like siblings.
@@ -46,10 +47,19 @@ export function FarmerAuthShell({
           }}
           aria-hidden="true"
         />
-        <div className="absolute top-8 left-8 text-parchment/85 z-10">
+        <div className="absolute top-8 left-8 right-8 flex items-start justify-between text-parchment/85 z-10">
           <div className="small-caps text-[10px] text-parchment/60 tracking-[0.2em]">
             The farm desk · for operators
           </div>
+          <a
+            href={CROS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="small-caps text-[10px] text-parchment/50 hover:text-parchment tracking-[0.2em] whitespace-nowrap"
+            title="Part of the CROS family of apps"
+          >
+            CROS ↗
+          </a>
         </div>
         <div className="absolute bottom-8 left-8 right-8 md:right-auto md:max-w-sm z-10">
           <div className="bg-parchment/95 backdrop-blur p-6 paper border-soil/10">

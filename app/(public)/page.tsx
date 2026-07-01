@@ -9,7 +9,13 @@ import {
 } from "@/components/screenshots";
 import { ScreencastEmbed } from "@/components/screencast-embed";
 import { JsonLd } from "@/components/json-ld";
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+import {
+  SITE_URL,
+  SITE_NAME,
+  SITE_DESCRIPTION,
+  CROS_URL,
+  CROS_LONG,
+} from "@/lib/site";
 
 // Honors the deploy-time base path (e.g. "/communicare" on a GitHub Pages
 // project page). Raw <img>/CSS background-image URLs need it prepended;
@@ -511,6 +517,26 @@ export default function Home() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* CROS FAMILY — quiet attribution before the closing */}
+      <section className="border-t border-b border-soil/15 bg-cream2/40">
+        <div className="max-w-3xl mx-auto px-6 py-16 text-center">
+          <div className="small-caps text-[11px] text-brick mb-4 tracking-[0.25em]">
+            One of the CROS family
+          </div>
+          <p className="display italic text-2xl md:text-3xl text-soil/85 leading-snug mb-6">
+            {CROS_LONG}
+          </p>
+          <a
+            href={CROS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-ghost text-sm"
+          >
+            See what else is being built at thecros.app →
+          </a>
         </div>
       </section>
 

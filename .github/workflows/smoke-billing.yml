@@ -1,27 +1,37 @@
 name: Smoke test — billing flow
 
-# Runs against the live communicare.farm deploy. Uses manual dispatch so
-# it doesn't fire on every push; the test creates a real (unpaid) user
-# row + a real Stripe Customer per run, which are cheap but do
-# accumulate. Sweep them every quarter or so.
+# Runs against the live communicare.farm deploy. Auto-fires after every
+# successful Deploy to Cloudflare run; also manually dispatchable.
 #
-# What it verifies:
-#   1. /api/auth/signup creates a user and returns a session cookie
-#   2. /api/auth/me returns the new user
-#   3. /api/farmer/me-with-farm returns billing = { unpaid, no customer }
-#   4. /api/billing/create-checkout-session hits Stripe, creates a
-#      Customer + Checkout Session, returns a stripe.com URL
-#   5. That URL 200s from Stripe's side (proves the session is valid)
+# Required repo secrets (mirror what's in CF Worker Secrets):
+#   - CLOUDFLARE_API_TOKEN     already set (deploys use it)
+#   - CLOUDFLARE_ACCOUNT_ID    already set (deploys use it)
+#   - STRIPE_SECRET_KEY        Phase A step 6 uses it to resolve
+#                              customer id via /customers/search
+#   - STRIPE_WEBHOOK_SECRET    Phase B signs synthetic events with it
 #
-# NOT verified here (would require paying $9 or wiring test mode):
-#   - webhook signature verification + dispatch
-#   - subscription_status flipping to 'active'
-#   - gate releasing on the previously-gated endpoints
-# Those you check once manually and then trust the code path.
+# What Phase A verifies (always runs):
+#   1. /api/auth/signup            works, session cookie mints
+#   2. /api/auth/me                session round-trips
+#   3. /api/farmer/me-with-farm    billing snapshot = unpaid, no customer
+#   4. /api/billing/create-checkout-session  Stripe Customer + Checkout land
+#   5. HEAD the returned Stripe URL     Stripe accepts the session
+#   6. /api/farmer/me-with-farm    customer id landed on the row
+#
+# What Phase B verifies (requires the two Stripe secrets above):
+#   7. Sign a customer.subscription.created event with STRIPE_WEBHOOK_SECRET
+#      → POST to /api/billing/webhook → real signature verification passes
+#      → same dispatch code Stripe would trigger runs
+#   8. /api/farmer/me-with-farm    subscription_status flipped to 'active'
+#   9. /api/farmer/sms/send-test   no longer returns 402 (gate released)
+#  10. Sign customer.subscription.deleted → status flips to 'canceled'
+#
+# Cleanup step at the end wipes the smoke user rows so we don't
+# accumulate. Also nice: if the cleanup itself fails, the run is
+# still reported as red so we notice.
 
 on:
   workflow_dispatch:
-  # Also run automatically after deploy so we catch regressions.
   workflow_run:
     workflows: ["Deploy to Cloudflare"]
     types: [completed]
@@ -37,6 +47,22 @@ jobs:
           node-version: '22'
 
       - name: Run smoke test
+        id: smoke
         run: node .github/scripts/smoke-billing.mjs
         env:
           SITE_URL: https://communicare.farm
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+
+      # Cleanup — wipe smoke test artifacts regardless of pass/fail so
+      # every run leaves the DB clean. Uses wrangler with the same
+      # CF token the deploy uses.
+      - name: Cleanup smoke rows
+        if: always()
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.97.0'
+          command: >-
+            d1 execute communicare-db --remote --file .github/scripts/smoke-billing-cleanup.sql

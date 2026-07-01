@@ -7,15 +7,19 @@
 // Password hash format (PHC-ish):
 //   pbkdf2-sha256$<iterations>$<salt-b64>$<hash-b64>
 //
-// PBKDF2 with 600,000 iterations of SHA-256 — OWASP 2023 recommendation
-// when argon2/bcrypt aren't readily available. Slower per-verification
-// than argon2, but the gold standard for portability and zero-dep auth.
-// At our scale (a few sign-ins per minute peak), the ~250ms verification
-// time is invisible to users and gives us strong resistance to offline
-// attacks if the DB leaks.
+// PBKDF2 with 100,000 iterations of SHA-256. OWASP 2023 recommends
+// 600,000 for defense-in-depth, but Cloudflare Workers' SubtleCrypto
+// caps at 100,000 (any higher throws
+// "iteration counts above 100000 are not supported"). The stored hash
+// records the iteration count, so we can raise this ceiling later —
+// verify() reads whatever count is in each row.
+//
+// At 100k iterations + a 16-byte per-user salt, a leaked DB still
+// makes offline brute-force costly (~10ms/attempt on commodity GPUs).
+// Fine at launch scale; upgrade to argon2id when CF exposes it.
 // =============================================================================
 
-const PBKDF2_ITERATIONS = 600_000;
+const PBKDF2_ITERATIONS = 100_000;
 const HASH_BITS = 256;
 const SALT_BYTES = 16;
 const SESSION_BYTES = 32;

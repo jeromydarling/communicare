@@ -1,0 +1,42 @@
+name: Smoke test — billing flow
+
+# Runs against the live communicare.farm deploy. Uses manual dispatch so
+# it doesn't fire on every push; the test creates a real (unpaid) user
+# row + a real Stripe Customer per run, which are cheap but do
+# accumulate. Sweep them every quarter or so.
+#
+# What it verifies:
+#   1. /api/auth/signup creates a user and returns a session cookie
+#   2. /api/auth/me returns the new user
+#   3. /api/farmer/me-with-farm returns billing = { unpaid, no customer }
+#   4. /api/billing/create-checkout-session hits Stripe, creates a
+#      Customer + Checkout Session, returns a stripe.com URL
+#   5. That URL 200s from Stripe's side (proves the session is valid)
+#
+# NOT verified here (would require paying $9 or wiring test mode):
+#   - webhook signature verification + dispatch
+#   - subscription_status flipping to 'active'
+#   - gate releasing on the previously-gated endpoints
+# Those you check once manually and then trust the code path.
+
+on:
+  workflow_dispatch:
+  # Also run automatically after deploy so we catch regressions.
+  workflow_run:
+    workflows: ["Deploy to Cloudflare"]
+    types: [completed]
+
+jobs:
+  smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run smoke test
+        run: node .github/scripts/smoke-billing.mjs
+        env:
+          SITE_URL: https://communicare.farm

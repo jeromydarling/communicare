@@ -104,6 +104,12 @@ import * as billingResume from "../functions/api/farmer/billing/resume";
 import * as billingCancel from "../functions/api/farmer/billing/cancel";
 import * as dataExport from "../functions/api/farmer/data-export";
 import * as healthSignals from "../functions/api/farmer/health-signals";
+import * as adminContacts from "../functions/api/admin/contacts";
+import * as adminContact from "../functions/api/admin/contacts/[id]";
+import * as adminNotes from "../functions/api/admin/notes";
+import * as adminActions from "../functions/api/admin/actions";
+import * as adminMessages from "../functions/api/admin/messages";
+import * as adminMetrics from "../functions/api/admin/metrics";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -247,6 +253,26 @@ const ROUTES: Route[] = [
   { method: "OPTIONS", pattern: P("/api/farmer/data-export"),    handler: adapt(dataExport.onRequestOptions) },
   { method: "GET",     pattern: P("/api/farmer/health-signals"), handler: adapt(healthSignals.onRequestGet) },
   { method: "OPTIONS", pattern: P("/api/farmer/health-signals"), handler: adapt(healthSignals.onRequestOptions) },
+
+  // CRM — every route gated by users.is_admin. Returns 404 to non-admins
+  // so the admin surface isn't advertised to signed-in-but-not-privileged.
+  { method: "GET",     pattern: P("/api/admin/contacts"),          handler: adapt(adminContacts.onRequestGet) },
+  { method: "OPTIONS", pattern: P("/api/admin/contacts"),          handler: adapt(adminContacts.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/admin/contacts/:id"),      handler: adapt(adminContact.onRequestGet) },
+  { method: "OPTIONS", pattern: P("/api/admin/contacts/:id"),      handler: adapt(adminContact.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/admin/notes"),             handler: adapt(adminNotes.onRequestPost) },
+  { method: "PUT",     pattern: P("/api/admin/notes"),             handler: adapt(adminNotes.onRequestPut) },
+  { method: "DELETE",  pattern: P("/api/admin/notes"),             handler: adapt(adminNotes.onRequestDelete) },
+  { method: "OPTIONS", pattern: P("/api/admin/notes"),             handler: adapt(adminNotes.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/admin/actions"),           handler: adapt(adminActions.onRequestGet) },
+  { method: "POST",    pattern: P("/api/admin/actions"),           handler: adapt(adminActions.onRequestPost) },
+  { method: "PUT",     pattern: P("/api/admin/actions"),           handler: adapt(adminActions.onRequestPut) },
+  { method: "DELETE",  pattern: P("/api/admin/actions"),           handler: adapt(adminActions.onRequestDelete) },
+  { method: "OPTIONS", pattern: P("/api/admin/actions"),           handler: adapt(adminActions.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/admin/messages"),          handler: adapt(adminMessages.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/admin/messages"),          handler: adapt(adminMessages.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/admin/metrics"),           handler: adapt(adminMetrics.onRequestGet) },
+  { method: "OPTIONS", pattern: P("/api/admin/metrics"),           handler: adapt(adminMetrics.onRequestOptions) },
 
   // Twilio inbound webhook — HMAC-verified at the handler boundary.
   // Twilio's console points each Twilio number's "messaging webhook"

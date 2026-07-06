@@ -13,6 +13,7 @@ import {
 } from "@/lib/farmer-demo";
 import { Sun, Wheat, Leaf } from "@/components/mark";
 import { getMeWithFarm } from "@/lib/farmer/api";
+import { HealthSignalsCard } from "@/components/farmer/health-signals-card";
 
 export default function FarmerHomePage() {
   // First-five-minutes guard: if the operator is signed in but hasn't
@@ -59,6 +60,10 @@ export default function FarmerHomePage() {
           </Link>
         }
       />
+
+      <div className="px-6 md:px-10 pt-4">
+        <HealthSignalsCard />
+      </div>
 
       <div className="px-6 md:px-10 py-8 grid md:grid-cols-3 gap-6">
         <Stat label="Active members" value={demoFarm.active_members.toString()} icon={<Sun className="w-7 h-7 text-wheat" />} />

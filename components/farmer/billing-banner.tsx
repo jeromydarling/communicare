@@ -129,6 +129,17 @@ function messageFor(billing: BillingSnapshot): {
         body: "Try again with a different card to finish opening the desk.",
         action: "checkout",
       };
+    case "paused":
+      return {
+        headline:
+          "Your farm desk is paused" +
+          (billing.period_end
+            ? ` — resuming ${billing.period_end.slice(0, 10)}.`
+            : "."),
+        body:
+          "No bills, no texts. The dashboard is read-only. Resume any time from Settings.",
+        action: "portal",
+      };
     case "unpaid":
     default:
       return {

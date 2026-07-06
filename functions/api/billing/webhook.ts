@@ -160,14 +160,22 @@ async function upsertSubscription(
     ? new Date(sub.trial_end * 1000).toISOString()
     : null;
   const created = new Date(sub.created * 1000).toISOString();
+  // Pause snapshot — null when Stripe has cleared pause_collection.
+  const pausedAt =
+    !forceCanceled && sub.pause_collection?.behavior === "void" ? now : null;
+  const resumeAt =
+    !forceCanceled && sub.pause_collection?.resumes_at
+      ? new Date(sub.pause_collection.resumes_at * 1000).toISOString()
+      : null;
 
   await run(
     db,
     `insert into stripe_subscriptions
        (id, user_id, stripe_customer_id, status, price_id,
         current_period_start, current_period_end, cancel_at_period_end,
-        canceled_at, trial_end, created, raw_json, inserted_at, updated_at)
-     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        canceled_at, trial_end, created, raw_json,
+        paused_at, resume_at, inserted_at, updated_at)
+     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      on conflict(id) do update set
        status = excluded.status,
        price_id = excluded.price_id,
@@ -177,16 +185,21 @@ async function upsertSubscription(
        canceled_at = excluded.canceled_at,
        trial_end = excluded.trial_end,
        raw_json = excluded.raw_json,
+       paused_at = excluded.paused_at,
+       resume_at = excluded.resume_at,
        updated_at = excluded.updated_at`,
     [
       sub.id, userId, sub.customer, status, priceId,
       cps, cpe, sub.cancel_at_period_end ? 1 : 0,
-      canceledAt, trialEnd, created, JSON.stringify(sub), now, now,
+      canceledAt, trialEnd, created, JSON.stringify(sub),
+      pausedAt, resumeAt, now, now,
     ],
   );
 
-  // Denormalize onto users for fast gate reads.
-  const userStatus = mapToUserStatus(status);
+  // Denormalize onto users for fast gate reads. Pause wins over the
+  // Stripe status — a paused subscription's status stays 'active' on
+  // Stripe's side, but for our gate purposes it's read-only.
+  const userStatus = pausedAt ? "paused" : mapToUserStatus(status);
   await run(
     db,
     `update users

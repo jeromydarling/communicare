@@ -42,6 +42,25 @@ export async function requireActiveSubscription(
   const status = row?.subscription_status ?? "unpaid";
   if (status === "active") return { ok: true, status: "active" };
 
+  // Paused = read-only. Farmer chose to pause; we don't charge them,
+  // we don't push texts, but we don't nag them either. The dashboard
+  // banner explains they can resume anytime; destructive routes return
+  // a distinct 402 with a friendlier code so the client can render the
+  // right message instead of the generic "add a card" prompt.
+  if (status === "paused") {
+    return {
+      ok: false,
+      response: json(
+        {
+          error: "Your farm desk is paused for the season. Resume to unlock this.",
+          code: "subscription_paused",
+          subscription_status: status,
+        },
+        402,
+      ),
+    };
+  }
+
   return {
     ok: false,
     response: json(
@@ -50,7 +69,7 @@ export async function requireActiveSubscription(
         code: "subscription_required",
         subscription_status: status,
       },
-      402, // Payment Required
+      402,
     ),
   };
 }

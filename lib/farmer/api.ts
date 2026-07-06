@@ -52,7 +52,7 @@ export type OperatorFarm = {
 export type BillingSnapshot = {
   subscription_status:
     | "unpaid" | "active" | "past_due" | "canceled"
-    | "incomplete" | "incomplete_expired";
+    | "incomplete" | "incomplete_expired" | "paused";
   period_end: string | null;
   has_stripe_customer: boolean;
 };
@@ -256,5 +256,50 @@ export function startConnectOnboarding(args: { farm_id?: string } = {}) {
   return api<{ url: string; accountId: string }>(
     "/api/billing/connect-onboard",
     { method: "POST", body: JSON.stringify(args) },
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Churn tools — pause, resume, cancel, data export, health signals
+// -----------------------------------------------------------------------------
+
+export function pauseSubscription(args: { resume_at: string | null }) {
+  return api<{ ok: true; subscription_status: "paused"; resume_at: string | null }>(
+    "/api/farmer/billing/pause",
+    { method: "POST", body: JSON.stringify(args) },
+  );
+}
+
+export function resumeSubscription() {
+  return api<{ ok: true; subscription_status: "active" }>(
+    "/api/farmer/billing/resume",
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
+export function cancelSubscription(args: { reason?: string } = {}) {
+  return api<{ ok: true; canceled_at: string }>(
+    "/api/farmer/billing/cancel",
+    { method: "POST", body: JSON.stringify(args) },
+  );
+}
+
+// The data-export endpoint returns application/json with a Content-
+// Disposition, not our standard ApiOk<T> shape — hand the raw URL to
+// the browser and let it download.
+export const DATA_EXPORT_URL = "/api/farmer/data-export";
+
+export type HealthSignals = {
+  opted_in_members: number;
+  weekly_offers_this_month: number;
+  replies_this_month: number;
+  reply_rate: number | null;
+  inbound_messages_this_month: number;
+  last_offer_sent_at: string | null;
+};
+
+export function getHealthSignals() {
+  return api<{ farm: { id: string } | null; signals: HealthSignals }>(
+    "/api/farmer/health-signals",
   );
 }

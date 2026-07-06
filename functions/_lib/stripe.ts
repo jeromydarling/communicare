@@ -199,6 +199,15 @@ export type StripeSubscription = {
   trial_end: number | null;
   created: number;
   items: { data: Array<{ price: { id: string } }> };
+  // Stripe's soft-pause. When set with behavior='void', the
+  // subscription's `status` stays 'active' but invoices are voided
+  // during the pause. We map this to our own 'paused' status so the
+  // gate can distinguish "not paying because seasonal" from "not
+  // paying because delinquent."
+  pause_collection?: {
+    behavior: "void" | "mark_uncollectible" | "keep_as_draft";
+    resumes_at: number | null;
+  } | null;
 };
 
 export type StripeAccount = {

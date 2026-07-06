@@ -285,6 +285,71 @@ ${CLOSING_BLESSING}
 }
 
 // =============================================================================
+// Concierge cancel — one honest note from a human at gardener@thecros.app
+// =============================================================================
+// Not a save-flow. Not a discount offer. One short email asking the
+// only question that matters: was something broken, or is it just not
+// the season? Link to the data-export URL so they leave with their
+// bytes exactly as the manifesto promised.
+// =============================================================================
+
+export function conciergeCancelEmail(opts: {
+  to: string;
+  displayName: string | null;
+  exportLink: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "Gracias — y una pregunta antes de despedirnos",
+      text: `${greeting}
+
+Vimos que canceló su cuenta de Communicare. Gracias por probar la
+herramienta. Su acceso continúa hasta el fin del período que ya pagó,
+y su exportación de datos está lista aquí:
+
+${opts.exportLink}
+
+Antes de que se vaya, una pregunta honesta: ¿algo estaba roto, o
+simplemente no es la temporada? Cualquiera sea la respuesta ayuda —
+si algo se rompió, lo arreglaremos antes de que le pase a otra granja.
+
+Si quiere responder, solo responda este correo. Va a llegar a una
+persona real, no a un bot.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: "Thank you — and one question before you go",
+    text: `${greeting}
+
+We saw you canceled your Communicare account. Thank you for trying
+the tool. Your access runs through the end of the period you already
+paid for, and your data export is waiting here:
+
+${opts.exportLink}
+
+Before you go, one honest question: was something broken, or is it
+just not the season? Either answer helps us — if something broke, we'd
+like to fix it before it happens to another farm.
+
+To answer, just reply to this note. It goes to a person, not a bot.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// =============================================================================
 // Locale detection
 // =============================================================================
 // Browsers send Accept-Language with weighted preferences. We pick the

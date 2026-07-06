@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMeWithFarm } from "@/lib/farmer/api";
 import { PageHeader } from "@/components/farmer/shell";
 import {
   demoFarm,
@@ -13,7 +12,14 @@ import {
 import { downloadBundle, downloadCsv } from "@/lib/csv-export";
 import { HortusIntegrationCard } from "./HortusIntegrationCard";
 import { PendingCropMappings } from "./PendingCropMappings";
-import { openBillingPortal } from "@/lib/farmer/api";
+import {
+  openBillingPortal,
+  pauseSubscription,
+  resumeSubscription,
+  cancelSubscription,
+  getMeWithFarm,
+  DATA_EXPORT_URL,
+} from "@/lib/farmer/api";
 
 export default function FarmerSettingsPage() {
   const [farmId, setFarmId] = useState<string | null>(null);
@@ -176,8 +182,74 @@ export default function FarmerSettingsPage() {
 }
 
 function BillingSection() {
-  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string>("unpaid");
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [resumeAt, setResumeAt] = useState<string>(defaultResumeDate());
+
+  useEffect(() => {
+    let cancelled = false;
+    getMeWithFarm().then((r) => {
+      if (cancelled) return;
+      if ("billing" in r && r.billing?.subscription_status) {
+        setStatus(r.billing.subscription_status);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function runPortal() {
+    setError(null);
+    setBusy("portal");
+    const res = await openBillingPortal();
+    setBusy(null);
+    if ("error" in res) return setError(res.error);
+    window.location.href = res.url;
+  }
+
+  async function runPause() {
+    setError(null);
+    setBusy("pause");
+    const res = await pauseSubscription({ resume_at: resumeAt });
+    setBusy(null);
+    if ("error" in res) return setError(res.error);
+    setStatus("paused");
+    setFlash(`Paused. See you around ${resumeAt}.`);
+    setTimeout(() => setFlash(null), 4000);
+  }
+
+  async function runResume() {
+    setError(null);
+    setBusy("resume");
+    const res = await resumeSubscription();
+    setBusy(null);
+    if ("error" in res) return setError(res.error);
+    setStatus("active");
+    setFlash("Welcome back.");
+    setTimeout(() => setFlash(null), 4000);
+  }
+
+  async function runCancel() {
+    if (
+      !confirm(
+        "Cancel your subscription? You'll keep access until the end of the current billing period. We'll email you a copy of your data.",
+      )
+    )
+      return;
+    setError(null);
+    setBusy("cancel");
+    const res = await cancelSubscription();
+    setBusy(null);
+    if ("error" in res) return setError(res.error);
+    setFlash(
+      "Canceled. Look for the note from gardener@thecros.app with your data export.",
+    );
+    setTimeout(() => setFlash(null), 6000);
+  }
+
   return (
     <section className="paper p-8">
       <div className="small-caps text-xs text-brick mb-2">Billing</div>
@@ -185,34 +257,132 @@ function BillingSection() {
         Manage your subscription.
       </h2>
       <p className="text-sm text-soil/75 mb-5">
-        Update your card, view invoices, or cancel. Stripe handles all of it
-        through their billing portal.
+        Nine dollars a month keeps the farm desk open. Pause it when your
+        season ends, cancel any time, or open the Stripe billing portal
+        for cards and invoices.
       </p>
+
       {error && (
         <div className="border border-brick bg-brick/5 px-3 py-2 text-brick text-sm mb-4">
           {error}
         </div>
       )}
-      <button
-        type="button"
-        onClick={async () => {
-          setError(null);
-          setBusy(true);
-          const res = await openBillingPortal();
-          setBusy(false);
-          if ("error" in res) {
-            setError(res.error);
-            return;
-          }
-          window.location.href = res.url;
-        }}
-        className="btn btn-primary disabled:opacity-50"
-        disabled={busy}
-      >
-        {busy ? "Opening Stripe…" : "Open billing portal →"}
-      </button>
+      {flash && (
+        <div className="border border-mossDark bg-mossDark/5 px-3 py-2 text-mossDark text-sm mb-4">
+          {flash}
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-5">
+        <div className="border border-soil/10 rounded p-5">
+          <div className="small-caps text-[10px] text-brick mb-2">
+            Pause for the season
+          </div>
+          <p className="text-sm text-soil/75 leading-snug mb-3">
+            Winter dormancy for your farm desk. No bills, no texts, dashboard
+            stays read-only. Auto-resumes on the date you pick.
+          </p>
+          {status === "paused" ? (
+            <button
+              type="button"
+              onClick={runResume}
+              disabled={busy !== null}
+              className="btn btn-primary disabled:opacity-50 text-sm"
+            >
+              {busy === "resume" ? "Resuming…" : "Resume now →"}
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <label className="label text-xs" htmlFor="resume-date">
+                Resume on
+              </label>
+              <input
+                id="resume-date"
+                type="date"
+                className="field"
+                value={resumeAt}
+                min={tomorrow()}
+                onChange={(e) => setResumeAt(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={runPause}
+                disabled={busy !== null || status !== "active"}
+                className="btn btn-ghost disabled:opacity-50 text-sm"
+              >
+                {busy === "pause" ? "Pausing…" : "Pause the desk"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="border border-soil/10 rounded p-5">
+          <div className="small-caps text-[10px] text-brick mb-2">
+            Cards, invoices, receipts
+          </div>
+          <p className="text-sm text-soil/75 leading-snug mb-3">
+            Update your card, download past invoices, or view every charge.
+            Stripe hosts the whole page.
+          </p>
+          <button
+            type="button"
+            onClick={runPortal}
+            disabled={busy !== null}
+            className="btn btn-ghost disabled:opacity-50 text-sm"
+          >
+            {busy === "portal" ? "Opening Stripe…" : "Open billing portal →"}
+          </button>
+        </div>
+      </div>
+
+      <div className="border-t border-soil/15 mt-8 pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="small-caps text-[10px] text-soil/55 mb-1">
+            Take your data
+          </div>
+          <p className="text-sm text-soil/70">
+            A full JSON export of your farm, members, orders, SMS log, and
+            everything else we hold about you — anytime, not just at cancel.
+          </p>
+        </div>
+        <a
+          href={DATA_EXPORT_URL}
+          className="btn btn-ghost text-sm whitespace-nowrap"
+        >
+          Download my export ↓
+        </a>
+      </div>
+
+      <div className="border-t border-soil/15 mt-6 pt-6">
+        <button
+          type="button"
+          onClick={runCancel}
+          disabled={busy !== null}
+          className="text-brick hover:underline text-sm italic disabled:opacity-50"
+        >
+          {busy === "cancel" ? "Canceling…" : "Cancel my subscription"}
+        </button>
+        <p className="text-xs text-soil/55 mt-1 italic">
+          Keeps access through the end of the current period. One honest note
+          from us before you go.
+        </p>
+      </div>
     </section>
   );
+}
+
+function tomorrow(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function defaultResumeDate(): string {
+  // Six months out — a reasonable "next season" pick that the farmer
+  // can adjust before clicking Pause.
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toISOString().slice(0, 10);
 }
 
 function Field({

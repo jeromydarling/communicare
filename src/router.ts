@@ -99,6 +99,11 @@ import * as billingPortal from "../functions/api/billing/portal";
 import * as billingWebhook from "../functions/api/billing/webhook";
 import * as billingConnectOnboard from "../functions/api/billing/connect-onboard";
 import * as billingConnectWebhook from "../functions/api/billing/connect-webhook";
+import * as billingPause from "../functions/api/farmer/billing/pause";
+import * as billingResume from "../functions/api/farmer/billing/resume";
+import * as billingCancel from "../functions/api/farmer/billing/cancel";
+import * as dataExport from "../functions/api/farmer/data-export";
+import * as healthSignals from "../functions/api/farmer/health-signals";
 
 // -----------------------------------------------------------------------------
 // Route table
@@ -228,6 +233,20 @@ const ROUTES: Route[] = [
   { method: "POST",    pattern: P("/api/billing/connect-onboard"),       handler: adapt(billingConnectOnboard.onRequestPost) },
   { method: "OPTIONS", pattern: P("/api/billing/connect-onboard"),       handler: adapt(billingConnectOnboard.onRequestOptions) },
   { method: "POST",    pattern: P("/api/billing/connect-webhook"),        handler: adapt(billingConnectWebhook.onRequestPost) },
+
+  // Churn tools — farmer-facing pause / resume / cancel + the data
+  // export bundle that gets emailed on cancel. Health signals is the
+  // in-dashboard usage summary.
+  { method: "POST",    pattern: P("/api/farmer/billing/pause"),  handler: adapt(billingPause.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/billing/pause"),  handler: adapt(billingPause.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/billing/resume"), handler: adapt(billingResume.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/billing/resume"), handler: adapt(billingResume.onRequestOptions) },
+  { method: "POST",    pattern: P("/api/farmer/billing/cancel"), handler: adapt(billingCancel.onRequestPost) },
+  { method: "OPTIONS", pattern: P("/api/farmer/billing/cancel"), handler: adapt(billingCancel.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/farmer/data-export"),    handler: adapt(dataExport.onRequestGet) },
+  { method: "OPTIONS", pattern: P("/api/farmer/data-export"),    handler: adapt(dataExport.onRequestOptions) },
+  { method: "GET",     pattern: P("/api/farmer/health-signals"), handler: adapt(healthSignals.onRequestGet) },
+  { method: "OPTIONS", pattern: P("/api/farmer/health-signals"), handler: adapt(healthSignals.onRequestOptions) },
 
   // Twilio inbound webhook — HMAC-verified at the handler boundary.
   // Twilio's console points each Twilio number's "messaging webhook"

@@ -5,6 +5,7 @@
 import type { MetadataRoute } from "next";
 import { sampleFarms } from "@/lib/sample-farms";
 import { journalEntries } from "@/lib/journal-entries";
+import { journalEntries as siteJournal } from "@/lib/site-journal";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -30,6 +31,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["/privacy", 0.3, "monthly"],
     ["/terms", 0.3, "monthly"],
     ["/refunds", 0.3, "monthly"],
+    ["/roadmap", 0.5, "monthly"],
+    ["/journal", 0.5, "weekly"],
   ];
 
   const farmRoutes: Array<[string, number, "weekly" | "monthly"]> =
@@ -46,7 +49,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       "monthly",
     ]);
 
-  return [...staticRoutes, ...farmRoutes, ...journalRoutes].map(
+  const siteJournalRoutes: Array<[string, number, "weekly" | "monthly"]> =
+    siteJournal.map((e) => [`/journal/${e.slug}`, 0.4, "monthly"]);
+
+  return [...staticRoutes, ...farmRoutes, ...journalRoutes, ...siteJournalRoutes].map(
     ([path, priority, freq]) => ({
       url: `${SITE_URL}${path}/`,
       lastModified: now,

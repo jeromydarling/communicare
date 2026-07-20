@@ -31,6 +31,7 @@ declare global {
     __COMMUNICARE_PUBLIC_ENV__?: {
       MAPBOX_TOKEN?: string;
       TURNSTILE_SITE_KEY?: string;
+      CF_ANALYTICS_TOKEN?: string;
     };
   }
 }

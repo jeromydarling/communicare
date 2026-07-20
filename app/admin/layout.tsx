@@ -17,6 +17,7 @@ import { getMetrics } from "@/lib/admin/api";
 const NAV = [
   { href: "/admin/", label: "Desk", hint: "signals + open work" },
   { href: "/admin/contacts/", label: "Contacts", hint: "every farm & farmer" },
+  { href: "/admin/map/", label: "Map", hint: "farms by lifecycle" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

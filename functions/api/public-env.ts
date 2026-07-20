@@ -23,12 +23,14 @@
 type Env = {
   MAPBOX_TOKEN?: string;
   TURNSTILE_SITE_KEY?: string;
+  CF_ANALYTICS_TOKEN?: string;
 };
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const payload = {
     MAPBOX_TOKEN: ctx.env.MAPBOX_TOKEN ?? "",
     TURNSTILE_SITE_KEY: ctx.env.TURNSTILE_SITE_KEY ?? "",
+    CF_ANALYTICS_TOKEN: ctx.env.CF_ANALYTICS_TOKEN ?? "",
   };
   const body = `window.__COMMUNICARE_PUBLIC_ENV__=${JSON.stringify(payload)};`;
   return new Response(body, {

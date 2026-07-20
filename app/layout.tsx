@@ -122,6 +122,27 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_JSON_LD) }}
         />
         {children}
+
+        {/* Cloudflare Web Analytics — privacy-respecting (no cookies,
+            no user IDs, no cross-site tracking). The token gets baked
+            into the /api/public-env.js payload; the beacon activates
+            once window.__COMMUNICARE_PUBLIC_ENV__.CF_ANALYTICS_TOKEN
+            is present. If unset, this script is a no-op. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                var e=window.__COMMUNICARE_PUBLIC_ENV__;
+                if(!e||!e.CF_ANALYTICS_TOKEN)return;
+                var s=document.createElement('script');
+                s.defer=true;
+                s.src='https://static.cloudflareinsights.com/beacon.min.js';
+                s.setAttribute('data-cf-beacon', JSON.stringify({token: e.CF_ANALYTICS_TOKEN}));
+                document.head.appendChild(s);
+              })();
+            `,
+          }}
+        />
       </body>
     </html>
   );

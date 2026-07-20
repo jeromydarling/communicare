@@ -37,6 +37,7 @@ export type Env = {
   // Set with `wrangler secret put MAPBOX_TOKEN` etc.
   MAPBOX_TOKEN?: string;
   TURNSTILE_SITE_KEY?: string;
+  CF_ANALYTICS_TOKEN?: string;
 
   // Stripe (all set via `wrangler secret put`)
   STRIPE_SECRET_KEY?: string;

@@ -8,6 +8,7 @@ import {
   HomepageGeneratorScreenshot,
 } from "@/components/screenshots";
 import { ScreencastEmbed } from "@/components/screencast-embed";
+import { TestimonialsStrip } from "@/components/testimonials-strip";
 import { JsonLd } from "@/components/json-ld";
 import {
   SITE_URL,
@@ -519,6 +520,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* TESTIMONIALS — silent until we have real ones */}
+      <TestimonialsStrip />
 
       {/* CROS FAMILY — quiet attribution before the closing */}
       <section className="border-t border-b border-soil/15 bg-cream2/40">

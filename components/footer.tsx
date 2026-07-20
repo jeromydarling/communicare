@@ -44,6 +44,16 @@ export function Footer() {
                   Read the manifesto
                 </Link>
               </li>
+              <li>
+                <Link href="/roadmap" className="hover:text-brick">
+                  See the roadmap
+                </Link>
+              </li>
+              <li>
+                <Link href="/journal" className="hover:text-brick">
+                  Notes from the workshop
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

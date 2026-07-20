@@ -26,6 +26,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["/come-in", 0.3, "monthly"],
     ["/farmer/come-in", 0.3, "monthly"],
     ["/farmer/sign-up", 0.5, "monthly"],
+    ["/support", 0.4, "monthly"],
+    ["/privacy", 0.3, "monthly"],
+    ["/terms", 0.3, "monthly"],
+    ["/refunds", 0.3, "monthly"],
   ];
 
   const farmRoutes: Array<[string, number, "weekly" | "monthly"]> =

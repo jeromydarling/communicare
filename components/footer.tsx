@@ -58,7 +58,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/farm/elmwood" className="hover:text-brick">
-                  Read a farm's page
+                  Read a farm&apos;s page
                 </Link>
               </li>
               <li>
@@ -69,6 +69,31 @@ export function Footer() {
             </ul>
           </div>
         </div>
+
+        <div className="rule my-10" />
+
+        <ul className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-soil/55 small-caps tracking-[0.15em]">
+          <li>
+            <Link href="/support" className="hover:text-brick">
+              Support
+            </Link>
+          </li>
+          <li>
+            <Link href="/privacy" className="hover:text-brick">
+              Privacy
+            </Link>
+          </li>
+          <li>
+            <Link href="/terms" className="hover:text-brick">
+              Terms
+            </Link>
+          </li>
+          <li>
+            <Link href="/refunds" className="hover:text-brick">
+              Refunds
+            </Link>
+          </li>
+        </ul>
         <div className="rule my-10" />
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-sm text-soil/60">
           <div>

@@ -84,6 +84,17 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const ua = ctx.request.headers.get("user-agent") ?? undefined;
   const sess = await createSession(db, user.id, { ip, userAgent: ua });
 
+  // Record last_login_at + clear the dormant-nudge flag so a stretch of
+  // real activity resets the "we haven't seen you in a week" counter.
+  await db
+    .prepare(
+      `update users
+          set last_login_at = ?, dormant_nudge_sent_at = null, updated_at = ?
+        where id = ?`,
+    )
+    .bind(new Date().toISOString(), new Date().toISOString(), user.id)
+    .run();
+
   const res = json({
     ok: true,
     user: {

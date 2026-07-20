@@ -27,10 +27,19 @@ import {
   type StripeCheckoutSession,
   type StripeEnv,
 } from "../../_lib/stripe";
+import {
+  sendEmail,
+  welcomeEmail,
+  type EmailSendBinding,
+} from "../../_lib/email";
 
 type Env = StripeEnv & {
   DB?: D1Database;
   STRIPE_WEBHOOK_SECRET?: string;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
+  SITE_URL?: string;
 };
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
@@ -76,7 +85,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   try {
-    await dispatchEvent(ctx.env.DB, event);
+    await dispatchEvent(ctx.env, ctx, event);
     await run(
       ctx.env.DB,
       `update stripe_events set processed_at = ? where id = ?`,
@@ -84,8 +93,6 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     );
   } catch (err) {
     console.error("stripe event dispatch failed:", err);
-    // Returning 500 makes Stripe retry; the event row stays unprocessed
-    // and dedup gates the retry safely.
     return new Response("dispatch failed", { status: 500 });
   }
 
@@ -96,7 +103,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 // Dispatch
 // -----------------------------------------------------------------------------
 
-async function dispatchEvent(db: D1Database, event: StripeEvent): Promise<void> {
+async function dispatchEvent(
+  env: Env,
+  ctx: { waitUntil?: (p: Promise<unknown>) => void },
+  event: StripeEvent,
+): Promise<void> {
+  const db = env.DB!;
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as StripeCheckoutSession;
@@ -123,6 +135,10 @@ async function dispatchEvent(db: D1Database, event: StripeEvent): Promise<void> 
     case "customer.subscription.deleted": {
       const sub = event.data.object as StripeSubscription;
       await upsertSubscription(db, sub, event.type === "customer.subscription.deleted");
+      // Send the welcome email on the first active state we see.
+      if (event.type === "customer.subscription.created" && sub.status === "active") {
+        await maybeSendWelcome(env, ctx, sub.customer);
+      }
       break;
     }
     case "invoice.payment_failed": {
@@ -241,4 +257,55 @@ function mapToUserStatus(stripeStatus: string): string {
     default:
       return "unpaid";
   }
+}
+
+// -----------------------------------------------------------------------------
+// Welcome email — fired on the first customer.subscription.created event
+// -----------------------------------------------------------------------------
+
+async function maybeSendWelcome(
+  env: Env,
+  ctx: { waitUntil?: (p: Promise<unknown>) => void },
+  stripeCustomerId: string,
+): Promise<void> {
+  if (!env.EMAIL || !env.DB) return;
+  const u = await one<{
+    id: string;
+    email: string;
+    display_name: string | null;
+    preferred_locale: string | null;
+    welcome_email_sent_at: string | null;
+  }>(
+    env.DB,
+    `select id, email, display_name, preferred_locale, welcome_email_sent_at
+       from users where stripe_customer_id = ? limit 1`,
+    [stripeCustomerId],
+  );
+  if (!u) return;
+  if (u.welcome_email_sent_at) return; // idempotent
+
+  const site = (env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
+  const locale = u.preferred_locale === "es" ? "es" : "en";
+  const msg = welcomeEmail({
+    to: u.email,
+    displayName: u.display_name,
+    siteUrl: site,
+    locale,
+  });
+  const send = sendEmail(env.EMAIL, env.SEND_FROM, {
+    ...msg,
+    replyTo: env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+  }).then(async (res) => {
+    if (res.ok) {
+      await run(
+        env.DB!,
+        `update users set welcome_email_sent_at = ?, updated_at = ? where id = ?`,
+        [nowIso(), nowIso(), u.id],
+      );
+    } else {
+      console.warn("welcome email failed:", res.error);
+    }
+  });
+  if (ctx.waitUntil) ctx.waitUntil(send);
+  else await send;
 }

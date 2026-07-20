@@ -14,6 +14,7 @@
 
 import { route, type Env } from "./router";
 import { runCronTick } from "../functions/_lib/cron-tick";
+import { runEngagementCron } from "../functions/_lib/engagement-cron";
 
 export default {
   // -------------------------------------------------------------------------
@@ -28,9 +29,11 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ): Promise<void> {
-    const result = await runCronTick(new Date(), env);
-    console.log("[cron]", JSON.stringify(result));
-    // Let logs flush before the isolate sleeps.
+    const now = new Date();
+    const smsResult = await runCronTick(now, env);
+    console.log("[cron.sms]", JSON.stringify(smsResult));
+    const engagementResult = await runEngagementCron(now, env);
+    console.log("[cron.engagement]", JSON.stringify(engagementResult));
     ctx.waitUntil(Promise.resolve());
   },
 

@@ -80,6 +80,16 @@ jobs:
           wranglerVersion: '4.97.0'
           command: d1 migrations apply communicare-db --remote
 
+      # Bootstrap the owner's is_admin flag so /admin works without
+      # touching a terminal. Idempotent — an already-set row is a no-op.
+      - name: Bootstrap admin flag
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.97.0'
+          command: d1 execute communicare-db --remote --file cloudflare/d1/bootstrap-admin.sql
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:

@@ -311,6 +311,25 @@ if (!STRIPE_WEBHOOK_SECRET) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Phase C — password reset (fires the request; can't verify inbox delivery)
+// ---------------------------------------------------------------------------
+
+log("");
+log("## Phase C — password reset request");
+log("### 11. POST /api/auth/forgot");
+{
+  const res = await fetch(`${SITE_URL}/api/auth/forgot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: EMAIL }),
+  });
+  // Forgot always returns 200 to avoid enumeration; the assertion is
+  // simply that the route exists and responds cleanly.
+  if (res.status !== 200) fail(`forgot HTTP ${res.status}`);
+  log(`  ✓ forgot returned 200`);
+}
+
 log("");
 log("**All in-scope steps green.**");
 flushSummary();

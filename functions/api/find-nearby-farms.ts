@@ -24,7 +24,7 @@
 // =============================================================================
 
 import { preflight, json } from "../_lib/cors";
-import { rateLimit, ipBucket } from "../_lib/ratelimit";
+import { rateLimit, ipBucket, dailyCap } from "../_lib/ratelimit";
 import { many, run, uuid, nowIso } from "../_lib/db";
 
 type Env = {
@@ -378,13 +378,26 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return json({ error: "MAPBOX_TOKEN missing on this deploy." }, 500);
   }
 
-  // 20/hr/IP — Perplexity + Mapbox are paid; this is the real cost gate.
+  // Per-IP: 20/hr for real visitors.
   const gate = await rateLimit(ctx.env.RATELIMIT, {
     bucket: ipBucket(ctx.request, "find-nearby"),
     limit: 20,
     windowSeconds: 60 * 60,
   });
   if (!gate.ok) return gate.response;
+
+  // Global daily budget cap — Perplexity + Mapbox are real dollars.
+  // At ~$0.02/uncached search, 500/day is ~$10/day worst case (if
+  // every request misses the KV cache). Cached hits don't count
+  // because we early-return before this point... actually we don't;
+  // this fires on every entry. That's fine — the ceiling is a runaway
+  // guard, not a per-search cost cap. If a cache hit is what's
+  // pushing us over the ceiling, we have far bigger problems.
+  const globalGate = await dailyCap(ctx.env.RATELIMIT, {
+    bucket: "find-nearby-global",
+    dailyLimit: 500,
+  });
+  if (!globalGate.ok) return globalGate.response;
 
   let body: RequestBody;
   try {

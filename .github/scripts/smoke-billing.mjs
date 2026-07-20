@@ -312,11 +312,12 @@ if (!STRIPE_WEBHOOK_SECRET) {
 }
 
 // ---------------------------------------------------------------------------
-// Phase C — password reset (fires the request; can't verify inbox delivery)
+// Phase C — password reset + onboarding wizard shape
 // ---------------------------------------------------------------------------
 
 log("");
-log("## Phase C — password reset request");
+log("## Phase C — auxiliary auth + onboarding");
+
 log("### 11. POST /api/auth/forgot");
 {
   const res = await fetch(`${SITE_URL}/api/auth/forgot`, {
@@ -324,10 +325,46 @@ log("### 11. POST /api/auth/forgot");
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: EMAIL }),
   });
-  // Forgot always returns 200 to avoid enumeration; the assertion is
-  // simply that the route exists and responds cleanly.
   if (res.status !== 200) fail(`forgot HTTP ${res.status}`);
   log(`  ✓ forgot returned 200`);
+}
+
+// Onboarding wizard step 1: create-farm. We can create; complete-
+// onboarding won't work because the smoke user's subscription isn't
+// active. That's expected — we just want to prove the create step
+// doesn't 500 for a real signed-in caller.
+log("### 12. POST /api/farmer/onboarding/create-farm");
+{
+  const res = await req("/api/farmer/onboarding/create-farm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: `Smoke Test Farm ${RUN_ID}`,
+      slug: `smoke-${RUN_ID}`,
+      kind: "vegetable_csa",
+      location: "Nowhere, VA",
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) fail(`create-farm HTTP ${res.status}: ${JSON.stringify(body)}`);
+  log(`  ✓ farm created (id ${body?.farm_id ?? "?"})`);
+}
+
+log("### 13. POST /api/farmer/complete-onboarding");
+{
+  // Expected: 402 subscription_required (smoke user is unpaid unless
+  // Phase B ran and flipped them to active). Either is fine — the
+  // gate is what we're verifying.
+  const res = await req("/api/farmer/complete-onboarding", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (res.status !== 402 && res.status !== 200) {
+    fail(`complete-onboarding unexpected HTTP ${res.status}: ${JSON.stringify(body)}`);
+  }
+  log(`  ✓ status ${res.status} (${body?.code ?? "ok"}) — gate behaves`);
 }
 
 log("");

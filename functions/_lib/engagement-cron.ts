@@ -25,6 +25,7 @@ import {
   onboardingDaySevenEmail,
   dormantNudgeEmail,
   weeklyDigestEmail,
+  herdShareReminderEmail,
   type EmailSendBinding,
 } from "./email";
 
@@ -63,9 +64,18 @@ export async function runEngagementCron(
   drip_day7: number;
   dormant: number;
   digest: number;
+  herdshare: number;
   errors: string[];
 }> {
-  const summary = { drip_day1: 0, drip_day3: 0, drip_day7: 0, dormant: 0, digest: 0, errors: [] as string[] };
+  const summary = {
+    drip_day1: 0,
+    drip_day3: 0,
+    drip_day7: 0,
+    dormant: 0,
+    digest: 0,
+    herdshare: 0,
+    errors: [] as string[],
+  };
   if (!env.DB) return summary;
   if (!env.EMAIL) {
     summary.errors.push("EMAIL binding missing");
@@ -209,6 +219,67 @@ export async function runEngagementCron(
       } catch (e) {
         summary.errors.push(
           `digest to ${u.id}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+  }
+
+  // ------------------ Herd-share monthly check-in ------------------------
+  // First-of-month, 14:00 UTC. For each active farmer whose farm.kind is
+  // 'raw_milk_herd_share', send the monthly reminder. Guarded by a
+  // per-user column so a re-run within the same month is a no-op.
+  if (now.getUTCDate() === 1 && now.getUTCHours() === 14) {
+    const monthKey = now.toISOString().slice(0, 7); // YYYY-MM
+    const cands = await many<{
+      id: string;
+      email: string;
+      display_name: string | null;
+      preferred_locale: string | null;
+      farm_name: string;
+      herdshare_state: string | null;
+    }>(
+      db,
+      `select u.id, u.email, u.display_name, u.preferred_locale,
+              f.name as farm_name, f.herdshare_state
+         from users u
+         join farm_members fm on fm.user_id = u.id
+              and fm.role in ('owner','staff') and fm.archived_at is null
+         join farms f on f.id = fm.farm_id
+        where u.subscription_status = 'active'
+          and f.kind = 'raw_milk_herd_share'
+          and (u.weekly_digest_last_sent_at is null
+               or strftime('%Y-%m', u.weekly_digest_last_sent_at) != ?)
+        limit 100`,
+      [monthKey],
+    );
+    // Reusing weekly_digest_last_sent_at as the "last sent this month"
+    // stamp — the herd-share reminder is monthly and never conflicts
+    // with the digest schedule (Mondays 14:00 vs 1st-of-month 14:00).
+    for (const u of cands) {
+      try {
+        const msg = herdShareReminderEmail({
+          to: u.email,
+          displayName: u.display_name,
+          farmName: u.farm_name,
+          siteUrl: site,
+          herdshareState: u.herdshare_state,
+          locale: u.preferred_locale === "es" ? "es" : "en",
+        });
+        const res = await sendEmail(env.EMAIL!, env.SEND_FROM, {
+          ...msg,
+          replyTo: env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+        });
+        if (res.ok) {
+          await run(
+            db,
+            `update users set weekly_digest_last_sent_at = ?, updated_at = ? where id = ?`,
+            [nowIso(), nowIso(), u.id],
+          );
+          summary.herdshare++;
+        }
+      } catch (e) {
+        summary.errors.push(
+          `herdshare to ${u.id}: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     }

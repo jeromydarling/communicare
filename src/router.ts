@@ -45,6 +45,10 @@ export type Env = {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_CONNECT_WEBHOOK_SECRET?: string;
 
+  // Slack / Discord incoming webhook for the daily CROS team digest.
+  // If unset, the team-digest cron pass is a no-op.
+  TEAM_DIGEST_WEBHOOK_URL?: string;
+
   // Optional bindings — added in wrangler.jsonc after provisioning
   DB?: D1Database;
   CACHE?: KVNamespace;

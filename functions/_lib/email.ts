@@ -643,6 +643,69 @@ ${CLOSING_BLESSING}
 }
 
 // =============================================================================
+// Herd-share monthly compliance reminder
+// =============================================================================
+// State milk-test schedules and contract-renewal dates vary; the safe
+// move is a monthly nudge to CHECK, not a schedule we might get wrong.
+// The farmer is the authority on their state's rules.
+// =============================================================================
+
+export function herdShareReminderEmail(opts: {
+  to: string;
+  displayName: string | null;
+  farmName: string;
+  siteUrl: string;
+  herdshareState: string | null;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const state = opts.herdshareState?.toUpperCase() || null;
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: `${opts.farmName} — recordatorio mensual del herd share`,
+      text: `${greeting}
+
+Un recordatorio mensual para su granja de leche cruda:
+
+  • ¿Su prueba de leche del mes actual está al día?
+  • ¿Todos los miembros nuevos firmaron el contrato de herd share?
+  • ¿Hay tarifas de cuidado (boarding) próximas a renovar?
+
+${state ? `Las reglas de ${state} pueden variar; usted es la autoridad sobre lo que aplica a su rebaño.` : "Las reglas varían por estado; usted es la autoridad sobre lo que aplica a su rebaño."}
+
+Panel del herd share: ${dash}/farmer/herd-share/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: `${opts.farmName} — monthly herd-share check-in`,
+    text: `${greeting}
+
+Monthly reminder for your raw-milk farm:
+
+  • Is this month's milk test on file?
+  • Did every new member sign the herd-share contract?
+  • Any boarding fees coming up for renewal?
+
+${state ? `${state}'s rules may differ from what we know; you're the authority on your herd.` : "State rules vary; you're the authority on what applies to your herd."}
+
+Herd-share desk: ${dash}/farmer/herd-share/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// =============================================================================
 // Concierge cancel — one honest note from a human at gardener@thecros.app
 // =============================================================================
 // Not a save-flow. Not a discount offer. One short email asking the

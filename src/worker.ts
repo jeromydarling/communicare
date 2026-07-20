@@ -15,6 +15,7 @@
 import { route, type Env } from "./router";
 import { runCronTick } from "../functions/_lib/cron-tick";
 import { runEngagementCron } from "../functions/_lib/engagement-cron";
+import { runTeamDigest } from "../functions/_lib/team-digest";
 
 export default {
   // -------------------------------------------------------------------------
@@ -34,6 +35,8 @@ export default {
     console.log("[cron.sms]", JSON.stringify(smsResult));
     const engagementResult = await runEngagementCron(now, env);
     console.log("[cron.engagement]", JSON.stringify(engagementResult));
+    const digestResult = await runTeamDigest(now, env);
+    console.log("[cron.team-digest]", JSON.stringify(digestResult));
     ctx.waitUntil(Promise.resolve());
   },
 

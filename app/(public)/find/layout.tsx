@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Find a farm share near you",
   description:
-    "Discover real CSAs, herd shares, pastured meat shares, and pastured egg shares within twenty miles of any US ZIP. Live farms looking for members, listed whether they use Communicare or not.",
+    "Discover real CSAs, herd shares, and pastured meat shares within 20 miles of any US ZIP. Live farms looking for members, on or off Communicare.",
   alternates: { canonical: "/find" },
   openGraph: {
     title: "Find a farm share near you — Communicare",

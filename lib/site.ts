@@ -17,7 +17,7 @@ export const SITE_URL = (
 export const SITE_NAME = "Communicare";
 
 export const SITE_DESCRIPTION =
-  "A small, slow-built tool for farm shares and the neighbors they feed. Members order by texting back. Farms get a free homepage, the SMS swap loop, and the directory neighbors are searching. Nine dollars a month, no contracts.";
+  "Farm-share software for small CSAs, herd shares, and meat shares. Free homepage, weekly SMS swap loop, directory neighbors are searching. $9/mo, no contracts.";
 
 export const SITE_TAGLINE = "For the farms that feed us.";
 

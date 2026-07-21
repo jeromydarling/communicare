@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Draft a homepage for your farm — free",
   description:
-    "Paste a few honest sentences about what you grow and how members pick up. We draft you a homepage in your own voice — no marketing copy, no stock photos, no template smell. Free to try, yours to keep.",
+    "Paste a few honest sentences about what you grow. We draft a homepage in your own voice — no marketing copy, no template smell. Free to try, yours to keep.",
   alternates: { canonical: "/homepage" },
   openGraph: {
     title: "Draft a homepage for your farm — Communicare",

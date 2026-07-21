@@ -1,0 +1,58 @@
+# Communicare
+
+> A small, slow-built tool for farm shares and the neighbors they feed.
+> Communicare gives small farms a free homepage, a weekly SMS "swap loop"
+> for members, and a public directory neighbors are searching. Nine dollars
+> a month, no contracts, no trial (card required at signup). Card
+> processing on the farm's behalf uses Stripe Connect at 1%. Part of the
+> CROS family of tools (https://thecros.app).
+
+## What it is
+
+- A directory of real US farm shares (vegetable CSA, raw-milk herd share,
+  pastured meat, mixed farm) searchable by ZIP with a live map.
+- A homepage drafter that writes a farm's public site from six honest
+  answers in the farmer's own voice.
+- The Tuesday text loop: one SMS per member per week. Members reply YES,
+  SKIP, PAUSE, or swap an item. TCPA / 10DLC compliant.
+- A member roster, weekly order log, printable share cards, and a
+  seasonal-pause + full JSON data export on request.
+- Stripe billing at $9/mo (platform) plus optional 1% Managed Payments
+  for farms who want the tool to take money for them.
+
+## Who it's for
+
+- Small direct-to-consumer farms who currently run their share on a
+  spreadsheet, a binder, or one of the enterprise SaaS platforms that
+  churn them out at $99+/mo.
+- CSA members, herd-share holders, and meat-share subscribers looking
+  for the farm they belong to.
+
+## Key public pages
+
+- / — Homepage, the pitch
+- /find — Directory search (ZIP → farms within radius)
+- /manifesto — Why we built it
+- /journal — Notes from the workshop
+- /roadmap — What's shipped, what's next
+- /join — Bring a farm on
+- /homepage — The homepage drafter (free to try)
+- /demo — Working dashboard demo
+- /privacy — Privacy policy
+- /terms — Terms of service
+- /refunds — Refund policy
+- /support — Contact a human
+
+## Not indexed
+
+Dashboards behind auth (/farmer/*, /share/*, /admin/*) and the OAuth
+callback (/auth/callback) are excluded from crawlers.
+
+## Contact
+
+gardener@thecros.app
+
+## Attribution
+
+Communicare is part of CROS — a small family of tools built for the work
+that holds people together. https://thecros.app

@@ -643,6 +643,584 @@ ${CLOSING_BLESSING}
 }
 
 // =============================================================================
+// Security & lifecycle alerts — password changed, pause/resume,
+// payment failed, connect approved, member events, milestones
+// =============================================================================
+// Each of these has one narrow trigger, one honest paragraph, EN + ES.
+// The security alerts (password changed, sign-in from new device) are
+// standard "if this wasn't you, tell us" notices. The billing alerts
+// are transactional confirmations, not marketing. The milestone
+// alerts (first farm published, anniversary) are quiet celebrations.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Password changed — successful /api/auth/reset completion
+// -----------------------------------------------------------------------------
+
+export function passwordChangedEmail(opts: {
+  to: string;
+  displayName: string | null;
+  siteUrl: string;
+  ip?: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "Su contraseña de Communicare cambió",
+      text: `${greeting}
+
+Cambiaron la contraseña de su cuenta de Communicare${opts.ip ? ` (desde ${opts.ip})` : ""}.
+
+Si fue usted, no necesita hacer nada.
+
+Si no fue usted, escriba de inmediato a ${SUPPORT_EMAIL} y cierre
+sesión en todos los dispositivos aquí: ${dash}/farmer/settings/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: "Your Communicare password changed",
+    text: `${greeting}
+
+Your Communicare account password was just changed${opts.ip ? ` (from ${opts.ip})` : ""}.
+
+If it was you, no need to do anything.
+
+If it wasn't you, write ${SUPPORT_EMAIL} right away and sign out of
+every device at ${dash}/farmer/settings/.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Subscription paused / resumed — transactional confirmations
+// -----------------------------------------------------------------------------
+
+export function subscriptionPausedEmail(opts: {
+  to: string;
+  displayName: string | null;
+  resumeDate: string | null;
+  siteUrl: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const resumeLine = opts.resumeDate ? opts.resumeDate.slice(0, 10) : null;
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "Su granja está pausada",
+      text: `${greeting}
+
+Pausamos su suscripción de Communicare.
+${resumeLine ? `Se reanudará automáticamente el ${resumeLine}.` : "Reanude cuando quiera desde la configuración."}
+
+Durante la pausa: sin facturas, sin textos automáticos, y el panel
+queda en solo lectura. Cuando esté listo:
+${dash}/farmer/settings/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: "Your farm desk is paused",
+    text: `${greeting}
+
+We've paused your Communicare subscription.
+${resumeLine ? `It resumes automatically on ${resumeLine}.` : "Resume it whenever you're ready from settings."}
+
+While paused: no bills, no automatic texts, and the dashboard is
+read-only. When you're ready:
+${dash}/farmer/settings/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+export function subscriptionResumedEmail(opts: {
+  to: string;
+  displayName: string | null;
+  siteUrl: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "Bienvenido de vuelta",
+      text: `${greeting}
+
+Su suscripción está activa otra vez. El escritorio, la línea de
+mensajes, y todo lo demás vuelven a funcionar.
+
+${dash}/farmer/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: "Welcome back",
+    text: `${greeting}
+
+Your subscription is active again. The desk, the SMS line, and
+everything else are back on.
+
+${dash}/farmer/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Payment failed — Stripe invoice.payment_failed webhook
+// -----------------------------------------------------------------------------
+
+export function paymentFailedEmail(opts: {
+  to: string;
+  displayName: string | null;
+  siteUrl: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "Su tarjeta no pasó — vamos a intentar otra vez",
+      text: `${greeting}
+
+Su banco rechazó el cargo mensual de nueve dólares. Suele ser una
+tarjeta vencida o un límite temporal. Stripe volverá a intentar en
+unos días. Si prefiere actualizar la tarjeta ahora:
+
+${dash}/farmer/settings/
+
+Si en dos semanas no cobramos, pausamos su granja (los textos y el
+sitio quedan en solo lectura hasta que resolvamos).
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: "Your card didn't go through — we'll try again",
+    text: `${greeting}
+
+Your bank declined the monthly nine-dollar charge. Usually an
+expired card or a temporary hold. Stripe will retry in a few days;
+if you'd rather fix the card now:
+
+${dash}/farmer/settings/
+
+If we can't collect within two weeks, your farm desk pauses (texts
+and site go read-only until we sort it out).
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Card expiring soon — Stripe's expiring event
+// -----------------------------------------------------------------------------
+
+export function cardExpiringEmail(opts: {
+  to: string;
+  displayName: string | null;
+  siteUrl: string;
+  brandLast4?: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const which = opts.brandLast4 ? ` on ${opts.brandLast4}` : "";
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "Su tarjeta vence pronto",
+      text: `${greeting}
+
+Su tarjeta${which} vence este mes. Actualícela para que el próximo
+cobro no falle:
+
+${dash}/farmer/settings/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: "Your card expires soon",
+    text: `${greeting}
+
+Your card${which} expires this month. Update it so next month's
+charge goes through:
+
+${dash}/farmer/settings/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Stripe Connect approved — Managed Payments unlocked
+// -----------------------------------------------------------------------------
+
+export function connectApprovedEmail(opts: {
+  to: string;
+  displayName: string | null;
+  farmName: string;
+  siteUrl: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: "${opts.farmName} — Managed Payments está listo",
+      text: `${greeting}
+
+Stripe aprobó su cuenta de Connect. ${opts.farmName} ya puede cobrar
+tarjetas y ACH a través de Communicare. Nuestra tarifa de plataforma
+del 1% se descuenta sobre el volumen procesado — nada más.
+
+${dash}/farmer/payments/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: `${opts.farmName} — Managed Payments is live`,
+    text: `${greeting}
+
+Stripe approved your Connect account. ${opts.farmName} can now take
+cards and ACH through Communicare. Our 1% platform fee comes off the
+processed volume — no other charges.
+
+${dash}/farmer/payments/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// New member joined — inbound SMS YES from a member
+// -----------------------------------------------------------------------------
+
+export function newMemberJoinedEmail(opts: {
+  to: string;
+  displayName: string | null;
+  memberPhone: string;
+  memberName: string | null;
+  farmName: string;
+  siteUrl: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const who = opts.memberName || opts.memberPhone;
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: `${who} se unió a la línea de ${opts.farmName}`,
+      text: `${greeting}
+
+${who} respondió SÍ al mensaje de consentimiento. Está en la lista
+oficial de miembros que reciben el texto del martes.
+
+${dash}/farmer/sms/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: `${who} joined ${opts.farmName}'s SMS line`,
+    text: `${greeting}
+
+${who} replied YES to the consent text. They're on the roster for
+next Tuesday's message.
+
+${dash}/farmer/sms/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Member opted out — inbound STOP
+// -----------------------------------------------------------------------------
+
+export function memberOptedOutEmail(opts: {
+  to: string;
+  displayName: string | null;
+  memberPhone: string;
+  memberName: string | null;
+  farmName: string;
+  siteUrl: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const who = opts.memberName || opts.memberPhone;
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: `${who} se dio de baja del SMS`,
+      text: `${greeting}
+
+${who} respondió BASTA/STOP y se dio de baja de los textos. Ya no
+recibirá el mensaje del martes. Puede seguir siendo miembro de
+${opts.farmName} — solo no por SMS.
+
+${dash}/farmer/sms/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: `${who} left the SMS line`,
+    text: `${greeting}
+
+${who} replied STOP and opted out of texts. They won't get next
+Tuesday's message. They can still be a member of ${opts.farmName} —
+just not by SMS.
+
+${dash}/farmer/sms/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// First farm published — milestone
+// -----------------------------------------------------------------------------
+
+export function firstFarmPublishedEmail(opts: {
+  to: string;
+  displayName: string | null;
+  farmName: string;
+  farmSlug: string;
+  siteUrl: string;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const publicUrl = `${dash}/farm/${opts.farmSlug}/`;
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: `${opts.farmName} está en vivo`,
+      text: `${greeting}
+
+Publicó el sitio de ${opts.farmName}. Ya lo puede compartir con sus
+vecinos:
+
+${publicUrl}
+
+Copie el enlace en su perfil de Instagram, imprímalo en la esquina
+del cartel del puesto, o envíelo por correo a la gente que suele
+preguntar.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: `${opts.farmName} is live`,
+    text: `${greeting}
+
+You published ${opts.farmName}'s site. You can share it with
+neighbors now:
+
+${publicUrl}
+
+Drop the link in your Instagram bio, print it on the corner of your
+farm-stand poster, or send it to the neighbors who always ask.
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Anniversary — one year since signup
+// -----------------------------------------------------------------------------
+
+export function anniversaryEmail(opts: {
+  to: string;
+  displayName: string | null;
+  siteUrl: string;
+  yearNumber: number;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const y = opts.yearNumber;
+  const yl = y === 1 ? "un año" : `${y} años`;
+  const yg = y === 1 ? "one year" : `${y} years`;
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: `${yl} con Communicare`,
+      text: `${greeting}
+
+Hace ${yl} que llegó a Communicare. Gracias por seguir con nosotros.
+
+Si algo se rompió en el camino, o si algo debería funcionar
+diferente, respóndanos este correo — llega a una persona.
+
+Su granja: ${dash}/farmer/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: `${yg} with Communicare`,
+    text: `${greeting}
+
+It's been ${yg} since you joined Communicare. Thank you for staying.
+
+If anything's broken, or if something should work differently, reply
+to this note — it lands with a person.
+
+Your desk: ${dash}/farmer/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// End-of-season summary — for veg CSAs (October), meat farms (November)
+// -----------------------------------------------------------------------------
+
+export function endOfSeasonEmail(opts: {
+  to: string;
+  displayName: string | null;
+  farmName: string;
+  siteUrl: string;
+  weeksOffered: number;
+  membersServed: number;
+  totalReplies: number;
+  locale?: Locale;
+}): SendArgs {
+  const name = opts.displayName?.trim() || null;
+  const greeting = name ? `Hi ${name} —` : "Hi —";
+  const dash = opts.siteUrl.replace(/\/+$/, "");
+  const locale: Locale = opts.locale === "es" ? "es" : "en";
+  if (locale === "es") {
+    return {
+      to: opts.to,
+      subject: `${opts.farmName} — resumen de la temporada`,
+      text: `${greeting}
+
+La temporada terminó en ${opts.farmName}. Lo que hicieron juntos:
+
+  • ${opts.weeksOffered} semanas de porciones enviadas
+  • ${opts.membersServed} miembros servidos
+  • ${opts.totalReplies} conversaciones por SMS
+
+¿Va a pausar hasta la próxima temporada? Configúrelo aquí sin bajarse:
+${dash}/farmer/settings/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+    };
+  }
+  return {
+    to: opts.to,
+    subject: `${opts.farmName} — the season's numbers`,
+    text: `${greeting}
+
+Your season wrapped at ${opts.farmName}. What you did together:
+
+  • ${opts.weeksOffered} weeks of shares sent out
+  • ${opts.membersServed} members served
+  • ${opts.totalReplies} SMS conversations
+
+Pausing until next season? Set the resume date here so you don't
+have to remember:
+${dash}/farmer/settings/
+
+${CLOSING_BLESSING}
+— Communicare
+`,
+  };
+}
+
+// =============================================================================
 // Herd-share monthly compliance reminder
 // =============================================================================
 // State milk-test schedules and contract-renewal dates vary; the safe

@@ -10,9 +10,18 @@ import { preflight, json } from "../../../_lib/cors";
 import { verifyAuth } from "../../../_lib/auth";
 import { one, run, nowIso } from "../../../_lib/db";
 import { stripeRequest, type StripeSubscription, type StripeEnv } from "../../../_lib/stripe";
+import {
+  sendEmail,
+  subscriptionResumedEmail,
+  type EmailSendBinding,
+} from "../../../_lib/email";
 
 type Env = StripeEnv & {
   DB?: D1Database;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
+  SITE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
 };
@@ -27,9 +36,16 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const auth = await verifyAuth(ctx.request, ctx.env);
   if (!auth.ok) return auth.response;
 
-  const u = await one<{ subscription_id: string | null }>(
+  const u = await one<{
+    subscription_id: string | null;
+    email: string;
+    display_name: string | null;
+    preferred_locale: string | null;
+  }>(
     ctx.env.DB,
-    `select subscription_id from users where id = ?`,
+    `select subscription_id, email, display_name,
+            coalesce(preferred_locale,'en') as preferred_locale
+       from users where id = ?`,
     [auth.user.id],
   );
   if (!u?.subscription_id) {
@@ -53,6 +69,22 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     `update users set subscription_status = 'active', updated_at = ? where id = ?`,
     [nowIso(), auth.user.id],
   );
+
+  if (ctx.env.EMAIL) {
+    const site = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
+    const msg = subscriptionResumedEmail({
+      to: u.email,
+      displayName: u.display_name,
+      siteUrl: site,
+      locale: u.preferred_locale === "es" ? "es" : "en",
+    });
+    ctx.waitUntil(
+      sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
+        ...msg,
+        replyTo: ctx.env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+      }),
+    );
+  }
 
   return json({ ok: true, subscription_status: "active" });
 };

@@ -17,9 +17,18 @@ import { preflight, json } from "../../../_lib/cors";
 import { verifyAuth } from "../../../_lib/auth";
 import { one, run, nowIso } from "../../../_lib/db";
 import { stripeRequest, type StripeSubscription, type StripeEnv } from "../../../_lib/stripe";
+import {
+  sendEmail,
+  subscriptionPausedEmail,
+  type EmailSendBinding,
+} from "../../../_lib/email";
 
 type Env = StripeEnv & {
   DB?: D1Database;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
+  SITE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
 };
@@ -56,9 +65,16 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     resumesAtEpoch = Math.floor(parsed / 1000);
   }
 
-  const u = await one<{ subscription_id: string | null }>(
+  const u = await one<{
+    subscription_id: string | null;
+    email: string;
+    display_name: string | null;
+    preferred_locale: string | null;
+  }>(
     ctx.env.DB,
-    `select subscription_id from users where id = ?`,
+    `select subscription_id, email, display_name,
+            coalesce(preferred_locale,'en') as preferred_locale
+       from users where id = ?`,
     [auth.user.id],
   );
   if (!u?.subscription_id) {
@@ -90,11 +106,30 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     [nowIso(), auth.user.id],
   );
 
+  const resumeIso = resumesAtEpoch
+    ? new Date(resumesAtEpoch * 1000).toISOString()
+    : null;
+
+  if (ctx.env.EMAIL) {
+    const site = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
+    const msg = subscriptionPausedEmail({
+      to: u.email,
+      displayName: u.display_name,
+      resumeDate: resumeIso,
+      siteUrl: site,
+      locale: u.preferred_locale === "es" ? "es" : "en",
+    });
+    ctx.waitUntil(
+      sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
+        ...msg,
+        replyTo: ctx.env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+      }),
+    );
+  }
+
   return json({
     ok: true,
     subscription_status: "paused",
-    resume_at: resumesAtEpoch
-      ? new Date(resumesAtEpoch * 1000).toISOString()
-      : null,
+    resume_at: resumeIso,
   });
 };

@@ -9,9 +9,18 @@ import { preflight, json } from "../../_lib/cors";
 import { verifyAuth } from "../../_lib/auth";
 import { requireActiveSubscription } from "../../_lib/billing";
 import { one, run, nowIso } from "../../_lib/db";
+import {
+  sendEmail,
+  firstFarmPublishedEmail,
+  type EmailSendBinding,
+} from "../../_lib/email";
 
 type Env = {
   DB?: D1Database;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
+  SITE_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
 };
@@ -61,6 +70,19 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return json({ error: "No farm found for this account." }, 404);
   }
 
+  // Detect whether this is the first time we're stamping — used to gate
+  // the milestone email so re-hits don't fire duplicates.
+  const before = await one<{
+    onboarded_at: string | null;
+    name: string;
+    slug: string;
+  }>(
+    ctx.env.DB,
+    `select onboarded_at, name, slug from farms where id = ?`,
+    [fm.farm_id],
+  );
+  const wasFirst = !before?.onboarded_at;
+
   await run(
     ctx.env.DB,
     `update farms set onboarded_at = coalesce(onboarded_at, ?),
@@ -68,5 +90,37 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       where id = ?`,
     [nowIso(), nowIso(), fm.farm_id],
   );
+
+  if (wasFirst && ctx.env.EMAIL && before) {
+    const u = await one<{
+      email: string;
+      display_name: string | null;
+      preferred_locale: string | null;
+    }>(
+      ctx.env.DB,
+      `select email, display_name,
+              coalesce(preferred_locale,'en') as preferred_locale
+         from users where id = ?`,
+      [auth.user.id],
+    );
+    if (u) {
+      const site = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
+      const msg = firstFarmPublishedEmail({
+        to: u.email,
+        displayName: u.display_name,
+        farmName: before.name,
+        farmSlug: before.slug,
+        siteUrl: site,
+        locale: u.preferred_locale === "es" ? "es" : "en",
+      });
+      ctx.waitUntil(
+        sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
+          ...msg,
+          replyTo: ctx.env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+        }),
+      );
+    }
+  }
+
   return json({ ok: true, farm_id: fm.farm_id });
 };

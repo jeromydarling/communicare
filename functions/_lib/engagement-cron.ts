@@ -26,6 +26,8 @@ import {
   dormantNudgeEmail,
   weeklyDigestEmail,
   herdShareReminderEmail,
+  anniversaryEmail,
+  endOfSeasonEmail,
   type EmailSendBinding,
 } from "./email";
 
@@ -65,6 +67,8 @@ export async function runEngagementCron(
   dormant: number;
   digest: number;
   herdshare: number;
+  anniversary: number;
+  end_of_season: number;
   errors: string[];
 }> {
   const summary = {
@@ -74,6 +78,8 @@ export async function runEngagementCron(
     dormant: 0,
     digest: 0,
     herdshare: 0,
+    anniversary: 0,
+    end_of_season: 0,
     errors: [] as string[],
   };
   if (!env.DB) return summary;
@@ -280,6 +286,165 @@ export async function runEngagementCron(
       } catch (e) {
         summary.errors.push(
           `herdshare to ${u.id}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+  }
+
+  // ------------------ Anniversary — one per year of signup --------------
+  // Runs on the user's signup month-day at 14:00 UTC. Idempotency key
+  // per year: "anniversary:<N>" where N is years since signup.
+  if (now.getUTCHours() === 14) {
+    const monthDay = `${(now.getUTCMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${now.getUTCDate().toString().padStart(2, "0")}`;
+    const anniversaries = await many<{
+      id: string;
+      email: string;
+      display_name: string | null;
+      preferred_locale: string | null;
+      created_at: string;
+      lifecycle_last_sent_key: string | null;
+    }>(
+      db,
+      `select id, email, display_name, preferred_locale, created_at,
+              lifecycle_last_sent_key
+         from users
+        where subscription_status = 'active'
+          and substr(created_at, 6, 5) = ?
+          and created_at < ?
+        limit 100`,
+      [
+        monthDay,
+        new Date(now.getTime() - 365 * 86400 * 1000).toISOString(),
+      ],
+    );
+    for (const u of anniversaries) {
+      const yearNumber = Math.floor(
+        (now.getTime() - new Date(u.created_at).getTime()) /
+          (365.25 * 86400 * 1000),
+      );
+      if (yearNumber < 1) continue;
+      const key = `anniversary:${yearNumber}`;
+      if (u.lifecycle_last_sent_key === key) continue;
+      try {
+        const msg = anniversaryEmail({
+          to: u.email,
+          displayName: u.display_name,
+          siteUrl: site,
+          yearNumber,
+          locale: u.preferred_locale === "es" ? "es" : "en",
+        });
+        const res = await sendEmail(env.EMAIL!, env.SEND_FROM, {
+          ...msg,
+          replyTo: env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+        });
+        if (res.ok) {
+          await run(
+            db,
+            `update users set lifecycle_last_sent_key = ?, updated_at = ? where id = ?`,
+            [key, nowIso(), u.id],
+          );
+          summary.anniversary++;
+        }
+      } catch (e) {
+        summary.errors.push(
+          `anniversary to ${u.id}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+  }
+
+  // ------------------ End-of-season summary -----------------------------
+  // Season endings by farm kind (northern hemisphere defaults; U.S.
+  // launch scope). October 15 for veg CSAs, November 15 for meat/eggs,
+  // 14:00 UTC. Idempotency key per year: "endofseason:<YYYY>".
+  const seasonHitsToday = (): { kind: string; day: number; month: number } | null => {
+    if (now.getUTCHours() !== 14) return null;
+    const md = { m: now.getUTCMonth() + 1, d: now.getUTCDate() };
+    if (md.m === 10 && md.d === 15) return { kind: "vegetable_csa", day: 15, month: 10 };
+    if (md.m === 11 && md.d === 15) return { kind: "pastured_meat", day: 15, month: 11 };
+    return null;
+  };
+  const hit = seasonHitsToday();
+  if (hit) {
+    const year = now.getUTCFullYear();
+    const key = `endofseason:${year}:${hit.kind}`;
+    const weekAgo = new Date(now.getTime() - 30 * 7 * 86400 * 1000).toISOString(); // full 30-week window
+    const cands = await many<{
+      id: string;
+      email: string;
+      display_name: string | null;
+      preferred_locale: string | null;
+      farm_id: string;
+      farm_name: string;
+      lifecycle_last_sent_key: string | null;
+    }>(
+      db,
+      `select u.id, u.email, u.display_name, u.preferred_locale,
+              f.id as farm_id, f.name as farm_name,
+              u.lifecycle_last_sent_key
+         from users u
+         join farm_members fm on fm.user_id = u.id
+              and fm.role in ('owner','staff') and fm.archived_at is null
+         join farms f on f.id = fm.farm_id
+        where u.subscription_status = 'active'
+          and f.kind = ?
+        limit 200`,
+      [hit.kind],
+    );
+    for (const u of cands) {
+      if (u.lifecycle_last_sent_key === key) continue;
+      try {
+        const [weeks, membersServed, replies] = await Promise.all([
+          one<{ n: number }>(
+            db,
+            `select count(distinct week_starting) as n from weekly_offers
+              where farm_id = ? and created_at >= ?`,
+            [u.farm_id, weekAgo],
+          ),
+          one<{ n: number }>(
+            db,
+            `select count(distinct subscription_id) as n from weekly_offers
+              where farm_id = ? and state in ('sent','confirmed','swapped','gifted')
+                and created_at >= ?`,
+            [u.farm_id, weekAgo],
+          ),
+          one<{ n: number }>(
+            db,
+            `select count(*) as n from weekly_offers
+              where farm_id = ? and reply_received_at is not null
+                and created_at >= ?`,
+            [u.farm_id, weekAgo],
+          ),
+        ]);
+        const w = weeks?.n ?? 0;
+        if (w === 0) continue; // no season data, no letter
+        const msg = endOfSeasonEmail({
+          to: u.email,
+          displayName: u.display_name,
+          farmName: u.farm_name,
+          siteUrl: site,
+          weeksOffered: w,
+          membersServed: membersServed?.n ?? 0,
+          totalReplies: replies?.n ?? 0,
+          locale: u.preferred_locale === "es" ? "es" : "en",
+        });
+        const res = await sendEmail(env.EMAIL!, env.SEND_FROM, {
+          ...msg,
+          replyTo: env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+        });
+        if (res.ok) {
+          await run(
+            db,
+            `update users set lifecycle_last_sent_key = ?, updated_at = ? where id = ?`,
+            [key, nowIso(), u.id],
+          );
+          summary.end_of_season++;
+        }
+      } catch (e) {
+        summary.errors.push(
+          `endofseason to ${u.id}: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     }

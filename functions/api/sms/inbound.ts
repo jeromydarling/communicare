@@ -42,8 +42,14 @@ import {
 } from "../../_lib/sms";
 import { parseIntentSmart } from "../../_lib/sms-parse";
 import { replyAck } from "../../_lib/sms-templates";
-import { normalizeUsPhone } from "../../_lib/phone";
+import { normalizeUsPhone, formatUsPhone } from "../../_lib/phone";
 import { one, run, uuid, nowIso } from "../../_lib/db";
+import {
+  sendEmail,
+  newMemberJoinedEmail,
+  memberOptedOutEmail,
+  type EmailSendBinding,
+} from "../../_lib/email";
 
 type Env = {
   DB?: D1Database;
@@ -52,6 +58,10 @@ type Env = {
   AI_GATEWAY_TOKEN?: string;
   TWILIO_ACCOUNT_SID?: string;
   TWILIO_AUTH_TOKEN?: string;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
+  SITE_URL?: string;
 };
 
 type FarmConfigRow = {
@@ -197,6 +207,22 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     inboundMessageSid: messageSid,
     inboundMessageId: inboundMsgId,
   });
+
+  // ---- 5b. Farmer email on the two meaningful roster transitions ---------
+  // consent_confirmation when the sub WAS pending → new member joined
+  // stop_ack from any state → member left
+  const wasPending = sub.consent_status === "pending";
+  const transition =
+    ack?.kind === "consent_confirmation" && wasPending
+      ? "joined"
+      : ack?.kind === "stop_ack"
+        ? "left"
+        : null;
+  if (transition) {
+    ctx.waitUntil(
+      notifyFarmerOfMemberChange(ctx.env, sub.farm_id, farmName, from, transition),
+    );
+  }
 
   // ---- 6. Send ack via REST so it lands in sms_messages ------------------
   if (ack && (farmConfig.twilio_phone_number || farmConfig.twilio_messaging_service_sid)) {
@@ -494,4 +520,56 @@ async function markOfferResolved(
       where id = ?`,
     [state, intent, replyMessageId, now, by, now, offerId],
   );
+}
+
+// -----------------------------------------------------------------------------
+// Farmer notifications on member joined / left the SMS line
+// -----------------------------------------------------------------------------
+
+async function notifyFarmerOfMemberChange(
+  env: Env,
+  farmId: string,
+  farmName: string,
+  memberPhone: string,
+  transition: "joined" | "left",
+): Promise<void> {
+  if (!env.EMAIL || !env.DB) return;
+  const owner = await one<{
+    email: string;
+    display_name: string | null;
+    preferred_locale: string | null;
+  }>(
+    env.DB,
+    `select u.email, u.display_name,
+            coalesce(u.preferred_locale,'en') as preferred_locale
+       from farm_members m
+       join users u on u.id = m.user_id
+      where m.farm_id = ? and m.role in ('owner','staff') and m.archived_at is null
+      order by case m.role when 'owner' then 0 else 1 end, m.joined_at asc
+      limit 1`,
+    [farmId],
+  );
+  if (!owner) return;
+  const memberName = await one<{ display_name: string | null }>(
+    env.DB,
+    `select display_name from member_sms_subscriptions
+      where farm_id = ? and phone_e164 = ? limit 1`,
+    [farmId, memberPhone],
+  );
+  const site = (env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
+  const args = {
+    to: owner.email,
+    displayName: owner.display_name,
+    memberPhone: formatUsPhone(memberPhone),
+    memberName: memberName?.display_name ?? null,
+    farmName,
+    siteUrl: site,
+    locale: (owner.preferred_locale === "es" ? "es" : "en") as "es" | "en",
+  };
+  const msg =
+    transition === "joined" ? newMemberJoinedEmail(args) : memberOptedOutEmail(args);
+  await sendEmail(env.EMAIL, env.SEND_FROM, {
+    ...msg,
+    replyTo: env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+  });
 }

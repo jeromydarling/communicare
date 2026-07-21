@@ -30,6 +30,8 @@ import {
 import {
   sendEmail,
   welcomeEmail,
+  paymentFailedEmail,
+  cardExpiringEmail,
   type EmailSendBinding,
 } from "../../_lib/email";
 
@@ -142,13 +144,45 @@ async function dispatchEvent(
       break;
     }
     case "invoice.payment_failed": {
-      // Stripe flips the underlying subscription status to past_due on
-      // its own; the subscription.updated event that follows will land
-      // through the case above. We don't need to handle invoices.
+      // Stripe's default receipt is generic; ours points them to the
+      // portal explicitly. Stripe will still flip subscription_status
+      // to past_due on the subsequent subscription.updated event.
+      const inv = event.data.object as { customer?: string };
+      if (inv.customer) {
+        await maybeSendCustomerEmail(env, ctx, inv.customer, (u, site) =>
+          paymentFailedEmail({
+            to: u.email,
+            displayName: u.display_name,
+            siteUrl: site,
+            locale: u.preferred_locale === "es" ? "es" : "en",
+          }),
+        );
+      }
+      break;
+    }
+    case "customer.source.expiring":
+    case "payment_method.card_automatically_updated": {
+      // Both events indicate "your card is about to change" for the
+      // customer. Send a heads-up.
+      const src = event.data.object as {
+        customer?: string;
+        brand?: string;
+        last4?: string;
+      };
+      if (src.customer) {
+        await maybeSendCustomerEmail(env, ctx, src.customer, (u, site) =>
+          cardExpiringEmail({
+            to: u.email,
+            displayName: u.display_name,
+            siteUrl: site,
+            brandLast4: src.brand && src.last4 ? `${src.brand} …${src.last4}` : undefined,
+            locale: u.preferred_locale === "es" ? "es" : "en",
+          }),
+        );
+      }
       break;
     }
     default:
-      // Other events are recorded in stripe_events but not acted on.
       break;
   }
 }
@@ -257,6 +291,40 @@ function mapToUserStatus(stripeStatus: string): string {
     default:
       return "unpaid";
   }
+}
+
+// -----------------------------------------------------------------------------
+// Generic customer-email dispatch — used by payment_failed + card_expiring
+// -----------------------------------------------------------------------------
+
+type CustomerUser = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  preferred_locale: string | null;
+};
+
+async function maybeSendCustomerEmail(
+  env: Env,
+  ctx: { waitUntil?: (p: Promise<unknown>) => void },
+  stripeCustomerId: string,
+  build: (u: CustomerUser, siteUrl: string) => ReturnType<typeof welcomeEmail>,
+): Promise<void> {
+  if (!env.EMAIL || !env.DB) return;
+  const u = await one<CustomerUser>(
+    env.DB,
+    `select id, email, display_name, preferred_locale
+       from users where stripe_customer_id = ? limit 1`,
+    [stripeCustomerId],
+  );
+  if (!u) return;
+  const site = (env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
+  const send = sendEmail(env.EMAIL, env.SEND_FROM, {
+    ...build(u, site),
+    replyTo: env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+  });
+  if (ctx.waitUntil) ctx.waitUntil(send);
+  else await send;
 }
 
 // -----------------------------------------------------------------------------

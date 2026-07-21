@@ -10,8 +10,19 @@ import {
 } from "../../_lib/crypto";
 import { createSession, sessionCookie, destroyAllUserSessions } from "../../_lib/sessions";
 import { one, run, nowIso } from "../../_lib/db";
+import {
+  sendEmail,
+  passwordChangedEmail,
+  type EmailSendBinding,
+} from "../../_lib/email";
 
-type Env = { DB?: D1Database };
+type Env = {
+  DB?: D1Database;
+  EMAIL?: EmailSendBinding;
+  SEND_FROM?: string;
+  SYSTEM_REPLY_TO?: string;
+  SITE_URL?: string;
+};
 
 type RequestBody = { token?: string; password?: string };
 
@@ -79,6 +90,35 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const ip = ctx.request.headers.get("cf-connecting-ip") ?? undefined;
   const ua = ctx.request.headers.get("user-agent") ?? undefined;
   const sess = await createSession(db, row.user_id, { ip, userAgent: ua });
+
+  // Security alert — send the "your password just changed" note. Fire
+  // via waitUntil so a slow SMTP path doesn't hold the response.
+  const user = await one<{
+    email: string;
+    display_name: string | null;
+    preferred_locale: string | null;
+  }>(
+    db,
+    `select email, display_name, coalesce(preferred_locale,'en') as preferred_locale
+       from users where id = ?`,
+    [row.user_id],
+  );
+  if (user && ctx.env.EMAIL) {
+    const site = (ctx.env.SITE_URL ?? "https://communicare.farm").replace(/\/+$/, "");
+    const msg = passwordChangedEmail({
+      to: user.email,
+      displayName: user.display_name,
+      siteUrl: site,
+      ip,
+      locale: user.preferred_locale === "es" ? "es" : "en",
+    });
+    ctx.waitUntil(
+      sendEmail(ctx.env.EMAIL, ctx.env.SEND_FROM, {
+        ...msg,
+        replyTo: ctx.env.SYSTEM_REPLY_TO ?? "gardener@thecros.app",
+      }),
+    );
+  }
 
   const res = json({ ok: true });
   res.headers.append("Set-Cookie", sessionCookie(sess.id, sess.expiresAt));

@@ -65,6 +65,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       email: u.email,
       name: u.display_name ?? undefined,
       "metadata[user_id]": u.id,
+      "metadata[satellite_app]": "communicare",
     });
     if (!created.ok) {
       return json({ error: `Stripe customer creation failed: ${created.error}` }, 502);
@@ -94,7 +95,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       cancel_url: cancelUrl,
       allow_promotion_codes: "true",
       "subscription_data[metadata][user_id]": u.id,
+      "subscription_data[metadata][satellite_app]": "communicare",
       "metadata[user_id]": u.id,
+      "metadata[satellite_app]": "communicare",
     },
   );
   if (!session.ok) {
